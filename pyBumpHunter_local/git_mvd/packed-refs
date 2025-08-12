@@ -1,0 +1,17 @@
+# pack-refs with: peeled fully-peeled sorted 
+6a38fb5af1d45d4e0c7018030367fb22396e24c5 refs/remotes/origin/dependabot/github_actions/dot-github/workflows/actions/download-artifact-4.1.7
+2c861b2ef307ff8147def09aa3f5593c34230f9e refs/remotes/origin/henryiii-patch-1
+6666994e35e068e789a8e8a6b48330cd77480c81 refs/remotes/origin/je_initial_cleanup
+a05c083ee27da5dedd6cd326d9314f42e744f347 refs/remotes/origin/master
+9d5c15d3ff272c723d268a446a76dd1a012c5ccd refs/remotes/origin/update
+c7753ddf4b4a47d25a8acd8bd89356077ff01357 refs/tags/v0.0.0-alpha
+0f58c573c28171a8825bf39f5d6a17e9f1000842 refs/tags/v0.1.0
+^5ae4f3a37200d40080780b9d75cfec1131385485
+1a51ec0a3cc241929925977154e9880b405aa48e refs/tags/v0.2.0
+0f69e8249816150a11bcfac54064dd57422c283a refs/tags/v0.2.1
+abdc5a2b51c4ebec82f60c14fc389f9d886c4581 refs/tags/v0.2.2
+b5a8d733b6c586f6055d7c5ec26c5b8244b3f0b5 refs/tags/v0.3.0
+f350f3ee62adb57d6a14f469fa40b287e3c0d34a refs/tags/v0.3.1
+76a2f67d3f246279ec27e5bcc15f12a719468371 refs/tags/v0.4.0
+76a2f67d3f246279ec27e5bcc15f12a719468371 refs/tags/v0.4.1
+dcd00fe8393a1b12a89168878d585530a24ef504 refs/tags/v0.4.2
