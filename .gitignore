@@ -1,4 +1,5 @@
 .DS_Store
 .vscode/settings.json
-plots
-pyBumpHunter
+plots/
+pyBumpHunter/
+
