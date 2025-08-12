@@ -23,6 +23,9 @@ ROOT.gStyle.SetLabelFont(62)
 import os
 from math import sqrt, isnan
 from scipy.stats import chi2
+import warnings
+warnings.filterwarnings('ignore')
+import itertools
 
 import matplotlib as mpl
 import matplotlib.lines as mlines
@@ -40,10 +43,33 @@ mpl.rcParams['hatch.linewidth'] = 0.5
 title_size = 24
 label_size = 0.035
 
-import warnings
-warnings.filterwarnings('ignore')
-#import os
-import itertools
+#set base ROOT color numbers (from TAttFill class ref) for use with matplotlib
+kWhite  = 0   
+kBlack  = 1
+kGray    = 920
+kRed    = 632
+kGreen  = 416
+kBlue   = 600
+kYellow = 400
+kMagenta = 616
+kCyan   = 432
+kOrange = 800
+kSpring = 820
+kTeal   = 840
+kAzure   =  860
+kViolet = 880
+kPink   = 900
+
+#set default color and hatching
+colors = [ROOT.gROOT.GetColor(kRed+2).AsHexString(), ROOT.gROOT.GetColor(kOrange+3).AsHexString(),
+          ROOT.gROOT.GetColor(kGray).AsHexString(), ROOT.gROOT.GetColor(kOrange+1).AsHexString(),
+          ROOT.gROOT.GetColor(38).AsHexString(), ROOT.gROOT.GetColor(30).AsHexString(),
+          ROOT.gROOT.GetColor(kOrange+1).AsHexString(), ROOT.gROOT.GetColor(kAzure+6).AsHexString(),
+          ROOT.gROOT.GetColor(kGreen+1).AsHexString(), ROOT.gROOT.GetColor(kPink+5).AsHexString(),
+          ROOT.gROOT.GetColor(kPink-6).AsHexString(), ROOT.gROOT.GetColor(kPink-8).AsHexString(),
+          ROOT.gROOT.GetColor(kPink-7).AsHexString(), ROOT.gROOT.GetColor(kPink).AsHexString()]
+
+hatches = ['\\\\','\\\\','\\\\','\\\\',None,None,None,None,None,None,None,None,None,]
 
 #Category number labels
 # -100 = lee, -1=cc 1g overlay, -2=nc del 1g overlay, -3=nc pi0 overlay, 
@@ -1298,9 +1324,9 @@ def GetVariableArrays(all_df, var, array_name, array_sig = [0,1,2,3,111], select
     array_name_sig = array_name+"_sig"
     array_name_bkg = array_name+"_bkg"
     array_name_data = array_name+"_data"
-    globals()[array_name_sig] = var_array_sig
-    globals()[array_name_bkg] = var_array_bkg
-    globals()[array_name_data] = var_array_data
+    #globals()[array_name_sig] = var_array_sig
+    #globals()[array_name_bkg] = var_array_bkg
+    #globals()[array_name_data] = var_array_data
     
     return var_array_sig, var_array_bkg, var_array_data
 
@@ -1340,12 +1366,12 @@ def CalculateWeights(all_df, run1dataPOT, run2dataPOT, run3dataPOT, run1ExtBnbPO
     is_ncpi0overlay = (all_df["true_event_type"].to_numpy() == -3)
     has_muon = (all_df["is_sigoverlay"].to_numpy() == 0)# (all_df["reco_muonMomentum"].to_numpy() > 0)
     POT_factor = [(run1dataPOT + run2dataPOT + run3dataPOT) / (run1ExtBnbPOT + run2ExtBnbPOT + run3ExtBnbPOT) if is_ext[i] else
-                  (run1dataPOT + run2dataPOT + run3dataPOT) / (run1DirtPOT + run2DirtPOT + run3DirtPOT) if is_dirt[i] else
-                  (run1dataPOT + run2dataPOT + run3dataPOT) / (run1SPPOT + run2SPPOT + run3SPPOT) if is_sigoverlay[i] else
+                  (run1dataPOT + run2dataPOT + run3dataPOT) / (run1DirtPOT + run2DirtPOT + run3DirtPOT) if is_dirt[i] else # type: ignore
+                  (run1dataPOT + run2dataPOT + run3dataPOT) / (run1SPPOT + run2SPPOT + run3SPPOT) if is_sigoverlay[i] else # type: ignore
                   1. if is_data[i] else
                   1. if is_lee[i] else
                   1. if is_ncpi0overlay[i] else
-                  (run1dataPOT + run2dataPOT + run3dataPOT) / (run1BnbPOT + run2BnbPOT + run3BnbPOT) for i in range(len(is_ext))]
+                  (run1dataPOT + run2dataPOT + run3dataPOT) / (run1BnbPOT + run2BnbPOT + run3BnbPOT) for i in range(len(is_ext))] # type: ignore
     #[1.0 for i in range(len(is_ext)) ]
     
     #POT_factor = [ 5e19 / (run1ExtBnbPOT + run3ExtBnbPOT) if is_ext[i] else
@@ -1553,8 +1579,8 @@ def PassSelection(selection, numu_score, other_score, ncpi0_score, nue_score, nu
     return p
 
 ###
-def MakeDataMCPlot(var_data, var_sig, var_bkg, bin_width, start_edge, end_edge, title, x_label, y_label, 
-                  plotlog, changey, y_lim, selection):
+def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_label, 
+                  plotlog, changey, y_lim, selection, array_sig = [0,1,2,3,111], ignore_cat = []):
     
     #function to make a data mc plot for a variable, will use whatever cut value and part of chain comes before
         #the call to the function
@@ -1569,7 +1595,23 @@ def MakeDataMCPlot(var_data, var_sig, var_bkg, bin_width, start_edge, end_edge, 
         #plotlog: if true plot y as log, bool
         #changey: if true change y, bool
         #y_lim: if exaand y true, what to set y to
-        
+
+    var_sig, var_bkg, var_data = GetVariableArrays(all_df, var, "var", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+    weights_sig, weights_bkg, weights_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+
+    selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    #single_photon_numu_score_sig, single_photon_numu_score_bkg, single_photon_numu_score_data = GetVariableArrays(all_df, "single_photon_numu_score", "single_photon_numu_score", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    #single_photon_other_score_sig, single_photon_other_score_bkg, single_photon_other_score_data = GetVariableArrays(all_df, "single_photon_other_score", "single_photon_other_score", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    #single_photon_ncpi0_score_sig, single_photon_ncpi0_score_bkg, single_photon_ncpi0_score_data = GetVariableArrays(all_df, "single_photon_ncpi0_score", "single_photon_ncpi0_score", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    #single_photon_nue_score_sig, single_photon_nue_score_bkg, single_photon_nue_score_data = GetVariableArrays(all_df, "single_photon_nue_score", "single_photon_nue_score", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    #num_shw_sig, num_shw_bkg, num_shw_data = GetVariableArrays(all_df, "shw_sp_n_20mev_showers", "num_shw", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    #num_pro_sig, num_pro_bkg, num_pro_data = GetVariableArrays(all_df, "N_protons", "num_pro", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    #r_sig, r_bkg, r_data = GetVariableArrays(all_df, "run", "r", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    #s_sig, s_bkg, s_data = GetVariableArrays(all_df, "subrun", "s", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    #e_sig, e_bkg, e_data = GetVariableArrays(all_df, "event", "e", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+
     bin_num = int((end_edge-start_edge)/bin_width)
     
     bin_edges = [(i * bin_width)+start_edge for i in range(bin_num+1)]
@@ -1625,35 +1667,35 @@ def MakeDataMCPlot(var_data, var_sig, var_bkg, bin_width, start_edge, end_edge, 
     h_numuCC1g = ROOT.TH1F('h_numuCC1g', title, bin_num, start_edge, end_edge)
     h_out1g = ROOT.TH1F('h_out1g', title, bin_num, start_edge, end_edge)
     
-    selected_var_sig = []
-    selected_var_bkg = []
-    selected_var_data = []
+    #selected_var_sig = []
+    #selected_var_bkg = []
+    #selected_var_data = []
     
-    selected_w_sig = []
-    selected_w_bkg = []
-    selected_w_data = []
+    #selected_w_sig = []
+    #selected_w_bkg = []
+    #selected_w_data = []
     
-    selected_true_event_type_sig = []
-    selected_true_event_type_bkg = []
-    selected_true_event_type_data = []
+    #selected_true_event_type_sig = []
+    #selected_true_event_type_bkg = []
+    #selected_true_event_type_data = []
 
-    for i in range(0, len(e_sig)):
-        if(PassSelection(selection, single_photon_numu_score_sig[i], single_photon_other_score_sig[i], single_photon_ncpi0_score_sig[i], single_photon_nue_score_sig[i], num_shw_sig[i], num_pro_sig[i], r_sig[i], s_sig[i], e_sig[i])):
-            selected_var_sig.append(var_sig[i])
-            selected_w_sig.append(weights_sig[i])
-            selected_true_event_type_sig.append(true_event_type_sig[i])
+    #for i in range(0, len(var_sig)):
+    #    if(PassSelection(selection, single_photon_numu_score_sig[i], single_photon_other_score_sig[i], single_photon_ncpi0_score_sig[i], single_photon_nue_score_sig[i], num_shw_sig[i], num_pro_sig[i], r_sig[i], s_sig[i], e_sig[i])):
+    #        selected_var_sig.append(var_sig[i])
+    #        selected_w_sig.append(weights_sig[i])
+    #        selected_true_event_type_sig.append(true_event_type_sig[i])
 
-    for i in range(0, len(e_bkg)):
-        if(PassSelection(selection, single_photon_numu_score_bkg[i], single_photon_other_score_bkg[i], single_photon_ncpi0_score_bkg[i], single_photon_nue_score_bkg[i], num_shw_bkg[i], num_pro_bkg[i], r_bkg[i], s_bkg[i], e_bkg[i])):
-            selected_var_bkg.append(var_bkg[i])
-            selected_w_bkg.append(weights_bkg[i])
-            selected_true_event_type_bkg.append(true_event_type_bkg[i])
+    #for i in range(0, len(var_bkg)):
+    #    if(PassSelection(selection, single_photon_numu_score_bkg[i], single_photon_other_score_bkg[i], single_photon_ncpi0_score_bkg[i], single_photon_nue_score_bkg[i], num_shw_bkg[i], num_pro_bkg[i], r_bkg[i], s_bkg[i], e_bkg[i])):
+    #        selected_var_bkg.append(var_bkg[i])
+    #        selected_w_bkg.append(weights_bkg[i])
+    #        selected_true_event_type_bkg.append(true_event_type_bkg[i])
 
-    for i in range(0, len(e_data)):
-        if(PassSelection(selection, single_photon_numu_score_data[i], single_photon_other_score_data[i], single_photon_ncpi0_score_data[i], single_photon_nue_score_data[i], num_shw_data[i], num_pro_data[i], r_data[i], s_data[i], e_data[i])):
-            selected_var_data.append(var_data[i])
-            selected_w_data.append(weights_data[i])
-            selected_true_event_type_data.append(true_event_type_data[i])
+    #for i in range(0, len(var_data)):
+    #    if(PassSelection(selection, single_photon_numu_score_data[i], single_photon_other_score_data[i], single_photon_ncpi0_score_data[i], single_photon_nue_score_data[i], num_shw_data[i], num_pro_data[i], r_data[i], s_data[i], e_data[i])):
+    #        selected_var_data.append(var_data[i])
+    #        selected_w_data.append(weights_data[i])
+    #        selected_true_event_type_data.append(true_event_type_data[i])
 
     # picking out specific backgrounds from the selected events
 
