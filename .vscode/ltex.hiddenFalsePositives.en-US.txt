@@ -1,0 +1,9 @@
+{"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\QMake data, bkg, sig\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_RULE","sentence":"^\\Q#Open the file File = upr.open('/Users/eyandel/Documents/MicroBooNE/bump/data/Xp_1500_data_hists.root') File.items()\\E$"}
+{"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\Q#Open the file File = upr.open('/Users/eyandel/Documents/MicroBooNE/bump/data/Xp_1500_data_hists.root') File.items()\\E$"}
+{"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\Q#Background bkg = File'bkg'.values()\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_RULE","sentence":"^\\Q#Data data = File'data'.values()\\E$"}
+{"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\Q#Signal sig = File'sig'.values()\\E$"}
+{"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\QCall the BumpScan Method\\E$"}
+{"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\QTo cope with the look-elsewhere effect a global p-value is calculated using a two-step procedure:\nthe distribution of possible p-values is determined from background-only pseudo-experiments (npe parameter)\nthe p-value found in data is compared to the background-only p-value distribution to calculate the global p-value\\E$"}
+{"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\QLoop over different scalings\\E$"}

@@ -1580,12 +1580,12 @@ def PassSelection(selection, numu_score, other_score, ncpi0_score, nue_score, nu
 
 ###
 def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_label, 
-                  plotlog, changey, y_lim, selection, array_sig = [0,1,2,3,111], ignore_cat = []):
-    
+                   selection, POT, plot_folder, array_sig = [0,1,2,3,111], ignore_cat = [], showeffpur = False, 
+                   plotlog = False, changey = False, y_lim = 0, legx1 = 0.45, legy1 = 0.55, legx2 = 0.85, legy2 = 0.85):
     #function to make a data mc plot for a variable, will use whatever cut value and part of chain comes before
         #the call to the function
     #inputs:
-        #var_data/sig/bkg: array of variable values for data/sig/bkg, array
+        #var: variable name
         #bin_width: desired bin width (in variable units), float
         #start_edge: x-axis start value (inclusive), float or int
         #end_edge: x-axis end value (exclusive), float or int
@@ -1594,12 +1594,15 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
         #y_label: y-axis label, string
         #plotlog: if true plot y as log, bool
         #changey: if true change y, bool
-        #y_lim: if exaand y true, what to set y to
+        #y_lim: if x and y true, what to set y to
 
     var_sig, var_bkg, var_data = GetVariableArrays(all_df, var, "var", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
     weights_sig, weights_bkg, weights_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
 
     selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+
     #single_photon_numu_score_sig, single_photon_numu_score_bkg, single_photon_numu_score_data = GetVariableArrays(all_df, "single_photon_numu_score", "single_photon_numu_score", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
     #single_photon_other_score_sig, single_photon_other_score_bkg, single_photon_other_score_data = GetVariableArrays(all_df, "single_photon_other_score", "single_photon_other_score", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
     #single_photon_ncpi0_score_sig, single_photon_ncpi0_score_bkg, single_photon_ncpi0_score_data = GetVariableArrays(all_df, "single_photon_ncpi0_score", "single_photon_ncpi0_score", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
@@ -1609,8 +1612,6 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
     #r_sig, r_bkg, r_data = GetVariableArrays(all_df, "run", "r", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
     #s_sig, s_bkg, s_data = GetVariableArrays(all_df, "subrun", "s", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
     #e_sig, e_bkg, e_data = GetVariableArrays(all_df, "event", "e", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
 
     bin_num = int((end_edge-start_edge)/bin_width)
     
@@ -1928,13 +1929,13 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
 
     ex1.set_title(title)
     if showeffpur:
-        ex1.set_title(title+"\nCut value: " + str(cut_value) + ", purity: "+str(round(selected_purity, 3)) 
+        ex1.set_title(title+"\npurity: "+str(round(selected_purity, 3)) 
                       + ", sig eff: " + str(round(selected_efficiency, 3)))               
     ex1.title.set_size(title_size)
     handles, labels = ex1.get_legend_handles_labels()
     ex1.legend(handles, labels, prop={'size': 12},ncol=2,
                title = 
-               '{} POT                      Stat. Uncert. Only\n$\Sigma$Data/$\Sigma$(MC+EXT)={}'.format(run1dataPOT+run2dataPOT+run3dataPOT,
+               '{} POT                      Stat. Uncert. Only\n$\Sigma$Data/$\Sigma$(MC+EXT)={}'.format(POT,
                                                                                                          sum_data_mc_ratio))
     ex2.set_xlabel(x_label)
     ex1.set_ylabel(y_label)
@@ -2089,7 +2090,7 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
     leg = ROOT.TLegend(legx1,legy1,legx2,legy2)
     leg.SetNColumns(2)
     leg.SetHeader("MicroBooNE Preliminary","C")
-    leg.AddEntry(0,"{} POT  Stat. Uncert. Only".format(run1dataPOT+run2dataPOT+run3dataPOT),"")
+    leg.AddEntry(0,"{} POT  Stat. Uncert. Only".format(POT),"")
     leg.AddEntry(0,"#SigmaData/#Sigma(MC+EXT)={}".format(sum_data_mc_ratio),"")
     #leg.AddEntry(0, "#chi^2/dof = {}".format(chi2),"")
     mc_labels.insert(0,'BNB Data ({})'.format(int(sum(selected_data_w))))
@@ -2108,12 +2109,12 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
         p.SetLogy()
     p.Modified() 
     p.Update()
-    if var_data == single_photon_other_score_data:
-        cut=ROOT.TLine(0.2,p.GetUymin(),0.2,p.GetUymax())
-        cut.SetLineColor(kBlack)
-        cut.SetLineStyle(9)
-        cut.SetLineWidth(3)
-        cut.Draw("same")
+    #if var_data == single_photon_other_score_data:
+    #    cut=ROOT.TLine(0.2,p.GetUymin(),0.2,p.GetUymax())
+    #   cut.SetLineColor(kBlack)
+    #   cut.SetLineStyle(9)
+    #   cut.SetLineWidth(3)
+    #   cut.Draw("same")
     c.Update()
     
     c.Update()
@@ -2126,8 +2127,9 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
 
 
 ###
-def MakeDataPlot(var_data, bin_width, start_edge, end_edge, title, x_label, y_label, 
-                  plotlog, changey, y_lim, selection):
+def MakeDataPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_label, 
+                   selection, POT, plot_folder, array_sig = [0,1,2,3,111], ignore_cat = [], 
+                   plotlog = False, changey = False, y_lim = 0, legx1 = 0.45, legy1 = 0.55, legx2 = 0.85, legy2 = 0.85):
     
     #function to make a data plot for a variable, will use cuts given by "selection"
     #inputs:
@@ -2161,11 +2163,16 @@ def MakeDataPlot(var_data, bin_width, start_edge, end_edge, title, x_label, y_la
     
     selected_true_event_type_data = []
 
-    for i in range(0, len(e_data)):
-        if(PassSelection(selection, single_photon_numu_score_data[i], single_photon_other_score_data[i], single_photon_ncpi0_score_data[i], single_photon_nue_score_data[i], num_shw_data[i], num_pro_data[i], r_data[i], s_data[i], e_data[i])):
-            selected_var_data.append(var_data[i])
-            selected_w_data.append(weights_data[i])
-            selected_true_event_type_data.append(true_event_type_data[i])
+    selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+
+
+    #for i in range(0, len(e_data)):
+    #    if(PassSelection(selection, single_photon_numu_score_data[i], single_photon_other_score_data[i], single_photon_ncpi0_score_data[i], single_photon_nue_score_data[i], num_shw_data[i], num_pro_data[i], r_data[i], s_data[i], e_data[i])):
+    #        selected_var_data.append(var_data[i])
+    #        selected_w_data.append(weights_data[i])
+    #        selected_true_event_type_data.append(true_event_type_data[i])
 
     # picking out specific backgrounds from the selected events
 
@@ -2214,7 +2221,7 @@ def MakeDataPlot(var_data, bin_width, start_edge, end_edge, title, x_label, y_la
     handles, labels = ex1.get_legend_handles_labels()
     ex1.legend(reversed(handles), reversed(labels), prop={'size': 12},ncol=2,
                title = 
-               '{} POT'.format(run1dataPOT+run2dataPOT+run3dataPOT))
+               '{} POT'.format(POT))
     
     ex2.set_xlabel(x_label)
     ex1.set_ylabel(y_label)
@@ -2224,7 +2231,7 @@ def MakeDataPlot(var_data, bin_width, start_edge, end_edge, title, x_label, y_la
         ex1.set_ylim(0.,y_lim)
     #ex2.legend()
 
-    if var_data == time_data:
+    if var == "time":
         #ROOT.gStyle.SetOptFit(1011)
         # Create the fit function
         fitFunc = ROOT.TF1("fitFunc", "[0] * exp(-0.5 * ((x - [1]) / [2])**2) + [3]", -9, 9)
@@ -2258,7 +2265,7 @@ def MakeDataPlot(var_data, bin_width, start_edge, end_edge, title, x_label, y_la
     leg = ROOT.TLegend(legx1,legy1,legx2,legy2)
     #leg.SetNColumns(2)
     leg.SetHeader("MicroBooNE Preliminary","C")
-    leg.AddEntry(0,"{} POT".format(run1dataPOT+run2dataPOT+run3dataPOT),"")
+    leg.AddEntry(0,"{} POT".format(POT),"")
     #leg.AddEntry(0,"#SigmaData/#Sigma(MC+EXT)={}".format(sum_data_mc_ratio),"")
     #leg.AddEntry(0, "#chi^2/dof = {}".format(chi2),"")
     leg.AddEntry(h_data,'BNB Data ({})'.format(int(sum(selected_data_w))),"lp")  
@@ -2269,10 +2276,10 @@ def MakeDataPlot(var_data, bin_width, start_edge, end_edge, title, x_label, y_la
     
     h_data.Draw("E")
     #h_data.Draw("AE same")
-    if var_data != time_data:
+    if var != "time":
         leg.Draw()
     if plotlog:
-        p.SetLogy()
+        c.SetLogy()
     c.Modified() 
     c.Update()
     #c.Draw()
@@ -2283,8 +2290,9 @@ def MakeDataPlot(var_data, bin_width, start_edge, end_edge, title, x_label, y_la
     return h_data
 
 ###
-def MakeMCPlot(var_sig, var_bkg, bin_width, start_edge, end_edge, title, x_label, y_label, selection, systdir=""):
-    
+def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_label, 
+                   selection, POT, plot_folder, array_sig = [0,1,2,3,111], ignore_cat = [], 
+                   plotlog = False, changey = False, y_lim = 0, legx1 = 0.45, legy1 = 0.55, legx2 = 0.85, legy2 = 0.85, systdir=""):
     #function to make a mc plot for a variable, will use whatever cut value and part of chain comes before
         #the call to the function
     #inputs:
@@ -2365,17 +2373,26 @@ def MakeMCPlot(var_sig, var_bkg, bin_width, start_edge, end_edge, title, x_label
     selected_true_event_type_sig = []
     selected_true_event_type_bkg = []
 
-    for i in range(0, len(e_sig)):
-        if(PassSelection(selection, single_photon_numu_score_sig[i], single_photon_other_score_sig[i], single_photon_ncpi0_score_sig[i], single_photon_nue_score_sig[i], num_shw_sig[i], num_pro_sig[i], r_sig[i], s_sig[i], e_sig[i])):
-            selected_var_sig.append(var_sig[i])
-            selected_w_sig.append(weights_sig[i])
-            selected_true_event_type_sig.append(true_event_type_sig[i])
+    var_sig, var_bkg, var_data = GetVariableArrays(all_df, var, "var", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+    weights_sig, weights_bkg, weights_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
 
-    for i in range(0, len(e_bkg)):
-        if(PassSelection(selection, single_photon_numu_score_bkg[i], single_photon_other_score_bkg[i], single_photon_ncpi0_score_bkg[i], single_photon_nue_score_bkg[i], num_shw_bkg[i], num_pro_bkg[i], r_bkg[i], s_bkg[i], e_bkg[i])):
-            selected_var_bkg.append(var_bkg[i])
-            selected_w_bkg.append(weights_bkg[i])
-            selected_true_event_type_bkg.append(true_event_type_bkg[i])
+
+    selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+
+
+    #for i in range(0, len(e_sig)):
+    #    if(PassSelection(selection, single_photon_numu_score_sig[i], single_photon_other_score_sig[i], single_photon_ncpi0_score_sig[i], single_photon_nue_score_sig[i], num_shw_sig[i], num_pro_sig[i], r_sig[i], s_sig[i], e_sig[i])):
+    #        selected_var_sig.append(var_sig[i])
+    #        selected_w_sig.append(weights_sig[i])
+    #        selected_true_event_type_sig.append(true_event_type_sig[i])
+
+    #for i in range(0, len(e_bkg)):
+    #    if(PassSelection(selection, single_photon_numu_score_bkg[i], single_photon_other_score_bkg[i], single_photon_ncpi0_score_bkg[i], single_photon_nue_score_bkg[i], num_shw_bkg[i], num_pro_bkg[i], r_bkg[i], s_bkg[i], e_bkg[i])):
+    #        selected_var_bkg.append(var_bkg[i])
+    #        selected_w_bkg.append(weights_bkg[i])
+    #        selected_true_event_type_bkg.append(true_event_type_bkg[i])
 
     # picking out specific backgrounds from the selected events
 
@@ -2569,7 +2586,7 @@ def MakeMCPlot(var_sig, var_bkg, bin_width, start_edge, end_edge, title, x_label
     #handles, labels = plt.axes.Axes.get_legend_handles_labels()
     plt.legend(plt.legend().legend_handles,mc_labels, prop={'size': 12},ncol=2,
                title = 
-               '{} POT                      Stat. Uncert. Only'.format(run1dataPOT+run2dataPOT+run3dataPOT))
+               '{} POT                      Stat. Uncert. Only'.format(POT))
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     if plotlog:
@@ -2775,7 +2792,7 @@ def MakeMCPlot(var_sig, var_bkg, bin_width, start_edge, end_edge, title, x_label
     
     leg = ROOT.TLegend(legx1,legy1,legx2,legy2)
     leg.SetNColumns(2)
-    leg.SetHeader('#bf{MicroBooNE Preliminary}              '+str(run1dataPOT+run2dataPOT+run3dataPOT)+' POT',"C")
+    leg.SetHeader('#bf{MicroBooNE Preliminary}              '+str(POT)+' POT',"C")
     for h,l in zip(root_hists, mc_labels):
         leg.AddEntry(h,l)
     if systdir != "":
@@ -2790,7 +2807,7 @@ def MakeMCPlot(var_sig, var_bkg, bin_width, start_edge, end_edge, title, x_label
     
     return h_sig, h_bkg
 
-def MakeVarPlots(var_list, num_bins, folder_name, plot_folder_name, selection):
+def MakeVarPlots(all_df, var_list, num_bins, folder_name, plot_folder_name, selection):
     #make and save data/mc hists for all variables in var_list with any cuts made before function call
     #var_list: array of variable names in input files (e.g. all_sp_scalars, load_varaibles, etc.)
     #num_bins: number of bins for all plots
@@ -2805,6 +2822,10 @@ def MakeVarPlots(var_list, num_bins, folder_name, plot_folder_name, selection):
         os.makedirs('plots/root_plots/'+plot_folder+'/datamc')
         os.makedirs('plots/root_plots/'+plot_folder+'/data')
         os.makedirs('plots/root_plots/'+plot_folder+'/mc_only')
+
+    y = all_df["true_event_type"].to_numpy()
+    num_evts = len(y)
+
     for var_name in var_list:
         var = all_df[var_name].to_numpy()   
         var_sig = []
@@ -2833,7 +2854,9 @@ def MakeVarPlots(var_list, num_bins, folder_name, plot_folder_name, selection):
     plot_folder = plot_folder_temp
 
 ###
-def MakeEffPurPlots(var_sig, var_bkg, bin_width, start_edge, end_edge, title, x_label, selection):
+def MakeEffPurPlots(all_df, var, bin_width, start_edge, end_edge, title, x_label, 
+                   selection, POT, plot_folder, array_sig = [0,1,2,3,111], ignore_cat = [], showeffpur = False, 
+                   plotlog = False, changey = False, y_lim = 0, legx1 = 0.45, legy1 = 0.55, legx2 = 0.85, legy2 = 0.85):
     
     #function to make effciency and purity plots for a variable, will use whatever cut value and part of chain 
     #comes before the call to the function
@@ -2854,17 +2877,24 @@ def MakeEffPurPlots(var_sig, var_bkg, bin_width, start_edge, end_edge, title, x_
     selected_true_event_type_sig = []
     selected_true_event_type_bkg = []
 
-    for i in range(0, len(e_sig)):
-        if(PassSelection(selection, single_photon_numu_score_sig[i], single_photon_other_score_sig[i], single_photon_ncpi0_score_sig[i], single_photon_nue_score_sig[i], num_shw_sig[i], num_pro_sig[i], r_sig[i], s_sig[i], e_sig[i])):
-            selected_var_sig.append(var_sig[i])
-            selected_w_sig.append(weights_sig[i])
-            selected_true_event_type_sig.append(true_event_type_sig[i])
+    var_sig, var_bkg, var_data = GetVariableArrays(all_df, var, "var", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+    weights_sig, weights_bkg, weights_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
 
-    for i in range(0, len(e_bkg)):
-        if(PassSelection(selection, single_photon_numu_score_bkg[i], single_photon_other_score_bkg[i], single_photon_ncpi0_score_bkg[i], single_photon_nue_score_bkg[i], num_shw_bkg[i], num_pro_bkg[i], r_bkg[i], s_bkg[i], e_bkg[i])):
-            selected_var_bkg.append(var_bkg[i])
-            selected_w_bkg.append(weights_bkg[i])
-            selected_true_event_type_bkg.append(true_event_type_bkg[i])
+    selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+
+    #for i in range(0, len(e_sig)):
+    #    if(PassSelection(selection, single_photon_numu_score_sig[i], single_photon_other_score_sig[i], single_photon_ncpi0_score_sig[i], single_photon_nue_score_sig[i], num_shw_sig[i], num_pro_sig[i], r_sig[i], s_sig[i], e_sig[i])):
+    #        selected_var_sig.append(var_sig[i])
+    #        selected_w_sig.append(weights_sig[i])
+    #        selected_true_event_type_sig.append(true_event_type_sig[i])
+
+    #for i in range(0, len(e_bkg)):
+    #    if(PassSelection(selection, single_photon_numu_score_bkg[i], single_photon_other_score_bkg[i], single_photon_ncpi0_score_bkg[i], single_photon_nue_score_bkg[i], num_shw_bkg[i], num_pro_bkg[i], r_bkg[i], s_bkg[i], e_bkg[i])):
+    #        selected_var_bkg.append(var_bkg[i])
+    #        selected_w_bkg.append(weights_bkg[i])
+    #        selected_true_event_type_bkg.append(true_event_type_bkg[i])
 
     # picking out specific backgrounds from the selected events
 
@@ -2973,7 +3003,7 @@ def MakeEffPurPlots(var_sig, var_bkg, bin_width, start_edge, end_edge, title, x_
     selected_purity = np.sum(counts_sig_sel) / (np.sum(counts_sig_sel) + np.sum(counts_bkg_sel))
 
 
-    plt.title("Cut value: " + str(cut_value) + ", purity: "+str(round(selected_purity, 3)) + 
+    plt.title("purity: "+str(round(selected_purity, 3)) + 
                  ", sig eff: " + str(round(selected_efficiency, 3)), fontsize = title_size)
     plt.legend(prop={'size': 12})
     plt.xlabel(x_label)
@@ -3034,9 +3064,8 @@ def MakeEffPurPlots(var_sig, var_bkg, bin_width, start_edge, end_edge, title, x_
     plt.show()
 
 ###
-def Make2DPlot(varx_data, varx_sig, varx_bkg, vary_data, vary_sig, vary_bkg,
-               bin_widthx, start_edgex, end_edgex, bin_widthy, start_edgey, end_edgey,
-               title, x_label, y_label, event_types, selection):
+def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_widthy, start_edgey, end_edgey,
+               title, x_label, y_label, event_types, selection, POT, plot_folder, array_sig = [0,1,2,3,111], ignore_cat = []):
     
     #function to make a 2D histogram plot for two variables, will use whatever cut value and part of chain 
     #comes before the call to the function
@@ -3142,28 +3171,42 @@ def Make2DPlot(varx_data, varx_sig, varx_bkg, vary_data, vary_sig, vary_bkg,
     selected_true_event_type_bkg = []
     selected_true_event_type_data = []
 
-    for i in range(0, len(e_sig)):
-        if(PassSelection(selection, single_photon_numu_score_sig[i], single_photon_other_score_sig[i], single_photon_ncpi0_score_sig[i], single_photon_nue_score_sig[i], num_shw_sig[i], num_pro_sig[i], r_sig[i], s_sig[i], e_sig[i])):
-            selected_varx_sig.append(varx_sig[i])
-            selected_vary_sig.append(vary_sig[i])
-            selected_w_sig.append(weights_sig[i])
-            selected_true_event_type_sig.append(true_event_type_sig[i])
+    varx_sig, varx_bkg, varx_data = GetVariableArrays(all_df, varx, "varx", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+    vary_sig, vary_bkg, vary_data = GetVariableArrays(all_df, vary, "vary", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+    weights_sig, weights_bkg, weights_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
 
-    for i in range(0, len(e_bkg)):
-        if(PassSelection(selection, single_photon_numu_score_bkg[i], single_photon_other_score_bkg[i], single_photon_ncpi0_score_bkg[i], single_photon_nue_score_bkg[i], num_shw_bkg[i], num_pro_bkg[i], r_bkg[i], s_bkg[i], e_bkg[i])):
-            selected_varx_bkg.append(varx_bkg[i])
-            selected_vary_bkg.append(vary_bkg[i])
-            selected_w_bkg.append(weights_bkg[i])
-            selected_true_event_type_bkg.append(true_event_type_bkg[i])
+    selected_varx_sig, selected_varx_bkg, selected_varx_data = GetVariableArrays(all_df, varx, "selected_varx", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    selected_vary_sig, selected_vary_bkg, selected_vary_data = GetVariableArrays(all_df, vary, "selected_vary", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
 
-    for i in range(0, len(e_data)):
-        if(PassSelection(selection, single_photon_numu_score_data[i], single_photon_other_score_data[i], single_photon_ncpi0_score_data[i], single_photon_nue_score_data[i], num_shw_data[i], num_pro_data[i], r_data[i], s_data[i], e_data[i])):
-            selected_varx_data.append(varx_data[i])
-            selected_vary_data.append(vary_data[i])
-            selected_w_data.append(weights_data[i])
-            selected_true_event_type_data.append(true_event_type_data[i])
-            if 13 in event_types:
-                h_data.Fill(varx_data[i],vary_data[i],weights_data[i])
+
+    #for i in range(0, len(e_sig)):
+    #    if(PassSelection(selection, single_photon_numu_score_sig[i], single_photon_other_score_sig[i], single_photon_ncpi0_score_sig[i], single_photon_nue_score_sig[i], num_shw_sig[i], num_pro_sig[i], r_sig[i], s_sig[i], e_sig[i])):
+    #        selected_varx_sig.append(varx_sig[i])
+    #        selected_vary_sig.append(vary_sig[i])
+    #        selected_w_sig.append(weights_sig[i])
+    #        selected_true_event_type_sig.append(true_event_type_sig[i])
+#
+    #for i in range(0, len(e_bkg)):
+    #    if(PassSelection(selection, single_photon_numu_score_bkg[i], single_photon_other_score_bkg[i], single_photon_ncpi0_score_bkg[i], single_photon_nue_score_bkg[i], num_shw_bkg[i], num_pro_bkg[i], r_bkg[i], s_bkg[i], e_bkg[i])):
+    #        selected_varx_bkg.append(varx_bkg[i])
+    #        selected_vary_bkg.append(vary_bkg[i])
+    #        selected_w_bkg.append(weights_bkg[i])
+    #        selected_true_event_type_bkg.append(true_event_type_bkg[i])
+#
+    #for i in range(0, len(e_data)):
+    #    if(PassSelection(selection, single_photon_numu_score_data[i], single_photon_other_score_data[i], single_photon_ncpi0_score_data[i], single_photon_nue_score_data[i], num_shw_data[i], num_pro_data[i], r_data[i], s_data[i], e_data[i])):
+    #        selected_varx_data.append(varx_data[i])
+    #        selected_vary_data.append(vary_data[i])
+    #        selected_w_data.append(weights_data[i])
+    #        selected_true_event_type_data.append(true_event_type_data[i])
+    #        if 13 in event_types:
+    #            h_data.Fill(varx_data[i],vary_data[i],weights_data[i])
+
+    for i in range(len(selected_varx_data)):
+        if 13 in event_types:
+            h_data.Fill(selected_varx_data[i], selected_vary_data[i], selected_w_data[i])
 
     # picking out specific backgrounds from the selected events
     
