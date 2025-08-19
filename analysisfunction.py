@@ -327,7 +327,7 @@ def LoadTreesData1(file1, su = False):
 
 
 ###
-def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over):
+def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_over = [], all_df_in_pelee_over = [] ):
     #bnb overlay
     true_event_types = []
     shw_sp_energy = []
@@ -563,12 +563,15 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
     #all_df_in_bdt_over["pnd_time"] = pnd_time
 
     all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_kine_over)
-    #all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_time_over)
+    if (len(all_df_in_time_over) > 0):
+        all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_time_over)
+    if (len(all_df_in_pelee_over) > 0):
+        all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_pelee_over)
 
     return all_df_in_bdt_over
 
 ###
-def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all_df_in_eval_dirt):
+def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all_df_in_eval_dirt, all_df_in_time_dirt = [], all_df_in_pelee_dirt = []):
     #dirt
     true_event_types = []
     shw_sp_energy = []
@@ -764,11 +767,15 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
 
     all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_kine_dirt)
     #all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_time_dirt)
+    if (len(all_df_in_time_dirt) > 0):
+        all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_time_dirt)
+    if (len(all_df_in_pelee_dirt) > 0):
+        all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_pelee_dirt)
 
     return all_df_in_bdt_dirt
 
 ###
-def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_df_in_eval_ext):
+def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_df_in_eval_ext, all_df_in_time_ext = [], all_df_in_pelee_ext = []):
     #extbnb
     true_event_types = []
     shw_sp_energy = []
@@ -941,11 +948,15 @@ def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_
 
     all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_kine_ext)
     #all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_time_ext)
+    if (len(all_df_in_time_ext) > 0):
+        all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_time_ext)
+    if (len(all_df_in_pelee_ext) > 0):
+        all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_pelee_ext)
 
     return all_df_in_bdt_ext
 
 ###
-def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_df_in_eval_data):
+def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_df_in_eval_data, all_df_in_time_data = [], all_df_in_pelee_data = []):
     #bnb data
     true_event_types = []
     shw_sp_energy = []
@@ -1126,11 +1137,15 @@ def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_
 
     all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_kine_data)
     #all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_time_data)
+    if (len(all_df_in_time_data) > 0):
+        all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_time_data)
+    if (len(all_df_in_pelee_data) > 0):
+        all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_pelee_data)
 
     return all_df_in_bdt_data
 
 ###
-def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over):
+def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_over = [], all_df_in_pelee_over = []):
     #ncpi0 overlay overlay
     true_event_types = []
     true_event_types_sub = []
@@ -1370,6 +1385,10 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
 
     all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_kine_over)
     #all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_time_over)
+    if (len(all_df_in_time_over) > 0):
+        all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_time_over)
+    if (len(all_df_in_pelee_over) > 0):
+        all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_pelee_over)
 
     return all_df_in_bdt_over
 
@@ -1400,7 +1419,7 @@ def GetVariableArrays(all_df, var, array_name, array_sig = [0,1,2,3,111], select
     num_evts = all_df.shape[0]
 
     for i in range(num_evts):
-        if y[i] not in ignore_cat and PassSelection(selection, single_photon_numu_score[i], single_photon_other_score[i], single_photon_ncpi0_score[i], single_photon_nue_score[i], num_shw[i], num_pro[i], r[i], s[i], e[i]):
+        if y[i] not in ignore_cat and PassSelection(selection, all_df, i):
             if y[i] in array_sig:
                 var_array_sig.append(var_array[i])
             elif y[i] == 13:
@@ -1521,8 +1540,18 @@ def CalculateWeights(all_df, dataPOT, ExtBnbPOT, pot_vars, run4 = False, run5 = 
 
 
 ###
-def PassSelection(selection, numu_score, other_score, ncpi0_score, nue_score, num_shw, num_pro, r, s, e):
+def PassSelection(selection, all_df, i):
     #returns a boolean array that indicates if events pass selection
+    numu_score = all_df["single_photon_numu_score"].to_numpy()[i]
+    other_score = all_df["single_photon_other_score"].to_numpy()[i]
+    ncpi0_score = all_df["single_photon_ncpi0_score"].to_numpy()[i]
+    nue_score = all_df["single_photon_nue_score"].to_numpy()[i]
+    num_shw = all_df["shw_sp_n_20mev_showers"].to_numpy()[i]
+    num_pro = all_df["shw_sp_n_20mev_protons"].to_numpy()[i]
+    r = all_df["run"].to_numpy()[i]
+    s = all_df["subrun"].to_numpy()[i]
+    e = all_df["event"].to_numpy()[i]
+
     p = False
     if selection=="numu_sideband" and numu_score < 0.1 and numu_score > -20.0:
         p = True
