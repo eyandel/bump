@@ -76,7 +76,7 @@ hatches = ['\\\\','\\\\','\\\\','\\\\',None,None,None,None,None,None,None,None,N
 # 111 = outFV sig, 0=cc1g, 1=nc other 1g, 2=nc del 1g, 3=nc pi0 1g, 
 # 4=nue, 5=nc bkd, 6=ncpi0 bkd, 7=numu bkd, 8=numupi0 bkd, 9=nfv, 10=cosmic, 11=dirt, 12=extbnb, 13=data
 
-def LoadTreesTruth(file1, file2, file3):
+def LoadTreesTruth(file1, file2, file3, su = False):
     with uproot.open(file1)["wcpselection/T_BDTvars"] as f_in_bdt_over:
         all_df_in_bdt_over_1 = f_in_bdt_over.arrays(bdt_variables, library="pd")
 
@@ -88,6 +88,13 @@ def LoadTreesTruth(file1, file2, file3):
 
     with uproot.open(file1)["wcpselection/T_eval"] as f_in_eval_over:
         all_df_in_eval_over_1 = f_in_eval_over.arrays(eval_variables + eval_truth_variables, library="pd")
+
+    if su:
+        with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
+            all_df_in_time_data_1 = f_in_time_data.arrays(time_variables + time_truth_variables, library="pd")
+        with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
+            all_df_in_pelee_data_1 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + pelee_time_variables, library="pd")
+        
 
 
     with uproot.open(file2)["wcpselection/T_BDTvars"] as f_in_bdt_over:
@@ -102,6 +109,13 @@ def LoadTreesTruth(file1, file2, file3):
     with uproot.open(file2)["wcpselection/T_eval"] as f_in_eval_over:
         all_df_in_eval_over_2 = f_in_eval_over.arrays(eval_variables + eval_truth_variables, library="pd")
 
+    if su:
+        with uproot.open(file2)["wcpselection/T_PFeval"] as f_in_time_data:
+            all_df_in_time_data_2 = f_in_time_data.arrays(time_variables + time_truth_variables, library="pd")
+        with uproot.open(file2)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
+            all_df_in_pelee_data_2 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + pelee_time_variables, library="pd")
+      
+
 
     with uproot.open(file3)["wcpselection/T_BDTvars"] as f_in_bdt_over:
         all_df_in_bdt_over_3 = f_in_bdt_over.arrays(bdt_variables, library="pd")
@@ -114,6 +128,13 @@ def LoadTreesTruth(file1, file2, file3):
 
     with uproot.open(file3)["wcpselection/T_eval"] as f_in_eval_over:
         all_df_in_eval_over_3 = f_in_eval_over.arrays(eval_variables + eval_truth_variables, library="pd")
+
+    if su:
+        with uproot.open(file3)["wcpselection/T_PFeval"] as f_in_time_data:
+            all_df_in_time_data_3 = f_in_time_data.arrays(time_variables + time_truth_variables, library="pd")
+        with uproot.open(file3)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
+            all_df_in_pelee_data_3 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + pelee_time_variables, library="pd")
+      
 
     all_df_in_bdt_over = pd.concat([all_df_in_bdt_over_1, all_df_in_bdt_over_2, all_df_in_bdt_over_3], ignore_index=True, sort=False)
 
@@ -139,10 +160,25 @@ def LoadTreesTruth(file1, file2, file3):
     del all_df_in_eval_over_2
     del all_df_in_eval_over_3
 
-    return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
+    all_df_in_time_data = pd.concat([all_df_in_time_data_1, all_df_in_time_data_2, all_df_in_time_data_3], ignore_index=True, sort=False) if su else None
+
+    del all_df_in_time_data_1
+    del all_df_in_time_data_2
+    del all_df_in_time_data_3
+
+    all_df_in_pelee_data = pd.concat([all_df_in_pelee_data_1, all_df_in_pelee_data_2, all_df_in_pelee_data_3], ignore_index=True, sort=False) if su else None
+
+    del all_df_in_pelee_data_1
+    del all_df_in_pelee_data_2
+    del all_df_in_pelee_data_3
+
+    if su:
+        return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data
+    else:
+        return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
 
 ###
-def LoadTreesTruth1(file1):
+def LoadTreesTruth1(file1, su = False):
     with uproot.open(file1)["wcpselection/T_BDTvars"] as f_in_bdt_over:
         all_df_in_bdt_over = f_in_bdt_over.arrays(bdt_variables, library="pd")
 
@@ -155,10 +191,17 @@ def LoadTreesTruth1(file1):
     with uproot.open(file1)["wcpselection/T_eval"] as f_in_eval_over:
         all_df_in_eval_over = f_in_eval_over.arrays(eval_variables + eval_truth_variables, library="pd")
 
-    return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
+    if su:
+        with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
+            all_df_in_time_data = f_in_time_data.arrays(time_variables + time_truth_variables, library="pd")
+        with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
+            all_df_in_pelee_data = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + pelee_time_variables, library="pd")
+        return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data
+    else:
+        return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
 
 ###
-def LoadTreesData(file1, file2, file3):
+def LoadTreesData(file1, file2, file3, su = False):
     with uproot.open(file1)["wcpselection/T_BDTvars"] as f_in_bdt_over:
         all_df_in_bdt_over_1 = f_in_bdt_over.arrays(bdt_variables, library="pd")
 
@@ -170,6 +213,13 @@ def LoadTreesData(file1, file2, file3):
 
     with uproot.open(file1)["wcpselection/T_eval"] as f_in_eval_over:
         all_df_in_eval_over_1 = f_in_eval_over.arrays(eval_variables, library="pd")
+
+    if su:
+        with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
+            all_df_in_time_data_1 = f_in_time_data.arrays(time_variables, library="pd")
+        with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
+            all_df_in_pelee_data_1 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + pelee_time_variables, library="pd")
+        
 
 
     with uproot.open(file2)["wcpselection/T_BDTvars"] as f_in_bdt_over:
@@ -184,6 +234,13 @@ def LoadTreesData(file1, file2, file3):
     with uproot.open(file2)["wcpselection/T_eval"] as f_in_eval_over:
         all_df_in_eval_over_2 = f_in_eval_over.arrays(eval_variables, library="pd")
 
+    if su:
+        with uproot.open(file2)["wcpselection/T_PFeval"] as f_in_time_data:
+            all_df_in_time_data_2 = f_in_time_data.arrays(time_variables, library="pd")
+        with uproot.open(file2)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
+            all_df_in_pelee_data_2 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + pelee_time_variables, library="pd")
+
+
 
     with uproot.open(file3)["wcpselection/T_BDTvars"] as f_in_bdt_over:
         all_df_in_bdt_over_3 = f_in_bdt_over.arrays(bdt_variables, library="pd")
@@ -196,6 +253,13 @@ def LoadTreesData(file1, file2, file3):
 
     with uproot.open(file3)["wcpselection/T_eval"] as f_in_eval_over:
         all_df_in_eval_over_3 = f_in_eval_over.arrays(eval_variables, library="pd")
+
+    if su:
+        with uproot.open(file3)["wcpselection/T_PFeval"] as f_in_time_data:
+            all_df_in_time_data_3 = f_in_time_data.arrays(time_variables, library="pd")
+        with uproot.open(file3)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
+            all_df_in_pelee_data_3 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + pelee_time_variables, library="pd")
+
 
     all_df_in_bdt_over = pd.concat([all_df_in_bdt_over_1, all_df_in_bdt_over_2, all_df_in_bdt_over_3], ignore_index=True, sort=False)
 
@@ -221,10 +285,25 @@ def LoadTreesData(file1, file2, file3):
     del all_df_in_eval_over_2
     del all_df_in_eval_over_3
 
-    return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
+    all_df_in_time_data = pd.concat([all_df_in_time_data_1, all_df_in_time_data_2, all_df_in_time_data_3], ignore_index=True, sort=False) if su else None
+
+    del all_df_in_time_data_1
+    del all_df_in_time_data_2
+    del all_df_in_time_data_3
+
+    all_df_in_pelee_data = pd.concat([all_df_in_pelee_data_1, all_df_in_pelee_data_2, all_df_in_pelee_data_3], ignore_index=True, sort=False) if su else None
+
+    del all_df_in_pelee_data_1
+    del all_df_in_pelee_data_2
+    del all_df_in_pelee_data_3
+
+    if su:
+        return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data
+    else:
+        return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
 
 ###
-def LoadTreesData1(file1):
+def LoadTreesData1(file1, su = False):
     with uproot.open(file1)["wcpselection/T_BDTvars"] as f_in_bdt_over:
         all_df_in_bdt_over = f_in_bdt_over.arrays(bdt_variables, library="pd")
 
@@ -237,7 +316,15 @@ def LoadTreesData1(file1):
     with uproot.open(file1)["wcpselection/T_eval"] as f_in_eval_over:
         all_df_in_eval_over = f_in_eval_over.arrays(eval_variables, library="pd")
 
-    return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
+    if su:
+        with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
+            all_df_in_time_data = f_in_time_data.arrays(time_variables, library="pd")
+        with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
+            all_df_in_pelee_data = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + pelee_time_variables, library="pd")
+        return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data
+    else:
+        return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
+
 
 ###
 def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over):
@@ -1348,7 +1435,7 @@ def GetPOT(file):
     return p
 
 ###
-def CalculateWeights(all_df, run1dataPOT, run2dataPOT, run3dataPOT, run1ExtBnbPOT, run2ExtBnbPOT, run3ExtBnbPOT, pot_vars):
+def CalculateWeights(all_df, dataPOT, ExtBnbPOT, pot_vars, run4 = False, run5 = False, allruns = False):
     # for calculating the weight
     #returns w: array filled with weights
 
@@ -1365,13 +1452,38 @@ def CalculateWeights(all_df, run1dataPOT, run2dataPOT, run3dataPOT, run1ExtBnbPO
     is_sigoverlay = (all_df["is_sigoverlay"].to_numpy() == 1)
     is_ncpi0overlay = (all_df["true_event_type"].to_numpy() == -3)
     has_muon = (all_df["is_sigoverlay"].to_numpy() == 0)# (all_df["reco_muonMomentum"].to_numpy() > 0)
-    POT_factor = [(run1dataPOT + run2dataPOT + run3dataPOT) / (run1ExtBnbPOT + run2ExtBnbPOT + run3ExtBnbPOT) if is_ext[i] else
-                  (run1dataPOT + run2dataPOT + run3dataPOT) / (run1DirtPOT + run2DirtPOT + run3DirtPOT) if is_dirt[i] else # type: ignore
-                  (run1dataPOT + run2dataPOT + run3dataPOT) / (run1SPPOT + run2SPPOT + run3SPPOT) if is_sigoverlay[i] else # type: ignore
-                  1. if is_data[i] else
-                  1. if is_lee[i] else
-                  1. if is_ncpi0overlay[i] else
-                  (run1dataPOT + run2dataPOT + run3dataPOT) / (run1BnbPOT + run2BnbPOT + run3BnbPOT) for i in range(len(is_ext))] # type: ignore
+    if allruns:
+        POT_factor = [(dataPOT) / (ExtBnbPOT) if is_ext[i] else
+                    (dataPOT) / (run1DirtPOT + run2DirtPOT + run3DirtPOT + run4DirtPOT + run5DirtPOT) if is_dirt[i] else # type: ignore
+                    (dataPOT) / (run1SPPOT + run2SPPOT + run3SPPOT + run4SPPOT + run5SPPOT) if is_sigoverlay[i] else # type: ignore
+                    1. if is_data[i] else
+                    1. if is_lee[i] else
+                    1. if is_ncpi0overlay[i] else
+                    (dataPOT) / (run1BnbPOT + run2BnbPOT + run3BnbPOT + run4BnbPOT + run5BnbPOT) for i in range(len(is_ext))] # type: ignore
+    elif run4:
+            POT_factor = [(dataPOT) / (ExtBnbPOT) if is_ext[i] else
+                    (dataPOT) / (run4DirtPOT) if is_dirt[i] else # type: ignore
+                    (dataPOT) / (run4SPPOT) if is_sigoverlay[i] else # type: ignore
+                    1. if is_data[i] else
+                    1. if is_lee[i] else
+                    1. if is_ncpi0overlay[i] else
+                    (dataPOT) / (run4BnbPOT) for i in range(len(is_ext))] # type: ignore
+    elif run5:
+        POT_factor = [(dataPOT) / (ExtBnbPOT) if is_ext[i] else
+                    (dataPOT) / (run5DirtPOT) if is_dirt[i] else # type: ignore
+                    (dataPOT) / (run5SPPOT) if is_sigoverlay[i] else # type: ignore
+                    1. if is_data[i] else
+                    1. if is_lee[i] else
+                    1. if is_ncpi0overlay[i] else
+                    (dataPOT) / (run5BnbPOT) for i in range(len(is_ext))] # type: ignore
+    else:
+        POT_factor = [(dataPOT) / (ExtBnbPOT) if is_ext[i] else
+                    (dataPOT) / (run1DirtPOT + run2DirtPOT + run3DirtPOT) if is_dirt[i] else # type: ignore
+                    (dataPOT) / (run1SPPOT + run2SPPOT + run3SPPOT) if is_sigoverlay[i] else # type: ignore
+                    1. if is_data[i] else
+                    1. if is_lee[i] else
+                    1. if is_ncpi0overlay[i] else
+                    (dataPOT) / (run1BnbPOT + run2BnbPOT + run3BnbPOT) for i in range(len(is_ext))] # type: ignore
     #[1.0 for i in range(len(is_ext)) ]
     
     #POT_factor = [ 5e19 / (run1ExtBnbPOT + run3ExtBnbPOT) if is_ext[i] else
@@ -3553,6 +3665,34 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     return h_stack
     #return c,h_data,h_ext,h_dirt,h_cos,h_outFV,h_numuCCpi0,h_numuCC,h_NCpi0,h_NC,h_nueCC,h_NCpi1g,h_NCdel,h_NCother,h_numuCC1g
 
+###
+def GetInvariantMass(gamma1, gamma2):
+    """
+    Function to calculate the invariant mass of a system of particles.
+    This function assumes that the DataFrame `all_df` contains the necessary columns for the calculation.
+    """
+    # Calculate the invariant mass of two particles given their 4-momenta
+    # gamma1 and gamma2 should be DataFrames with columns: 'px', 'py', 'pz', 'E'
+    mass_squared = (gamma1[3] + gamma2[3])**2 - ((gamma1[0] + gamma2[0])**2 + 
+                                                      (gamma1[1] + gamma2[1])**2 + 
+                                                      (gamma1[2] + gamma2[2])**2)
+    return np.sqrt(mass_squared) if mass_squared >= 0 else -9999.0
+
+###
+def GetOpeningAngle(gamma1, gamma2):
+    """
+    Function to calculate the opening angle between two particles.
+    This function assumes that the DataFrame `all_df` contains the necessary columns for the calculation.
+    """
+    # Calculate the opening angle between two particles given their 3-momenta
+    # gamma1 and gamma2 should be DataFrames with columns: 'px', 'py', 'pz'
+    dot_product = (gamma1[0] * gamma2[0] + gamma1[1] * gamma2[1] + gamma1[2] * gamma2[2])
+    magnitude_gamma1 = np.sqrt(gamma1[0]**2 + gamma1[1]**2 + gamma1[2]**2)
+    magnitude_gamma2 = np.sqrt(gamma2[0]**2 + gamma2[1]**2 + gamma2[2]**2)
+    
+    cos_angle = dot_product / (magnitude_gamma1 * magnitude_gamma2)
+    return cos_angle if -1 <= cos_angle <= 1 else -9999.0
+
 
 ### Variables to load
 # This is a list of the scalar variables saved for the numu tagger
@@ -4126,4 +4266,287 @@ eval_truth_variables = [
     "weight_lee"
 ]
 
-time_variables = ["evtTimeNS","evtDeltaTimeNS"]
+#for SURPRISE files
+time_variables = ["evtTimeNS","evtDeltaTimeNS", "Ph_Tot"]
+time_truth_variables = ["evtTimeNS_cor"]
+PMT_variables = ["PMT_ID", "PMT_Time", "PMT_Amp", "PMT_TimeProp", "PMT_TimeDP", "PMT_TimeDL", "PMT_Sat", "RWM_Time"]
+#pelee ntuple time variables
+pelee_time_variables = ["interaction_time_abs", "interaction_time_modulo"]
+#pelee variables
+pelee_variables = [
+        "nu_pdg",
+        #############
+        # The variables below are not floating point numbers, but vectors of variable length
+        # that can only be stored in awkward arrays. These are very memory intensive, so we
+        # do not want to load them into the final dataframe.
+        # "mc_pdg",
+        # "mc_px",
+        # "mc_py",
+        # "mc_pz",
+        # "mc_E",
+        #############
+        "slpdg",
+        # "backtracked_pdg",
+        # "trk_score_v",
+        "category",
+        "ccnc",
+        "endmuonmichel",
+        # "NeutrinoEnergy0","NeutrinoEnergy1","NeutrinoEnergy2",
+                    #"run",
+        "sub",
+        "evt",
+        "CosmicIP",
+        "CosmicDirAll3D",
+        "CosmicIPAll3D",
+        # "nu_flashmatch_score","best_cosmic_flashmatch_score","best_obviouscosmic_flashmatch_score",
+        #"flash_pe",
+        # The TRK scroe is a rugged array and loading it directly into the Dataframe is very memory intensive
+        # "trk_llr_pid_score_v",  # trk-PID score
+        "_opfilter_pe_beam",
+        "_opfilter_pe_veto",  # did the event pass the common optical filter (for MC only)
+        "reco_nu_vtx_sce_x",
+        "reco_nu_vtx_sce_y",
+        "reco_nu_vtx_sce_z",
+        "nproton",
+        "nelec",
+        "nu_e",
+        # "hits_u", "hits_v", "hits_y",
+        "nneutron",
+        #"slnunhits",
+        "slnhits",
+        "true_e_visible",
+        "npi0",
+        "npion",
+        "pion_e",
+        "muon_e",
+        "pi0truth_elec_etot",
+        "pi0_e",
+        #"evnunhits",
+        "nslice",
+        "interaction",
+        "proton_e",
+        "slclustfrac",
+        "reco_nu_vtx_x",
+        "reco_nu_vtx_y",
+        "reco_nu_vtx_z",
+        "true_nu_vtx_sce_x",
+        "true_nu_vtx_sce_y",
+        "true_nu_vtx_sce_z",
+        "true_nu_vtx_x",
+        "true_nu_vtx_y",
+        "true_nu_vtx_z",
+        # "trk_sce_start_x_v","trk_sce_start_y_v","trk_sce_start_z_v",
+        # "trk_sce_end_x_v","trk_sce_end_y_v","trk_sce_end_z_v",
+        # "trk_start_x_v","trk_start_z_v","trk_start_z_v",
+        "topological_score",
+        "isVtxInFiducial",
+        "theta",  # angle between incoming and outgoing leptons in radians
+        # "nu_decay_mode","nu_hadron_pdg","nu_parent_pdg", # flux truth info
+        # "shr_energy_tot_cali","selected","n_showers_contained",  # only if CC0piNp variables are saved!
+        # We do not want to load "vector" variables into the final dataframe, as they take up 
+        # a lot of memory
+        # "pfp_generation_v",
+            #"shr_energy_cali"
+        # "trk_dir_x_v",
+        # "trk_dir_y_v",
+        # "trk_dir_z_v",
+        "n_showers_contained"
+    ]
+
+pelee_mcf_variables = [
+        "mcf_nu_e",
+        "mcf_lep_e",
+        "mcf_actvol",
+        "mcf_nmm",
+        "mcf_nmp",
+        "mcf_nem",
+        "mcf_nep",
+        "mcf_np0",
+        "mcf_npp",
+        "mcf_npm",
+        "mcf_mcshr_elec_etot",
+        "mcf_pass_ccpi0",
+        "mcf_pass_ncpi0",
+        "mcf_pass_ccnopi",
+        "mcf_pass_ncnopi",
+        "mcf_pass_cccpi",
+        "mcf_pass_nccpi"
+    ]
+
+pelee_nue_variables = [
+            #"shr_dedx_Y",
+            #"shr_bkt_pdg",
+            #"shr_theta",
+        # "shr_pfp_id_v",  # this is an array
+            #"shr_tkfit_dedx_U",
+            #"shr_tkfit_dedx_V",
+            #"shr_tkfit_dedx_Y",
+            #"shr_tkfit_gap10_dedx_U",
+            #"shr_tkfit_gap10_dedx_V",
+            #"shr_tkfit_gap10_dedx_Y",
+            #"shr_tkfit_2cm_dedx_U",
+            #"shr_tkfit_2cm_dedx_V",
+            #"shr_tkfit_2cm_dedx_Y",
+        "shrmoliereavg",
+        "shrmoliererms",
+        "shr_energy_tot_cali",
+        "n_showers_contained",
+        "selected",
+        "shr_tkfit_npointsvalid",
+        "shr_tkfit_npoints",  # fitted vs. all hits for shower
+        "shrclusfrac0",
+        "shrclusfrac1",
+        "shrclusfrac2",  # track-fitted hits / all hits
+        "trkshrhitdist2",
+        "trkshrhitdist0",
+        "trkshrhitdist1",  # distance between track and shower in 2D
+        "shrsubclusters0",
+        "shrsubclusters1",
+        "shrsubclusters2",  # number of sub-clusters in shower
+        "secondshower_U_nhit",
+        "secondshower_U_vtxdist",
+        "secondshower_U_dot",
+        "secondshower_U_dir",
+        "shrclusdir0",
+        "secondshower_V_nhit",
+        "secondshower_V_vtxdist",
+        "secondshower_V_dot",
+        "secondshower_V_dir",
+        "shrclusdir1",
+        "secondshower_Y_nhit",
+        "secondshower_Y_vtxdist",
+        "secondshower_Y_dot",
+        "secondshower_Y_dir",
+        "shrclusdir2",
+        "shrMCSMom",
+        "DeltaRMS2h",
+        "shrPCA1CMed_5cm",
+        "CylFrac2h_1cm",
+        "shr_hits_tot",
+        "shr_hits_u_tot",
+        "shr_hits_v_tot",
+        "shr_hits_y_tot",
+        # "shr_theta_v",
+        # "shr_phi_v",
+        # "shr_energy_y_v",
+        # "shr_start_x_v",
+        # "shr_start_z_v",
+        # "shr_start_z_v",
+        #"trk_bkt_pdg",
+        #"shr_tkfit_dedx_U",
+        #"shr_tkfit_dedx_V",
+            #"trk_bkt_pdg",
+        "shr_energy",
+        "shr_dedx_U",
+        "shr_dedx_V",
+        "shr_phi",
+        "trk_phi",
+        "trk_theta",
+        "shr_distance",
+        "trk_distance",
+        "matched_E",
+            #"shr_bkt_E",
+            #"trk_bkt_E",
+        "shr_tkfit_nhits_Y",
+        "shr_tkfit_nhits_U",
+        "shr_tkfit_nhits_V",
+        "shr_tkfit_2cm_nhits_Y",
+        "shr_tkfit_2cm_nhits_U",
+        "shr_tkfit_2cm_nhits_V",
+        "shr_tkfit_gap10_nhits_Y",
+        "shr_tkfit_gap10_nhits_U",
+        "shr_tkfit_gap10_nhits_V",
+        "trk_energy",
+        "tksh_distance",
+        "tksh_angle",
+        "contained_fraction",
+        "shr_score",
+        "trk_score",
+        "trk_hits_tot",
+        "trk_len",
+        "trk_hits_u_tot",
+        "trk_hits_v_tot",
+        "trk_hits_y_tot",
+        "shr_dedx_Y_cali",
+        "trk_energy_tot",
+        "shr_id",
+        "hits_ratio",
+        "n_tracks_contained",
+        "shr_px",
+        "shr_py",
+        "shr_pz",
+        "p",
+        "pt",
+        "hits_y",
+        "shr_start_x",
+        "elec_pz",
+        "elec_e",
+        "truthFiducial",
+        "pi0truth_gamma1_edep",
+        #"shr_bkt_E",
+        "pi0truth_gamma1_etot",
+        "pi0truth_gamma1_zpos",
+        "shr_start_z",
+        "pi0truth_gamma1_ypos",
+        "shr_start_y",
+        "pi0truth_gamma1_xpos"
+    ]
+
+pelee_pi0_variables = [
+        "pi0_radlen1",
+        "pi0_radlen2",
+        "pi0_dot1",
+        "pi0_dot2",
+        "pi0_energy1_Y",
+        "pi0_energy2_Y",
+        "pi0_dedx1_fit_Y",
+        "pi0_dedx2_fit_Y",
+        "pi0_shrscore1",
+        "pi0_shrscore2",
+        "pi0_gammadot",
+        "pi0_dedx1_fit_V",
+        "pi0_dedx2_fit_V",
+        "pi0_dedx1_fit_U",
+        "pi0_dedx2_fit_U",
+        "pi0_mass_Y",
+        "pi0_mass_V",
+        "pi0_mass_U",
+        "pi0_nshower",
+        "pi0_dir2_x",
+        "pi0_dir2_y",
+        "pi0_dir2_z",
+        "pi0_dir1_x",
+        "pi0_dir1_y",
+        "pi0_dir1_z",
+        "pi0truth_gamma1_etot",
+        "pi0truth_gamma2_etot",
+        "pi0truth_gammadot",
+        "pi0truth_gamma_parent",
+        "pi0truth_gamma1_dist",
+        "pi0truth_gamma1_edep",
+        "pi0truth_gamma2_dist",
+        "pi0truth_gamma2_edep"
+        #"true_nu_vtx_x",
+        #"true_nu_vtx_y",
+        #"true_nu_vtx_z",  # ,"n_showers_contained"
+    ]
+
+pelee_truth_variables = [
+    "shr_energy_cali",
+    "shr_dedx_Y",
+    "shr_bkt_E",
+    "trk_bkt_E",
+    "shr_bkt_pdg",
+    "trk_bkt_pdg",
+    "shr_theta",
+    "shr_tkfit_dedx_U",
+    "shr_tkfit_dedx_V",
+    "shr_tkfit_dedx_Y",
+    "shr_tkfit_gap10_dedx_U",
+    "shr_tkfit_gap10_dedx_V",
+    "shr_tkfit_gap10_dedx_Y",
+    "shr_tkfit_2cm_dedx_U",
+    "shr_tkfit_2cm_dedx_V",
+    "shr_tkfit_2cm_dedx_Y"
+]
+

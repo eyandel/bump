@@ -74,10 +74,10 @@ void rescaleaxisgraph(TGraphAsymmErrors* h, double scale){
 
 void MakeHistsFromConstrained(){
 
-  TString file_name = "Xp_1500_data";
+  TString file_name = "0p_600_data";
   float bin_start = 0.0;
-  float bin_end = 1600.0;
-  int num_bins = 16;
+  float bin_end = 700.0;
+  int num_bins = 7;
   
   TString variable = "Reconstructed Shower Energy";
   TString units = "MeV";//"MeV";
