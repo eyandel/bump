@@ -1547,7 +1547,7 @@ def PassSelection(selection, all_df, i):
     ncpi0_score = all_df["single_photon_ncpi0_score"].to_numpy()[i]
     nue_score = all_df["single_photon_nue_score"].to_numpy()[i]
     num_shw = all_df["shw_sp_n_20mev_showers"].to_numpy()[i]
-    num_pro = all_df["shw_sp_n_20mev_protons"].to_numpy()[i]
+    num_pro = all_df["N_protons"].to_numpy()[i]
     r = all_df["run"].to_numpy()[i]
     s = all_df["subrun"].to_numpy()[i]
     e = all_df["event"].to_numpy()[i]
