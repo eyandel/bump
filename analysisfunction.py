@@ -1551,6 +1551,7 @@ def PassSelection(selection, all_df, i):
     r = all_df["run"].to_numpy()[i]
     s = all_df["subrun"].to_numpy()[i]
     e = all_df["event"].to_numpy()[i]
+    enu = all_df["kine_reco_Enu"].to_numpy()[i]
 
     p = False
     if selection=="numu_sideband" and numu_score < 0.1 and numu_score > -20.0:
@@ -1602,6 +1603,8 @@ def PassSelection(selection, all_df, i):
     elif selection=="all":
         p = True
     elif selection=="preselection" and numu_score>-15.0:
+        p = True
+    elif selection=="generic" and enu > 0.0:
         p = True
     elif selection=="test" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > 0.5 and nue_score > -1.0 and num_shw==1:
         p = True
@@ -1914,6 +1917,26 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
             selected_nueCC_var.append(selected_var_bkg[i])
             selected_nueCC_w.append(selected_w_bkg[i])
             h_nueCC.Fill(selected_var_bkg[i],selected_w_bkg[i])
+        elif selected_true_event_type_bkg[i]==3: 
+            selected_NCpi1g_var.append(selected_var_bkg[i])
+            selected_NCpi1g_w.append(selected_w_bkg[i])
+            h_NCpi1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
+        elif selected_true_event_type_bkg[i]==2: 
+            selected_NCdel_var.append(selected_var_bkg[i])
+            selected_NCdel_w.append(selected_w_bkg[i])
+            h_NCdel.Fill(selected_var_bkg[i],selected_w_bkg[i])
+        elif selected_true_event_type_bkg[i]==1: 
+            selected_NCother_var.append(selected_var_bkg[i])
+            selected_NCother_w.append(selected_w_bkg[i])
+            h_NCother.Fill(selected_var_bkg[i],selected_w_bkg[i])
+        elif selected_true_event_type_sig[i]==0: 
+            selected_numuCC1g_var.append(selected_var_bkg[i])
+            selected_numuCC1g_w.append(selected_w_bkg[i])
+            h_numuCC1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
+        elif selected_true_event_type_sig[i]==111: 
+            selected_out1g_var.append(selected_var_bkg[i])
+            selected_out1g_w.append(selected_w_bkg[i])
+            h_out1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
 
         else:
             print("There is an unknown additional background type")
@@ -1922,7 +1945,43 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
             #print(selected_nu_Pdg_bkg[i])
 
     for i in range(len(selected_var_sig)):
-        if selected_true_event_type_sig[i]==3: 
+        if selected_true_event_type_sig[i]==12:
+            selected_ext_var.append(selected_var_sig[i])
+            selected_ext_w.append(selected_w_sig[i])
+            h_ext.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==11:
+            selected_dirt_var.append(selected_var_sig[i])
+            selected_dirt_w.append(selected_w_sig[i])
+            h_dirt.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==10:
+            selected_cos_var.append(selected_var_sig[i])
+            selected_cos_w.append(selected_w_sig[i])
+            h_cos.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==9:
+            selected_outFV_var.append(selected_var_sig[i])
+            selected_outFV_w.append(selected_w_sig[i])
+            h_outFV.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==8: 
+            selected_numuCCpi0_var.append(selected_var_sig[i])
+            selected_numuCCpi0_w.append(selected_w_sig[i])
+            h_numuCCpi0.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==7:
+            selected_numuCC_var.append(selected_var_sig[i])
+            selected_numuCC_w.append(selected_w_sig[i])
+            h_numuCC.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==6:
+            selected_NCpi0_var.append(selected_var_sig[i])
+            selected_NCpi0_w.append(selected_w_sig[i])
+            h_NCpi0.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==5:
+            selected_NC_var.append(selected_var_sig[i])
+            selected_NC_w.append(selected_w_sig[i])
+            h_NC.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==4: 
+            selected_nueCC_var.append(selected_var_sig[i])
+            selected_nueCC_w.append(selected_w_sig[i])
+            h_nueCC.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==3: 
             selected_NCpi1g_var.append(selected_var_sig[i])
             selected_NCpi1g_w.append(selected_w_sig[i])
             h_NCpi1g.Fill(selected_var_sig[i],selected_w_sig[i])
@@ -2569,7 +2628,6 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
 
 
     for i in range(len(selected_var_bkg)):
-        h_bkg.Fill(selected_var_bkg[i],selected_w_bkg[i])
         if selected_true_event_type_bkg[i]==12:
             selected_ext_var.append(selected_var_bkg[i])
             selected_ext_w.append(selected_w_bkg[i])
@@ -2606,6 +2664,26 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
             selected_nueCC_var.append(selected_var_bkg[i])
             selected_nueCC_w.append(selected_w_bkg[i])
             h_nueCC.Fill(selected_var_bkg[i],selected_w_bkg[i])
+        elif selected_true_event_type_bkg[i]==3: 
+            selected_NCpi1g_var.append(selected_var_bkg[i])
+            selected_NCpi1g_w.append(selected_w_bkg[i])
+            h_NCpi1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
+        elif selected_true_event_type_bkg[i]==2: 
+            selected_NCdel_var.append(selected_var_bkg[i])
+            selected_NCdel_w.append(selected_w_bkg[i])
+            h_NCdel.Fill(selected_var_bkg[i],selected_w_bkg[i])
+        elif selected_true_event_type_bkg[i]==1: 
+            selected_NCother_var.append(selected_var_bkg[i])
+            selected_NCother_w.append(selected_w_bkg[i])
+            h_NCother.Fill(selected_var_bkg[i],selected_w_bkg[i])
+        elif selected_true_event_type_sig[i]==0: 
+            selected_numuCC1g_var.append(selected_var_bkg[i])
+            selected_numuCC1g_w.append(selected_w_bkg[i])
+            h_numuCC1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
+        elif selected_true_event_type_sig[i]==111: 
+            selected_out1g_var.append(selected_var_bkg[i])
+            selected_out1g_w.append(selected_w_bkg[i])
+            h_out1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
 
         else:
             print("There is an unknown additional background type")
@@ -2614,8 +2692,43 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
             #print(selected_nu_Pdg_bkg[i])
 
     for i in range(len(selected_var_sig)):
-        h_sig.Fill(selected_var_sig[i],selected_w_sig[i])
-        if selected_true_event_type_sig[i]==3: 
+        if selected_true_event_type_sig[i]==12:
+            selected_ext_var.append(selected_var_sig[i])
+            selected_ext_w.append(selected_w_sig[i])
+            h_ext.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==11:
+            selected_dirt_var.append(selected_var_sig[i])
+            selected_dirt_w.append(selected_w_sig[i])
+            h_dirt.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==10:
+            selected_cos_var.append(selected_var_sig[i])
+            selected_cos_w.append(selected_w_sig[i])
+            h_cos.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==9:
+            selected_outFV_var.append(selected_var_sig[i])
+            selected_outFV_w.append(selected_w_sig[i])
+            h_outFV.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==8: 
+            selected_numuCCpi0_var.append(selected_var_sig[i])
+            selected_numuCCpi0_w.append(selected_w_sig[i])
+            h_numuCCpi0.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==7:
+            selected_numuCC_var.append(selected_var_sig[i])
+            selected_numuCC_w.append(selected_w_sig[i])
+            h_numuCC.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==6:
+            selected_NCpi0_var.append(selected_var_sig[i])
+            selected_NCpi0_w.append(selected_w_sig[i])
+            h_NCpi0.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==5:
+            selected_NC_var.append(selected_var_sig[i])
+            selected_NC_w.append(selected_w_sig[i])
+            h_NC.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==4: 
+            selected_nueCC_var.append(selected_var_sig[i])
+            selected_nueCC_w.append(selected_w_sig[i])
+            h_nueCC.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif selected_true_event_type_sig[i]==3: 
             selected_NCpi1g_var.append(selected_var_sig[i])
             selected_NCpi1g_w.append(selected_w_sig[i])
             h_NCpi1g.Fill(selected_var_sig[i],selected_w_sig[i])
