@@ -1929,11 +1929,11 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
             selected_NCother_var.append(selected_var_bkg[i])
             selected_NCother_w.append(selected_w_bkg[i])
             h_NCother.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_sig[i]==0: 
+        elif selected_true_event_type_bkg[i]==0: 
             selected_numuCC1g_var.append(selected_var_bkg[i])
             selected_numuCC1g_w.append(selected_w_bkg[i])
             h_numuCC1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_sig[i]==111: 
+        elif selected_true_event_type_bkg[i]==111: 
             selected_out1g_var.append(selected_var_bkg[i])
             selected_out1g_w.append(selected_w_bkg[i])
             h_out1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
@@ -2319,7 +2319,7 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
     
     c.Update()
     #c.Draw()
-    c.Print('plots/root_plots/'+plot_folder+'/datamc/'+title+'.png')
+    c.Print(plot_folder+'/datamc/'+title+'.png')
     
     print(title)
     
@@ -2483,7 +2483,7 @@ def MakeDataPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y
     c.Modified() 
     c.Update()
     #c.Draw()
-    c.Print('plots/root_plots/'+plot_folder+'/data/'+title+'.png')
+    c.Print(plot_folder+'/data/'+title+'.png')
     
     print(title)
     
@@ -2676,11 +2676,11 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
             selected_NCother_var.append(selected_var_bkg[i])
             selected_NCother_w.append(selected_w_bkg[i])
             h_NCother.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_sig[i]==0: 
+        elif selected_true_event_type_bkg[i]==0: 
             selected_numuCC1g_var.append(selected_var_bkg[i])
             selected_numuCC1g_w.append(selected_w_bkg[i])
             h_numuCC1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_sig[i]==111: 
+        elif selected_true_event_type_bkg[i]==111: 
             selected_out1g_var.append(selected_var_bkg[i])
             selected_out1g_w.append(selected_w_bkg[i])
             h_out1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
@@ -3057,7 +3057,7 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
         c.SetLogy()
     c.Update()
     #c.Draw()
-    c.Print('plots/root_plots/'+plot_folder+'/mc_only/'+title+'.png')
+    c.Print(plot_folder+'/mc_only/'+title+'.png')
     
     return h_sig, h_bkg
 
@@ -3071,11 +3071,11 @@ def MakeVarPlots(all_df, var_list, num_bins, folder_name, plot_folder_name, sele
         
     plot_folder_temp = plot_folder_name
     plot_folder = plot_folder_name+'/'+folder_name
-    if not os.path.exists('plots/root_plots/'+plot_folder):
-        os.makedirs('plots/root_plots/'+plot_folder)
-        os.makedirs('plots/root_plots/'+plot_folder+'/datamc')
-        os.makedirs('plots/root_plots/'+plot_folder+'/data')
-        os.makedirs('plots/root_plots/'+plot_folder+'/mc_only')
+    if not os.path.exists(plot_folder):
+        os.makedirs(plot_folder)
+        os.makedirs(plot_folder+'/datamc')
+        os.makedirs(plot_folder+'/data')
+        os.makedirs(plot_folder+'/mc_only')
 
     y = all_df["true_event_type"].to_numpy()
     num_evts = len(y)
@@ -3800,7 +3800,7 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     h_stack.Draw("colz")
     c.Update()
     #c.Draw()
-    c.Print('plots/root_plots/'+plot_folder+'/plots_2d/'+title+'.png')
+    c.Print(plot_folder+'/plots_2d/'+title+'.png')
     
     
     
