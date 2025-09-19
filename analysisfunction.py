@@ -1,11 +1,11 @@
 ###
-import xgboost as xgb
+#import xgboost as xgb
 import matplotlib.pyplot as plt
 import uproot as uproot
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import roc_curve, auc
+#from sklearn.model_selection import train_test_split
+#from sklearn.metrics import roc_curve, auc
 import shutil
 from array import array
 import math
@@ -94,6 +94,11 @@ def LoadTreesTruth(file1, file2, file3, su = False):
             all_df_in_time_data_1 = f_in_time_data.arrays(time_variables + time_truth_variables, library="pd")
         with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
             all_df_in_pelee_data_1 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + pelee_time_variables, library="pd")
+        with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
+            all_df_in_glee_data_1 = f_in_glee_data.arrays(glee_reco_variables, library="pd")
+        with uproot.open(file1)["lantern/EventTree"] as f_in_lantern_data:
+            all_df_in_lantern_data_1 = f_in_lantern_data.arrays(lantern_reco_variables, library="pd")
+
         
 
 
@@ -114,6 +119,10 @@ def LoadTreesTruth(file1, file2, file3, su = False):
             all_df_in_time_data_2 = f_in_time_data.arrays(time_variables + time_truth_variables, library="pd")
         with uproot.open(file2)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
             all_df_in_pelee_data_2 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + pelee_time_variables, library="pd")
+        with uproot.open(file2)["singlephotonana/vertex_tree"] as f_in_glee_data:
+            all_df_in_glee_data_2 = f_in_glee_data.arrays(glee_reco_variables, library="pd")
+        with uproot.open(file2)["lantern/EventTree"] as f_in_lantern_data:
+            all_df_in_lantern_data_2 = f_in_lantern_data.arrays(lantern_reco_variables, library="pd")
       
 
 
@@ -134,6 +143,10 @@ def LoadTreesTruth(file1, file2, file3, su = False):
             all_df_in_time_data_3 = f_in_time_data.arrays(time_variables + time_truth_variables, library="pd")
         with uproot.open(file3)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
             all_df_in_pelee_data_3 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + pelee_time_variables, library="pd")
+        with uproot.open(file3)["singlephotonana/vertex_tree"] as f_in_glee_data:
+            all_df_in_glee_data_3 = f_in_glee_data.arrays(glee_reco_variables, library="pd")
+        with uproot.open(file3)["lantern/EventTree"] as f_in_lantern_data:
+            all_df_in_lantern_data_3 = f_in_lantern_data.arrays(lantern_reco_variables, library="pd")
       
 
     all_df_in_bdt_over = pd.concat([all_df_in_bdt_over_1, all_df_in_bdt_over_2, all_df_in_bdt_over_3], ignore_index=True, sort=False)
@@ -172,8 +185,20 @@ def LoadTreesTruth(file1, file2, file3, su = False):
     del all_df_in_pelee_data_2
     del all_df_in_pelee_data_3
 
+    all_df_in_glee_data = pd.concat([all_df_in_glee_data_1, all_df_in_glee_data_2, all_df_in_glee_data_3], ignore_index=True, sort=False) if su else None
+
+    del all_df_in_glee_data_1
+    del all_df_in_glee_data_2
+    del all_df_in_glee_data_3
+
+    all_df_in_lantern_data = pd.concat([all_df_in_lantern_data_1, all_df_in_lantern_data_2, all_df_in_lantern_data_3], ignore_index=True, sort=False) if su else None
+
+    del all_df_in_lantern_data_1
+    del all_df_in_lantern_data_2
+    del all_df_in_lantern_data_3
+
     if su:
-        return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data
+        return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, all_df_in_glee_data, all_df_in_lantern_data
     else:
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
 
@@ -196,7 +221,11 @@ def LoadTreesTruth1(file1, su = False):
             all_df_in_time_data = f_in_time_data.arrays(time_variables + time_truth_variables, library="pd")
         with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
             all_df_in_pelee_data = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + pelee_time_variables, library="pd")
-        return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data
+        with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
+            all_df_in_glee_data = f_in_glee_data.arrays(glee_reco_variables, library="pd")
+        with uproot.open(file1)["lantern/EventTree"] as f_in_lantern_data:
+            all_df_in_lantern_data = f_in_lantern_data.arrays(lantern_reco_variables, library="pd")
+        return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, all_df_in_glee_data, all_df_in_lantern_data
     else:
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
 
@@ -219,6 +248,10 @@ def LoadTreesData(file1, file2, file3, su = False):
             all_df_in_time_data_1 = f_in_time_data.arrays(time_variables, library="pd")
         with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
             all_df_in_pelee_data_1 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + pelee_time_variables, library="pd")
+        with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
+            all_df_in_glee_data_1 = f_in_glee_data.arrays(glee_reco_variables, library="pd")
+        with uproot.open(file1)["lantern/EventTree"] as f_in_lantern_data:
+            all_df_in_lantern_data_1 = f_in_lantern_data.arrays(lantern_reco_variables, library="pd")
         
 
 
@@ -239,6 +272,10 @@ def LoadTreesData(file1, file2, file3, su = False):
             all_df_in_time_data_2 = f_in_time_data.arrays(time_variables, library="pd")
         with uproot.open(file2)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
             all_df_in_pelee_data_2 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + pelee_time_variables, library="pd")
+        with uproot.open(file2)["singlephotonana/vertex_tree"] as f_in_glee_data:
+            all_df_in_glee_data_2 = f_in_glee_data.arrays(glee_reco_variables, library="pd")
+        with uproot.open(file2)["lantern/EventTree"] as f_in_lantern_data:
+            all_df_in_lantern_data_2 = f_in_lantern_data.arrays(lantern_reco_variables, library="pd")
 
 
 
@@ -259,6 +296,10 @@ def LoadTreesData(file1, file2, file3, su = False):
             all_df_in_time_data_3 = f_in_time_data.arrays(time_variables, library="pd")
         with uproot.open(file3)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
             all_df_in_pelee_data_3 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + pelee_time_variables, library="pd")
+        with uproot.open(file3)["singlephotonana/vertex_tree"] as f_in_glee_data:
+            all_df_in_glee_data_3 = f_in_glee_data.arrays(glee_reco_variables, library="pd")
+        with uproot.open(file3)["lantern/EventTree"] as f_in_lantern_data:
+            all_df_in_lantern_data_3 = f_in_lantern_data.arrays(lantern_reco_variables, library="pd")
 
 
     all_df_in_bdt_over = pd.concat([all_df_in_bdt_over_1, all_df_in_bdt_over_2, all_df_in_bdt_over_3], ignore_index=True, sort=False)
@@ -297,8 +338,20 @@ def LoadTreesData(file1, file2, file3, su = False):
     del all_df_in_pelee_data_2
     del all_df_in_pelee_data_3
 
+    all_df_in_glee_data = pd.concat([all_df_in_glee_data_1, all_df_in_glee_data_2, all_df_in_glee_data_3], ignore_index=True, sort=False) if su else None
+
+    del all_df_in_glee_data_1
+    del all_df_in_glee_data_2
+    del all_df_in_glee_data_3
+
+    all_df_in_lantern_data = pd.concat([all_df_in_lantern_data_1, all_df_in_lantern_data_2, all_df_in_lantern_data_3], ignore_index=True, sort=False) if su else None
+
+    del all_df_in_lantern_data_1
+    del all_df_in_lantern_data_2
+    del all_df_in_lantern_data_3
+
     if su:
-        return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data
+        return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, all_df_in_glee_data, all_df_in_lantern_data
     else:
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
 
@@ -321,13 +374,17 @@ def LoadTreesData1(file1, su = False):
             all_df_in_time_data = f_in_time_data.arrays(time_variables, library="pd")
         with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
             all_df_in_pelee_data = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + pelee_time_variables, library="pd")
-        return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data
+        with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
+            all_df_in_glee_data = f_in_glee_data.arrays(glee_reco_variables, library="pd")
+        with uproot.open(file1)["lantern/EventTree"] as f_in_lantern_data:
+            all_df_in_lantern_data = f_in_lantern_data.arrays(lantern_reco_variables, library="pd")
+        return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, all_df_in_glee_data, all_df_in_lantern_data
     else:
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
 
 
 ###
-def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_over = [], all_df_in_pelee_over = [] ):
+def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_over = [], all_df_in_pelee_over = [], all_df_in_glee_over = [], all_df_in_lantern_over = []):
     #bnb overlay
     true_event_types = []
     shw_sp_energy = []
@@ -567,11 +624,15 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
         all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_time_over)
     if (len(all_df_in_pelee_over) > 0):
         all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_pelee_over)
+    if (len(all_df_in_glee_over) > 0):
+        all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_glee_over)
+    if (len(all_df_in_lantern_over) > 0):
+        all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_lantern_over)
 
     return all_df_in_bdt_over
 
 ###
-def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all_df_in_eval_dirt, all_df_in_time_dirt = [], all_df_in_pelee_dirt = []):
+def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all_df_in_eval_dirt, all_df_in_time_dirt = [], all_df_in_pelee_dirt = [], all_df_in_glee_dirt = [], all_df_in_lantern_dirt = []):
     #dirt
     true_event_types = []
     shw_sp_energy = []
@@ -771,11 +832,15 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
         all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_time_dirt)
     if (len(all_df_in_pelee_dirt) > 0):
         all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_pelee_dirt)
+    if (len(all_df_in_glee_dirt) > 0):
+        all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_glee_dirt)
+    if (len(all_df_in_lantern_dirt) > 0):
+        all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_lantern_dirt)
 
     return all_df_in_bdt_dirt
 
 ###
-def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_df_in_eval_ext, all_df_in_time_ext = [], all_df_in_pelee_ext = []):
+def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_df_in_eval_ext, all_df_in_time_ext = [], all_df_in_pelee_ext = [], all_df_in_glee_ext = [], all_df_in_lantern_ext = []):
     #extbnb
     true_event_types = []
     shw_sp_energy = []
@@ -952,11 +1017,15 @@ def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_
         all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_time_ext)
     if (len(all_df_in_pelee_ext) > 0):
         all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_pelee_ext)
+    if (len(all_df_in_glee_ext) > 0):
+        all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_glee_ext)
+    if (len(all_df_in_lantern_ext) > 0):
+        all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_lantern_ext)
 
     return all_df_in_bdt_ext
 
 ###
-def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_df_in_eval_data, all_df_in_time_data = [], all_df_in_pelee_data = []):
+def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_df_in_eval_data, all_df_in_time_data = [], all_df_in_pelee_data = [], all_df_in_glee_data = [], all_df_in_lantern_data = []):
     #bnb data
     true_event_types = []
     shw_sp_energy = []
@@ -1141,11 +1210,15 @@ def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_
         all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_time_data)
     if (len(all_df_in_pelee_data) > 0):
         all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_pelee_data)
+    if (len(all_df_in_glee_data) > 0):
+        all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_glee_data)
+    if (len(all_df_in_lantern_data) > 0):
+        all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_lantern_data)
 
     return all_df_in_bdt_data
 
 ###
-def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_over = [], all_df_in_pelee_over = []):
+def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_over = [], all_df_in_pelee_over = [], all_df_in_glee_over = [], all_df_in_lantern_over = []):
     #ncpi0 overlay overlay
     true_event_types = []
     true_event_types_sub = []
@@ -1389,6 +1462,10 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
         all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_time_over)
     if (len(all_df_in_pelee_over) > 0):
         all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_pelee_over)
+    if (len(all_df_in_glee_over) > 0):
+        all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_glee_over)
+    if (len(all_df_in_lantern_over) > 0):
+        all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_lantern_over)
 
     return all_df_in_bdt_over
 
@@ -4690,5 +4767,378 @@ pelee_truth_variables = [
     "shr_tkfit_2cm_dedx_U",
     "shr_tkfit_2cm_dedx_V",
     "shr_tkfit_2cm_dedx_Y"
+]
+
+glee_reco_variables = [
+ "run_number",
+ "subrun_number",   
+ "event_number",
+ "pot_per_event", 
+ "pot_per_subrun",
+ "number_of_events_in_subrun",
+ "genie_spline_weight",
+ "genie_CV_tune_weight",
+ "photonu_weight_low",
+ "photonu_weight_high",
+ "test_matched_hits",
+ "reco_vertex_size",
+ "reco_vertex_x",
+ "reco_vertex_y",
+ "reco_vertex_z",
+ "reco_vertex_wire_p0",
+ "reco_vertex_wire_p1",
+ "reco_vertex_wire_p2",
+ "reco_vertex_tick",
+ "reco_vertex_in_SCB",
+ "reco_vertex_dist_to_SCB",
+ "reco_vertex_dist_to_active_TPC",
+ "reco_vertex_to_nearest_dead_wire_plane0",
+ "reco_vertex_to_nearest_dead_wire_plane1",
+ "reco_vertex_to_nearest_dead_wire_plane2",
+ "reco_slice_objects",
+ "m_flash_optfltr_pe_beam",
+ "m_flash_optfltr_pe_veto",
+ "m_flash_optfltr_pe_veto_tot",
+ "m_flash_optfltr_pe_beam_tot",
+ "textgen_info",
+ "isolation_min_dist_trk_shr",
+ "isolation_min_dist_trk_unassoc",
+ "isolation_num_shr_hits_win_1cm_trk",
+ "isolation_num_shr_hits_win_2cm_trk",
+ "isolation_num_shr_hits_win_5cm_trk",
+ "isolation_num_shr_hits_win_10cm_trk",
+ "isolation_num_unassoc_hits_win_1cm_trk",
+ "isolation_num_unassoc_hits_win_2cm_trk",
+ "isolation_num_unassoc_hits_win_5cm_trk",
+ "isolation_num_unassoc_hits_win_10cm_trk",
+ "isolation_nearest_shr_hit_to_trk_wire",
+ "isolation_nearest_shr_hit_to_trk_time",
+ "isolation_nearest_unassoc_hit_to_trk_wire",
+ "isolation_nearest_unassoc_hit_to_trk_time",
+ "sss_num_unassociated_hits",
+ "sss_num_unassociated_hits_below_threshold",
+ "sss_num_associated_hits",
+ "sss_num_candidates",
+ "sss_candidate_veto_score",
+ "sss_candidate_in_nu_slice",
+ "sss_candidate_num_hits",
+ "sss_candidate_num_wires",
+ "sss_candidate_num_ticks",
+ "sss_candidate_plane",
+ "sss_candidate_PCA",
+ "sss_candidate_mean_ADC",
+ "sss_candidate_ADC_RMS",
+ "sss_candidate_impact_parameter",
+ "sss_candidate_fit_slope",
+ "sss_candidate_fit_constant",
+ "sss_candidate_mean_tick",
+ "sss_candidate_max_tick",
+ "sss_candidate_min_tick",
+ "sss_candidate_mean_wire",
+ "sss_candidate_max_wire",
+ "sss_candidate_min_wire",
+ "sss_candidate_min_dist",
+ "sss_candidate_wire_tick_based_length",
+ "sss_candidate_energy",
+ "sss_candidate_angle_to_shower",
+ "sss_candidate_closest_neighbour",
+ "sss_candidate_remerge",
+ "sss_candidate_matched",
+ "sss_candidate_pdg",
+ "sss_candidate_parent_pdg",
+ "sss_candidate_trackid",
+ "sss_candidate_true_energy",
+ "sss_candidate_overlay_fraction",
+ "sss_candidate_matched_energy_fraction_best_plane",
+ "sss3d_ioc_ranked_en",
+ "sss3d_ioc_ranked_conv",
+ "sss3d_ioc_ranked_invar",
+ "sss3d_ioc_ranked_implied_invar",
+ "sss3d_ioc_ranked_ioc",
+ "sss3d_ioc_ranked_opang",
+ "sss3d_ioc_ranked_implied_opang",
+ "sss3d_ioc_ranked_id",
+ "sss3d_invar_ranked_en",
+ "sss3d_invar_ranked_conv",
+ "sss3d_invar_ranked_invar",
+ "sss3d_invar_ranked_implied_invar",
+ "sss3d_invar_ranked_ioc",
+ "sss3d_invar_ranked_opang",
+ "sss3d_invar_ranked_implied_opang",
+ "sss3d_invar_ranked_id",
+ "sss2d_ioc_ranked_en",
+ "sss2d_ioc_ranked_conv",
+ "sss2d_ioc_ranked_ioc",
+ "sss2d_ioc_ranked_pca",
+ "sss2d_ioc_ranked_invar",
+ "sss2d_ioc_ranked_angle_to_shower",
+ "sss2d_ioc_ranked_num_planes",
+ "sss2d_invar_ranked_en",
+ "sss2d_invar_ranked_conv",
+ "sss2d_invar_ranked_ioc",
+ "sss2d_invar_ranked_pca",
+ "sss2d_invar_ranked_invar",
+ "sss2d_invar_ranked_angle_to_shower",
+ "sss2d_invar_ranked_num_planes",
+ "sss2d_conv_ranked_en",
+ "sss2d_conv_ranked_conv",
+ "sss2d_conv_ranked_ioc",
+ "sss2d_conv_ranked_pca",
+ "sss2d_conv_ranked_invar",
+ "sss2d_conv_ranked_angle_to_shower",
+ "sss2d_conv_ranked_num_planes",
+ "sss3d_num_showers",
+ "sss3d_shower_start_x",
+ "sss3d_shower_start_y",
+ "sss3d_shower_start_z",
+ "sss3d_shower_dir_x",
+ "sss3d_shower_dir_y",
+ "sss3d_shower_dir_z",
+ "sss3d_shower_length",
+ "sss3d_shower_conversion_dist",
+ "sss3d_shower_invariant_mass",
+ "sss3d_shower_implied_invariant_mass",
+ "sss3d_shower_impact_parameter",
+ "sss3d_shower_ioc_ratio",
+ "sss3d_shower_energy_max",
+ "sss3d_shower_score",
+ "trackstub_num_unassociated_hits",
+ "trackstub_unassociated_hits_below_threshold",
+ "trackstub_associated_hits",
+ "trackstub_num_candidates",
+ "trackstub_candidate_in_nu_slice",
+ "trackstub_candidate_num_hits",
+ "trackstub_candidate_num_wires",
+ "trackstub_candidate_num_ticks",
+ "trackstub_candidate_plane",
+ "trackstub_candidate_PCA",
+ "trackstub_candidate_mean_ADC",
+ "trackstub_candidate_ADC_RMS",
+ "trackstub_candidate_veto_score",
+ "trackstub_candidate_mean_tick",
+ "trackstub_candidate_max_tick",
+ "trackstub_candidate_min_tick",
+ "trackstub_candidate_min_wire",
+ "trackstub_candidate_max_wire",
+ "trackstub_candidate_mean_wire",
+ "trackstub_candidate_min_dist",
+ "trackstub_candidate_min_impact_parameter_to_shower",
+ "trackstub_candidate_min_conversion_dist_to_shower_start",
+ "trackstub_candidate_min_ioc_to_shower_start",
+ "trackstub_candidate_ioc_based_length",
+ "trackstub_candidate_wire_tick_based_length",
+ "trackstub_candidate_mean_ADC_first_half",
+ "trackstub_candidate_mean_ADC_second_half",
+ "trackstub_candidate_mean_ADC_first_to_second_ratio",
+ "trackstub_candidate_track_angle_wrt_shower_direction",
+ "trackstub_candidate_linear_fit_chi2",
+ "trackstub_candidate_energy",
+ "trackstub_candidate_remerge",
+ "trackstub_candidate_matched",
+ "trackstub_candidate_matched_energy_fraction_best_plane",
+ "trackstub_candidate_pdg",
+ "trackstub_candidate_parent_pdg",
+ "trackstub_candidate_trackid",
+ "trackstub_candidate_true_energy",
+ "trackstub_candidate_overlay_fraction",
+ "trackstub_num_candidate_groups",
+ "grouped_trackstub_candidate_indices",
+ "trackstub_candidate_group_timeoverlap_fraction",
+ "beamgate_flash_start",
+ "beamgate_flash_end",
+ "reco_num_flashes",
+ "reco_num_flashes_in_beamgate",
+ "reco_flash_total_pe",
+ "reco_flash_time",
+ "reco_flash_time_width",
+ "reco_flash_abs_time",
+ "reco_flash_frame",
+ "reco_flash_ycenter",
+ "reco_flash_ywidth",
+ "reco_flash_zcenter",
+ "reco_flash_zwidth",
+ "reco_flash_total_pe_in_beamgate",
+ "reco_flash_time_in_beamgate",
+ "reco_flash_ycenter_in_beamgate",
+ "reco_flash_zcenter_in_beamgate",
+ "CRT_veto_nhits",
+ "CRT_veto_hit_PE",
+ "CRT_dt",
+ "CRT_min_hit_time",
+ "CRT_min_hit_PE",
+ "CRT_min_hit_x",
+ "CRT_min_hit_y",
+ "CRT_min_hit_z",
+ "CRT_hits_time",
+ "CRT_hits_PE",
+ "CRT_hits_x",
+ "CRT_hits_y",
+ "CRT_hits_z",
+ "reco_asso_showers",
+ "reco_shower_num_daughters",
+ "reco_shower_daughter_trackscore",
+ "reco_shower_length",
+ "reco_shower_opening_angle",
+ "reco_shower_dirx",
+ "reco_shower_diry",
+ "reco_shower_dirz",
+ "reco_shower_startx",
+ "reco_shower_starty",
+ "reco_shower_startz",
+ "reco_shower_start_wire_plane0",
+ "reco_shower_start_wire_plane1",
+ "reco_shower_start_wire_plane2",
+ "reco_shower_start_tick",
+ "reco_shower_start_dist_to_active_TPC",
+ "reco_shower_start_dist_to_SCB",
+ "reco_shower_start_in_SCB",
+ "reco_shower_end_dist_to_active_TPC",
+ "reco_shower_end_dist_to_SCB",
+ "reco_shower_theta_yz",
+ "reco_shower_phi_yx",
+ "reco_shower_conversion_distance",
+ "reco_shower_impact_parameter",
+ "reco_shower_implied_dirx",
+ "reco_shower_implied_diry",
+ "reco_shower_implied_dirz",
+ "reco_shower_delaunay_num_triangles_plane0",
+ "reco_shower_delaunay_num_triangles_plane1",
+ "reco_shower_delaunay_num_triangles_plane2",
+ "reco_shower_num_hits_plane0",
+ "reco_shower_num_hits_plane1",
+ "reco_shower_num_hits_plane2",
+ "reco_shower_delaunay_area_plane0",
+ "reco_shower_delaunay_area_plane1",
+ "reco_shower_delaunay_area_plane2",
+ "reco_shower_energy_max",
+ "reco_shower_energy_plane0",
+ "reco_shower_energy_plane1",
+ "reco_shower_energy_plane2",
+ "reco_shower_plane0_nhits",
+ "reco_shower_plane1_nhits",
+ "reco_shower_plane2_nhits",
+ "reco_shower_plane0_meanRMS",
+ "reco_shower_plane1_meanRMS",
+ "reco_shower_plane2_meanRMS",
+ "reco_shower_reclustered_energy_plane0",
+ "reco_shower_reclustered_energy_plane1",
+ "reco_shower_reclustered_energy_plane2",
+ "reco_shower_reclustered_energy_max",
+ "reco_shower_hit_tick",
+ "reco_shower_hit_wire",
+ "reco_shower_hit_plane",
+ "reco_shower_hit_energy",
+ "reco_shower_spacepoint_x",
+ "reco_shower_spacepoint_y",
+ "reco_shower_spacepoint_z",
+ "reco_shower_ordered_energy_index",
+ "i_shr",
+ "reco_shower_dQdx_plane0",
+ "reco_shower_dQdx_plane1",
+ "reco_shower_dQdx_plane2",
+ "reco_shower_dEdx_plane0",
+ "reco_shower_dEdx_plane1",
+ "reco_shower_dEdx_plane2",
+ "reco_shower_dEdx_plane0_median",
+ "reco_shower_dEdx_plane1_median",
+ "reco_shower_dEdx_plane2_median",
+ "reco_shower_angle_wrt_wires_plane0",
+ "reco_shower_angle_wrt_wires_plane1",
+ "reco_shower_angle_wrt_wires_plane2",
+ "reco_shower_dEdx_amalgamated",
+ "reco_shower_dEdx_amalgamated_nhits",
+ "reco_shower_dQdx_plane0_median",
+ "reco_shower_dQdx_plane1_median",
+ "reco_shower_dQdx_plane2_median",
+ "reco_shower_dEdx_plane0_mean",
+ "reco_shower_dEdx_plane1_mean",
+ "reco_shower_dEdx_plane2_mean",
+ "reco_shower_dEdx_plane0_max",
+ "reco_shower_dEdx_plane1_max",
+ "reco_shower_dEdx_plane2_max",
+ "reco_shower_dEdx_plane0_min",
+ "reco_shower_dEdx_plane1_min",
+ "reco_shower_dEdx_plane2_min",
+ "reco_shower_dEdx_plane0_nhits",
+ "reco_shower_dEdx_plane1_nhits",
+ "reco_shower_dEdx_plane2_nhits",
+ "reco_shower_start_to_nearest_dead_wire_plane0",
+ "reco_shower_start_to_nearest_dead_wire_plane1",
+ "reco_shower_start_to_nearest_dead_wire_plane2",
+ "reco_shower_flash_shortest_distz",
+ "reco_shower_flash_shortest_disty",
+ "reco_shower_flash_shortest_distyz",
+ "reco_shower_flash_shortest_index_z",
+ "reco_shower_flash_shortest_index_y",
+ "reco_shower_flash_shortest_index_yz",
+ "reco_shower_sliceId",
+ "reco_shower_nuscore",
+ "reco_shower_isclearcosmic",
+ "reco_shower_is_nuslice",
+ "reco_shower_trackscore",
+ "reco_shower_pfparticle_pdg",
+ "reco_shower3d_exists",
+ "reco_shower3d_length",
+ "reco_shower3d_opening_angle",
+ "reco_shower3d_dirx",
+ "reco_shower3d_diry",
+ "reco_shower3d_dirz",
+ "reco_shower3d_startx",
+ "reco_shower3d_starty",
+ "reco_shower3d_startz",
+ "reco_shower3d_theta_yz",
+ "reco_shower3d_phi_yx",
+ "reco_shower3d_conversion_distance",
+ "reco_shower3d_impact_parameter",
+ "reco_shower3d_implied_dirx",
+ "reco_shower3d_implied_diry",
+ "reco_shower3d_implied_dirz",
+ "reco_shower3d_energy_plane0",
+ "reco_shower3d_energy_plane1",
+ "reco_shower3d_energy_plane2",
+ "reco_shower3d_dEdx_plane0",
+ "reco_shower3d_dEdx_plane1",
+ "reco_shower3d_dEdx_plane2",
+ "reco_shower_kalman_exists",
+ "reco_shower_kalman_dEdx_plane0_median",
+ "reco_shower_kalman_dEdx_plane1_median",
+ "reco_shower_kalman_dEdx_plane2_median",
+ "reco_shower_kalman_dEdx_allplane_median",
+ "reco_shower_kalman_dEdx_plane0_mean",
+ "reco_shower_kalman_dEdx_plane1_mean",
+ "reco_shower_kalman_dEdx_plane2_mean"
+]
+
+lantern_reco_variables = [
+    "haveReco",
+    "fileid",
+    "recoNuE",
+    "foundVertex",
+    "vtxX",
+    "vtxY",
+    "vtxZ",
+    "vtxIsFiducial",
+    "vtxContainment",
+    "vtxScore",
+    "vtxMaxIntimePixelSum",
+    "vtxKPtype",
+    "vtxKPscore",
+    "vtxFracHitsOnCosmic",
+    "eventPCAxis0",
+    "eventPCAxis1",
+    "eventPCAxis2",
+    "eventPCAxis0TSlope",
+    "eventPCEigenVals",
+    "eventPCProjMaxGap",
+    "eventPCProjMaxDist",
+    "nKeypoints",
+    "kpClusterType",
+    "kpFilterType",
+    "kpMaxScore",
+    "kpMaxPosX",
+    "kpMaxPosY",
+    "kpMaxPosZ",
+    "nTracks",
+    "nShowers",
 ]
 
