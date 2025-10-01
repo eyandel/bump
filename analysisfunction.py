@@ -1514,6 +1514,48 @@ def GetVariableArrays(all_df, var, array_name, array_sig = [0,1,2,3,111], select
     return var_array_sig, var_array_bkg, var_array_data
 
 ###
+def GetEffPur(all_df, selection, array_sig = [0,1,2,3,111], ignore_cat = []):
+    #return the efficiency and purity of the selection
+
+    y = all_df["true_event_type"].to_numpy()
+    num_evts = all_df.shape[0]
+
+    tot_sig = 0.0
+    sel_sig = 0.0
+    tot_bkg = 0.0
+    sel_bkg = 0.0
+    tot_data = 0.0
+    sel_data = 0.0
+
+    for i in range(num_evts):
+        if y[i] not in ignore_cat: #and PassSelection(selection, all_df, i):
+            if y[i] in array_sig:
+                tot_sig+=1.0
+                if PassSelection(selection, all_df, i):
+                    sel_sig+=1.0
+            elif y[i] == 13:
+                tot_data+=1.0
+                if PassSelection(selection, all_df, i):
+                    sel_data+=1.0
+            elif y[i] > -1: #y[i]>3 and y[i]!=13 and y[i]<100:
+                tot_bkg+=1.0
+                if PassSelection(selection, all_df, i):
+                    sel_bkg+=1.0
+
+    
+    if (tot_sig == 0.0):
+        eff = -1.0
+    else:
+        eff = sel_sig / tot_sig
+    
+    if (sel_sig + sel_bkg == 0.0):
+        pur = -1.0
+    else:
+        pur = sel_sig / (sel_sig + sel_bkg)
+    
+    return eff, pur
+
+###
 def GetPOT(file):
     # for calculating the POT of a file
     #returns p: the pot of the file
@@ -1629,6 +1671,10 @@ def PassSelection(selection, all_df, i):
     s = all_df["subrun"].to_numpy()[i]
     e = all_df["event"].to_numpy()[i]
     enu = all_df["kine_reco_Enu"].to_numpy()[i]
+    wc_showers = all_df["shw_sp_n_20br1_showers"].to_numpy()[i]
+    pelee_showers = all_df["n_showers_contained"].to_numpy()[i]
+    glee_showers = all_df["reco_asso_showers"].to_numpy()[i]
+    lantern_showers = all_df["nShowers"].to_numpy()[i]
 
     p = False
     if selection=="numu_sideband" and numu_score < 0.1 and numu_score > -20.0:
@@ -1794,6 +1840,18 @@ def PassSelection(selection, all_df, i):
                     if (score_p<1.0 and e_p==e and s_p==s and r_p==r):
                         p = True
                         break
+    elif selection=="2shower_wc" and enu>0.0 and wc_showers==2:
+        p = True
+    elif selection=="2shower_pelee" and pelee_showers==2:
+        p = True
+    elif selection=="2shower_glee" and glee_showers==2:
+        p = True
+    elif selection=="2shower_lantern" and lantern_showers==2:
+        p = True
+    elif selection=="2shower_all" and enu>0.0 and wc_showers==2 and pelee_showers==2 and glee_showers==2 and lantern_showers==2:
+        p = True
+    elif selection=="2shower_any" and ((enu>0.0 and wc_showers==2) or pelee_showers==2 or glee_showers==2 or lantern_showers==2):
+        p = True
             
         
     
