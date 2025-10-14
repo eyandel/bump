@@ -911,7 +911,8 @@ class BumpHunter1D:
         bkg,
         is_hist: bool = False,
         do_pseudo: bool = True,
-        multi_chan: bool = False
+        multi_chan: bool = False,
+        cov: np.ndarray = None
     ):
         """
         Function that perform the full BumpHunter algorithm presented in https://arxiv.org/pdf/1101.0390.pdf without sidebands.
@@ -946,6 +947,10 @@ class BumpHunter1D:
             multi_chan :
                 Boolean specifying if there are multiple channels.
                 Default to False.
+
+            cov :
+                Covariance matrix to be used to generate pseudo-data with systematics.
+                Default to None.
 
         Result inner variables :
             global_Pval :
@@ -1030,21 +1035,39 @@ class BumpHunter1D:
                 # loop over channels
                 pseudo_hist = []
                 for ch in range(len(data)):
-                    pseudo_hist.append(
-                            np.random.poisson(
-                            lam=np.tile(bkg_hist[ch], (self.npe, 1)).transpose(),
-                            size=(bkg_hist[ch].size, self.npe),
+                    if cov is None:
+                        pseudo_hist.append(
+                                np.random.poisson(
+                                lam=np.tile(bkg_hist[ch], (self.npe, 1)).transpose(),
+                                size=(bkg_hist[ch].size, self.npe),
+                            )
                         )
-                    )
+                    else:
+                        rng = np.random.default_rng()
+                        np.random.seed(self.seed)
+                        gauss = rng.multivariate_normal(bkg_hist[ch], cov, size=(self.npe)) 
+                        gauss[gauss < 0] = 0
+                        pseudo_hist.append(
+                            np.random.poisson(
+                            lam=gauss.transpose(), size=(bkg_hist[ch].size, self.npe),
+                            ))
                 # Convert the list into a 3D numpy array
                 #pseudo_hist = np.array(pseudo_hist)
                 
 
             else:
-                pseudo_hist = np.random.poisson(
-                    lam=np.tile(bkg_hist, (self.npe, 1)).transpose(),
-                    size=(bkg_hist.size, self.npe),
-                )
+                if cov is None:
+                    pseudo_hist = np.random.poisson(
+                        lam=np.tile(bkg_hist, (self.npe, 1)).transpose(),
+                        size=(bkg_hist.size, self.npe),
+                    )
+                else:
+                    rng = np.random.default_rng(self.seed)
+                    gauss = rng.multivariate_normal(bkg_hist, cov, size=(self.npe)) 
+                    gauss[gauss < 0] = 0
+                    pseudo_hist = np.random.poisson(
+                        lam=gauss.transpose(), size=(bkg_hist.size, self.npe),
+                        )
 
         # Set width_max if it is given as None
         if self.width_max is None:
@@ -1084,6 +1107,15 @@ class BumpHunter1D:
         w_ar = np.arange(self.width_min, self.width_max + 1, self.width_step)
         print(f"{w_ar.size} values of width will be tested")
 
+        # If a covariance matrix is provided, generate pseudo-data for the background using the covariance
+        if cov is not None and not multi_chan:
+            rng = np.random.default_rng(self.seed)
+            gauss = rng.multivariate_normal(bkg_hist, cov, size=1)[0]
+            gauss[gauss < 0] = 0
+            bkg_hist_cov = np.random.poisson(lam=gauss, size=gauss.size)
+        else:
+            bkg_hist_cov = bkg_hist
+
         # Compute the p-value for data and all pseudo-experiments
         # We must check if we should do it in multiple threads
         print("SCAN")
@@ -1096,7 +1128,7 @@ class BumpHunter1D:
                                 exe.submit(
                                     self._scan_hist_multi,
                                     data_hist,
-                                    bkg_hist,
+                                    bkg_hist_cov,
                                     w_ar,
                                     th,
                                 )
@@ -1108,7 +1140,7 @@ class BumpHunter1D:
                                 exe.submit(
                                     self._scan_hist_multi,
                                     pseudo,
-                                    bkg_hist,
+                                    bkg_hist_cov,
                                     w_ar,
                                     th,
                                 )
@@ -1117,7 +1149,7 @@ class BumpHunter1D:
                                 exe.submit(
                                     self._scan_hist,
                                     data_hist,
-                                    bkg_hist,
+                                    bkg_hist_cov,
                                     w_ar,
                                     th,
                                 )
@@ -1125,7 +1157,7 @@ class BumpHunter1D:
                                 exe.submit(
                                     self._scan_hist,
                                     pseudo_hist[:, th - 1],
-                                    bkg_hist,
+                                    bkg_hist_cov,
                                     w_ar,
                                     th,
                                 )
@@ -1135,7 +1167,7 @@ class BumpHunter1D:
                         if i == 0:
                             self._scan_hist_multi(
                                 data_hist,
-                                bkg_hist,
+                                bkg_hist_cov,
                                 w_ar,
                                 i
                             )
@@ -1146,7 +1178,7 @@ class BumpHunter1D:
                             ]
                             self._scan_hist_multi(
                                 pseudo,
-                                bkg_hist,
+                                bkg_hist_cov,
                                 w_ar,
                                 i
                             )
@@ -1154,22 +1186,22 @@ class BumpHunter1D:
                         if i == 0:
                             self._scan_hist(
                                 data_hist,
-                                bkg_hist,
+                                bkg_hist_cov,
                                 w_ar,
-                                i
+                                i,
                             )
                         else:
                             self._scan_hist(
                                 pseudo_hist[:, i - 1],
-                                bkg_hist,
+                                bkg_hist_cov,
                                 w_ar,
-                                i
+                                i,
                             )
         else:
             if multi_chan:
-                self._scan_hist_multi(data_hist, bkg_hist, w_ar, 0)
+                self._scan_hist_multi(data_hist, bkg_hist_cov, w_ar, 0)
             else:
-                self._scan_hist(data_hist, bkg_hist, w_ar, 0)
+                self._scan_hist(data_hist, bkg_hist_cov, w_ar, 0)
 
         # Use the p-value results to compute t
         if not multi_chan:
@@ -2235,7 +2267,7 @@ class BumpHunterInterface(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def bump_scan(self, data, bkg, is_hist, do_pseudo):
+    def bump_scan(self, data, bkg, is_hist, do_pseudo, cov):
         """
         Function that perform the full BumpHunter algorithm presented in https://arxiv.org/pdf/1101.0390.pdf without sidebands.
         This includes the generation of pseudo-data, the calculation of the BumpHunter p-value associated to data and to all pseudo experiment as well as the calculation of the test satistic t.
