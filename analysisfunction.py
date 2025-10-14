@@ -1675,6 +1675,7 @@ def PassSelection(selection, all_df, i):
     pelee_showers = all_df["n_showers_contained"].to_numpy()[i]
     glee_showers = all_df["reco_asso_showers"].to_numpy()[i]
     lantern_showers = all_df["nShowers"].to_numpy()[i]
+    lantern_vtxfv = all_df["vtxIsFiducial"].to_numpy()[i]
 
     p = False
     if selection=="numu_sideband" and numu_score < 0.1 and numu_score > -20.0:
@@ -1846,11 +1847,11 @@ def PassSelection(selection, all_df, i):
         p = True
     elif selection=="2shower_glee" and glee_showers==2:
         p = True
-    elif selection=="2shower_lantern" and lantern_showers==2:
+    elif selection=="2shower_lantern" and lantern_vtxfv>-1 and lantern_showers==2:
         p = True
     elif selection=="2shower_all" and enu>0.0 and wc_showers==2 and pelee_showers==2 and glee_showers==2 and lantern_showers==2:
         p = True
-    elif selection=="2shower_any" and ((enu>0.0 and wc_showers==2) or pelee_showers==2 or glee_showers==2 or lantern_showers==2):
+    elif selection=="2shower_any" and ((enu>0.0 and wc_showers==2) or pelee_showers==2 or glee_showers==2 or (lantern_vtxfv>-1 and lantern_showers==2)):
         p = True
             
         
