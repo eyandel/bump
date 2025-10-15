@@ -75,6 +75,46 @@ hatches = ['\\\\','\\\\','\\\\','\\\\',None,None,None,None,None,None,None,None,N
 # -100 = lee, -1=cc 1g overlay, -2=nc del 1g overlay, -3=nc pi0 overlay, 
 # 111 = outFV sig, 0=cc1g, 1=nc other 1g, 2=nc del 1g, 3=nc pi0 1g, 
 # 4=nue, 5=nc bkd, 6=ncpi0 bkd, 7=numu bkd, 8=numupi0 bkd, 9=nfv, 10=cosmic, 11=dirt, 12=extbnb, 13=data
+# 222 = true 2 photon
+
+def AddTruthCat(all_df, catname, catnum):
+    newcat = []
+    catname = []
+    true_event_types = all_df["true_event_types"].to_numpy()
+    truth_Ntrack = all_df["truth_Ntrack"].to_numpy()
+    truth_pdg = all_df["truth_pdg"].to_numpy()
+    truth_startMomentum = all_df["truth_startMomentum"].to_numpy()
+    truth_process = all_df["truth_process"].to_numpy()
+    truth_mother = all_df["truth_mother"].to_numpy()
+    truth_endXYZT = all_df["truth_endXYZT"].to_numpy()
+    for i in range(len(all_df)):
+        if true_event_types[i] == 12:
+            newcat.append(12)
+            catname.append("Extbnb")
+        if true_event_types[i] == 13:
+            newcat.append(13)
+            catname.append("Data")
+        else:
+            nphotons = 0
+            for j in range(truth_Ntrack[i]):
+                ex = truth_endXYZT[i][j][0]
+                ey = truth_endXYZT[i][j][1]
+                ez = truth_endXYZT[i][j][2]
+                if truth_pdg[i][j] == 22 and truth_startMomentum[i][j][3] > 0.02:
+                    if truth_process[i][j] != "eBrem" and truth_process[i][j] != "annihil":
+                        if ex > 13.0 and ex < 243.0 and ey > -103.0 and ey < 104.0 and ez > 13.0 and ez < 1024.0: #extra 10 cm from single photons
+                            nphotons += 1
+            if catname == "2 true photons" and nphotons == 2:
+                newcat.append(catnum)
+                catname.append(catname)
+            else:
+                newcat.append(true_event_types[i])
+                catname.append("old cat")
+
+
+    all_df["true_event_types"] = newcat
+    all_df["true_event_types_name"] = catname
+    return all_df
 
 def LoadTreesTruth(file1, file2, file3, su = False):
     with uproot.open(file1)["wcpselection/T_BDTvars"] as f_in_bdt_over:
@@ -4524,7 +4564,17 @@ truth_variables = [
     "truth_Npi0",
     "truth_NCDelta",
     "truth_showerKE",
-    "truth_showerMomentum"
+    "truth_showerMomentum",
+    "truth_mother",
+    "truth_pdg",
+    "truth_startMomentum",
+    "truth_Ntrack",
+    "truth_id",
+    "truth_process",
+    "truth_startXYZT",
+    "truth_endXYZT",
+    "truth_endMomentum",
+    "truth_daughters"
 ]
 
 eval_variables = [

@@ -1108,7 +1108,7 @@ class BumpHunter1D:
         print(f"{w_ar.size} values of width will be tested")
 
         # If a covariance matrix is provided, generate pseudo-data for the background using the covariance
-        if cov is not None and not multi_chan:
+        if False: #cov is not None and not multi_chan:
             rng = np.random.default_rng(self.seed)
             gauss = rng.multivariate_normal(bkg_hist, cov, size=1)[0]
             gauss[gauss < 0] = 0
