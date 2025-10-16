@@ -1,5 +1,6 @@
 ###
 #import xgboost as xgb
+from ast import For
 import matplotlib.pyplot as plt
 import uproot as uproot
 import pandas as pd
@@ -1025,6 +1026,19 @@ def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_
             #N_protons.append(-1)
 
         
+    for t in truth_variables:
+        if t=="truth_id" or t=="truth_pdg" or t=="truth_process" or t=="truth_mother":
+            all_df_in_pfeval_ext[t] = [[-9999]] * len(true_event_types)
+        if t=="truth_startXYZT" or t=="truth_endXYZT" or t=="truth_startMomentum" or t=="truth_endMomentum" or t=="truth_daughters":
+            all_df_in_pfeval_ext[t] = [[np.array([-9999.0, -9999.0, -9999.0, -9999.0])] ] * len(true_event_types)
+        #if t == "truth_muonMomentum" or t == "truth_showerMomentum":
+        #    all_df_in_pfeval_ext[t] = np.full((len(true_event_types), 4), -9999.0)
+        else:
+            all_df_in_pfeval_ext[t] = [-9999.0] * len(true_event_types)
+    
+    #for t in eval_truth_variables:
+    #    all_df_in_eval_ext[t] = [-9999] * len(true_event_types)
+    
     all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_pfeval_ext)
     all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_kine_ext)
     all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_eval_ext)
@@ -1220,6 +1234,19 @@ def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_
             single_photon_ncpi0_score.append(-99999.0)
             single_photon_nue_score.append(-99999.0)
             #N_protons.append(-1)
+
+    for t in truth_variables:
+        if t=="truth_id" or t=="truth_pdg" or t=="truth_process" or t=="truth_mother":
+            all_df_in_pfeval_data[t] = [[-9999]] * len(true_event_types)
+        if t=="truth_startXYZT" or t=="truth_endXYZT" or t=="truth_startMomentum" or t=="truth_endMomentum" or t=="truth_daughters":
+            all_df_in_pfeval_data[t] = [[np.array([-9999.0, -9999.0, -9999.0, -9999.0])] ] * len(true_event_types)
+        #if t == "truth_muonMomentum" or t == "truth_showerMomentum":
+        #    all_df_in_pfeval_data[t] = np.full((len(true_event_types), 4), -9999.0)
+        else:
+            all_df_in_pfeval_data[t] = [-9999.0] * len(true_event_types)
+
+    #for t in eval_truth_variables:
+    #    all_df_in_eval_data[t] = [-9999] * len(true_event_types)
 
     all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_pfeval_data)
     all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_kine_data)
@@ -4602,20 +4629,20 @@ pfeval_variables = [
     "reco_muonMomentum"
 ]
 
-truth_variables = [
-    "nuvtx_diff",
-    "showervtx_diff",
-    "muonvtx_diff",
-    "truth_isCC",
+#"nuvtx_diff",
+    #"showervtx_diff",
+    #"muonvtx_diff",
     #"truth_vtxInside",
     #"truth_nuPdg",
     #"truth_nuEnergy",
-    "truth_nuIntType",
     #"truth_energyInside",
     #"weight_spline",
     #"weight_cv",
     #"event_type",
     #"lowEweight",
+    #"truth_nuIntType",
+truth_variables = [
+    "truth_isCC",
     "truth_single_photon",
     "truth_muonMomentum",
     "truth_showerMother",
