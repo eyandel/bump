@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 plt.rcParams['figure.figsize'] = [16, 8]
 #import os
-import ROOT
+import ROOT # type: ignore
 print(ROOT.gROOT.GetVersion())
 ROOT.gStyle.SetOptStat(0)
 ROOT.gStyle.SetLegendBorderSize(0)
@@ -77,10 +77,11 @@ hatches = ['\\\\','\\\\','\\\\','\\\\',None,None,None,None,None,None,None,None,N
 # 4=nue, 5=nc bkd, 6=ncpi0 bkd, 7=numu bkd, 8=numupi0 bkd, 9=nfv, 10=cosmic, 11=dirt, 12=extbnb, 13=data
 # 222 = true 2 photon
 
-def AddTruthCat(all_df, catname, catnum):
+def AddTruthCat(all_df, catname, catnum, catcolor):
     newcat = []
-    catname = []
-    true_event_types = all_df["true_event_types"].to_numpy()
+    newcatname = []
+    newcatcolor = []
+    true_event_types = all_df["true_event_type"].to_numpy()
     truth_Ntrack = all_df["truth_Ntrack"].to_numpy()
     truth_pdg = all_df["truth_pdg"].to_numpy()
     truth_startMomentum = all_df["truth_startMomentum"].to_numpy()
@@ -90,10 +91,12 @@ def AddTruthCat(all_df, catname, catnum):
     for i in range(len(all_df)):
         if true_event_types[i] == 12:
             newcat.append(12)
-            catname.append("Extbnb")
+            newcatname.append("Extbnb")
+            newcatcolor.append(ROOT.kGray)
         if true_event_types[i] == 13:
             newcat.append(13)
-            catname.append("Data")
+            newcatname.append("Data")
+            newcatcolor.append(ROOT.kBlack)
         else:
             nphotons = 0
             for j in range(truth_Ntrack[i]):
@@ -106,14 +109,18 @@ def AddTruthCat(all_df, catname, catnum):
                             nphotons += 1
             if catname == "2 true photons" and nphotons == 2:
                 newcat.append(catnum)
-                catname.append(catname)
+                newcatname.append(catname)
+                newcatcolor.append(catcolor)
             else:
                 newcat.append(true_event_types[i])
-                catname.append("old cat")
+                newcatname.append("old cat")
+                newcatcolor.append(ROOT.kWhite)
 
 
-    all_df["true_event_types"] = newcat
-    all_df["true_event_types_name"] = catname
+
+    all_df["true_event_type"] = newcat
+    all_df["true_event_type_name"] = newcatname
+    all_df["true_event_type_color"] = newcatcolor
     return all_df
 
 def LoadTreesTruth(file1, file2, file3, su = False):
@@ -621,7 +628,9 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
 
         
         
-
+    all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_pfeval_over)
+    all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_kine_over)
+    all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_eval_over)
 
     all_df_in_bdt_over["true_event_type"] = true_event_types
     all_df_in_bdt_over["shw_sp_energy"] = shw_sp_energy
@@ -659,7 +668,7 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
     all_df_in_bdt_over["time"] = time
     #all_df_in_bdt_over["pnd_time"] = pnd_time
 
-    all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_kine_over)
+    #all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_kine_over)
     if (len(all_df_in_time_over) > 0):
         all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_time_over)
     if (len(all_df_in_pelee_over) > 0):
@@ -829,6 +838,9 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
             #N_protons.append(-1)
 
     
+    all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_pfeval_dirt)
+    all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_kine_dirt)
+    all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_eval_dirt)
 
     all_df_in_bdt_dirt["true_event_type"] = true_event_types
     all_df_in_bdt_dirt["shw_sp_energy"] = shw_sp_energy
@@ -866,7 +878,7 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
     all_df_in_bdt_dirt["time"] = time
     #all_df_in_bdt_dirt["pnd_time"] = pnd_time
 
-    all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_kine_dirt)
+    #all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_kine_dirt)
     #all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_time_dirt)
     if (len(all_df_in_time_dirt) > 0):
         all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_time_dirt)
@@ -1013,7 +1025,9 @@ def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_
             #N_protons.append(-1)
 
         
-
+    all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_pfeval_ext)
+    all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_kine_ext)
+    all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_eval_ext)
 
     all_df_in_bdt_ext["true_event_type"] = true_event_types
     all_df_in_bdt_ext["shw_sp_energy"] = shw_sp_energy
@@ -1051,7 +1065,7 @@ def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_
     all_df_in_bdt_ext["time"] = time
     #all_df_in_bdt_ext["pnd_time"] = pnd_time
 
-    all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_kine_ext)
+    #all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_kine_ext)
     #all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_time_ext)
     if (len(all_df_in_time_ext) > 0):
         all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_time_ext)
@@ -1207,6 +1221,9 @@ def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_
             single_photon_nue_score.append(-99999.0)
             #N_protons.append(-1)
 
+    all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_pfeval_data)
+    all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_kine_data)
+    all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_eval_data)
 
     all_df_in_bdt_data["true_event_type"] = true_event_types
     all_df_in_bdt_data["shw_sp_energy"] = shw_sp_energy
@@ -1244,7 +1261,7 @@ def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_
     all_df_in_bdt_data["time"] = time
     #all_df_in_bdt_data["pnd_time"] = pnd_time
 
-    all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_kine_data)
+    #all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_kine_data)
     #all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_time_data)
     if (len(all_df_in_time_data) > 0):
         all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_time_data)
@@ -1456,9 +1473,10 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
             #N_protons.append(-1)
 
         
-        
-
-
+    all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_pfeval_over)
+    all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_kine_over)
+    all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_eval_over)
+    
     all_df_in_bdt_over["true_event_type"] = true_event_types
     all_df_in_bdt_over["true_event_type_sub"] = true_event_types_sub
     all_df_in_bdt_over["shw_sp_energy"] = shw_sp_energy
@@ -1496,7 +1514,7 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
     all_df_in_bdt_over["time"] = time
     #all_df_in_bdt_over["pnd_time"] = pnd_time
 
-    all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_kine_over)
+    #all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_kine_over)
     #all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_time_over)
     if (len(all_df_in_time_over) > 0):
         all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_time_over)
@@ -2756,6 +2774,9 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
     selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
     selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArrays(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArrays(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    
 
 
     #for i in range(0, len(e_sig)):
@@ -2801,6 +2822,13 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     selected_NCother_w = []
     selected_numuCC1g_w = []
     selected_out1g_w = []
+
+    seen_new_type = []
+    seen_new_cat = []
+    seen_new_color = []
+    h_new = []
+    selected_new_var = []
+    selected_new_w = []
 
 
     for i in range(len(selected_var_bkg)):
@@ -2860,7 +2888,6 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
             selected_out1g_var.append(selected_var_bkg[i])
             selected_out1g_w.append(selected_w_bkg[i])
             h_out1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
-
         else:
             print("There is an unknown additional background type")
             #print(selected_is_CC_bkg[i])
@@ -2924,10 +2951,29 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
             selected_out1g_var.append(selected_var_sig[i])
             selected_out1g_w.append(selected_w_sig[i])
             h_out1g.Fill(selected_var_sig[i],selected_w_sig[i])
+        else:
+            if (selected_true_event_type_sig[i] not in seen_new_type):
+                print("There is a new signal type")
+                print(selected_true_event_type_sig[i])
+                seen_new_type.append(selected_true_event_type_sig[i])
+                seen_new_cat.append(selected_true_event_type_name_sig[i])
+                seen_new_color.append(selected_true_event_type_color_sig[i])
+                h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
+                new_var = []
+                new_w = []
+                selected_new_var.append(new_var)
+                selected_new_w.append(new_w)
+            index = seen_new_type.index(selected_true_event_type_sig[i])
+            selected_new_var[index].append(selected_var_sig[i])
+            selected_new_w[index].append(selected_w_sig[i])
+            h_new[index].Fill(selected_var_sig[i],selected_w_sig[i])
+            
             
     
     root_hists = [h_cos, h_ext, h_dirt, h_outFV, h_NCpi0, h_numuCCpi0, h_NC,h_numuCC, h_nueCC, 
                   h_NCpi1g, h_NCdel, h_NCother, h_numuCC1g, h_out1g] 
+    for h in h_new:
+        root_hists.append(h)
     
     # make the plots
     
@@ -2974,6 +3020,11 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
                 "NC Other 1#gamma("+str((round(sum(selected_NCother_w),2)))+")",
                 "#nu_{#mu}CC 1#gamma #mu<100MeV("+str(round(sum(selected_numuCC1g_w),2))+")",
                 "out of FV 1#gamma("+str(round(sum(selected_out1g_w),2))+")"]
+    
+    for i in range(len(seen_new_type)):
+        pred_var.append(selected_new_var[i])
+        mc_weights.append(selected_new_w[i])
+        mc_labels.append("{} ({})".format(seen_new_cat[i], round(sum(selected_new_w[i]),2)))
 
     mc_var_hist,mc_bins_var,patches_var = plt.hist(pred_var, bins=bin_edges, alpha=0.7, weights=mc_weights, 
                                                       histtype='barstacked', 
@@ -3109,6 +3160,13 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     h_out1g.SetFillStyle(1001)
     h_out1g.SetLineWidth(1)
     h_stack.Add(h_out1g)
+
+    for i in range(len(h_new)):
+        h_new[i].SetLineColor(seen_new_color[i])
+        h_new[i].SetFillColorAlpha(seen_new_color[i], 1.0)
+        h_new[i].SetFillStyle(1001)
+        h_new[i].SetLineWidth(1)
+        h_stack.Add(h_new[i])
 
     h_stack.Draw("hist")
 
