@@ -89,18 +89,18 @@ def AddTruthCat(all_df, catname, catnum, catcolor):
     truth_process = all_df["truth_process"].to_numpy()
     truth_mother = all_df["truth_mother"].to_numpy()
     truth_endXYZT = all_df["truth_endXYZT"].to_numpy()
-    for i in range(len(all_df)):
+    for i in range(len(true_event_types)):
         if true_event_types[i] == 12:
             newcat.append(12)
             newcatname.append("Extbnb")
             newcatcolor.append(ROOT.kGray)
-        if true_event_types[i] == 13:
+        elif true_event_types[i] == 13:
             newcat.append(13)
             newcatname.append("Data")
             newcatcolor.append(ROOT.kBlack)
         else:
             nphotons = 0
-            for j in range(truth_Ntrack[i]):
+            for j in range(int(truth_Ntrack[i])):
                 ex = truth_endXYZT[i][j][0]
                 ey = truth_endXYZT[i][j][1]
                 ez = truth_endXYZT[i][j][2]
@@ -122,6 +122,7 @@ def AddTruthCat(all_df, catname, catnum, catcolor):
     all_df["true_event_type"] = newcat
     all_df["true_event_type_name"] = newcatname
     all_df["true_event_type_color"] = newcatcolor
+
     return all_df
 
 def LoadTreesTruth(file1, file2, file3, su = False):
@@ -1934,7 +1935,7 @@ def PassSelection(selection, all_df, i):
         p = True
     elif selection=="2shower_lantern" and lantern_vtxfv>-1 and lantern_showers==2:
         p = True
-    elif selection=="2shower_all" and enu>0.0 and wc_showers==2 and pelee_showers==2 and glee_showers==2 and lantern_showers==2:
+    elif selection=="2shower_all" and enu>0.0 and wc_showers==2 and pelee_showers==2 and glee_showers==2 and (lantern_vtxfv>-1 and lantern_showers==2):
         p = True
     elif selection=="2shower_any" and ((enu>0.0 and wc_showers==2) or pelee_showers==2 or glee_showers==2 or (lantern_vtxfv>-1 and lantern_showers==2)):
         p = True
