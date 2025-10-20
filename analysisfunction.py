@@ -106,7 +106,7 @@ def AddTruthCat(all_df, catname, catnum, catcolor):
                 ez = truth_endXYZT[i][j][2]
                 if truth_pdg[i][j] == 22 and truth_startMomentum[i][j][3] > 0.02:
                     if truth_process[i][j] != "eBrem" and truth_process[i][j] != "annihil":
-                        if ex > 13.0 and ex < 243.0 and ey > -103.0 and ey < 104.0 and ez > 13.0 and ez < 1024.0: #extra 10 cm from single photons
+                        if ex > 3.0 and ex < 253.0 and ey > -113.0 and ey < 114.0 and ez > 3.0 and ez < 1034.0: #same as single photons
                             nphotons += 1
             if catname == "2 true photons" and nphotons == 2:
                 newcat.append(catnum)
@@ -1763,6 +1763,25 @@ def PassSelection(selection, all_df, i):
     lantern_showers = all_df["nShowers"].to_numpy()[i]
     lantern_vtxfv = all_df["vtxIsFiducial"].to_numpy()[i]
 
+    reco_Ntrack = all_df_in_bdt_ncpi0["reco_Ntrack"].to_numpy()
+    reco_pdg = all_df_in_bdt_ncpi0["reco_pdg"].to_numpy()
+    reco_startMomentum = all_df_in_bdt_ncpi0["reco_startMomentum"].to_numpy()
+    reco_startXYZT = all_df_in_bdt_ncpi0["reco_startXYZT"].to_numpy()
+
+    nphotons_wc = 0
+    for j in range(int(reco_Ntrack[i])):
+        ex = reco_startXYZT[i][j][0]
+        ey = reco_startXYZT[i][j][1]
+        ez = reco_startXYZT[i][j][2]
+        #kine_energy_particle = np.array(kine_energy_particle_vec[i]) 
+        #kine_particle_type = kine_particle_type_vec[i]
+        #proton_mask = (np.abs(kine_particle_type) == 2212) & (kine_energy_particle > 35)
+        #num_protons = np.sum(proton_mask)
+        if reco_pdg[i][j] == 22 and reco_startMomentum[i][j][3] > 0.02:
+            if ex > 3.0 and ex < 253.0 and ey > -113.0 and ey < 114.0 and ez > 3.0 and ez < 1034.0: #same as single photons
+                nphotons_wc += 1
+
+
     p = False
     if selection=="numu_sideband" and numu_score < 0.1 and numu_score > -20.0:
         p = True
@@ -1929,6 +1948,8 @@ def PassSelection(selection, all_df, i):
                         break
     elif selection=="2shower_wc" and enu>0.0 and wc_showers==2:
         p = True
+    elif selection=="2photon_wc" and enu>0.0 and nphotons_wc==2:
+        p = True
     elif selection=="2shower_pelee" and pelee_showers==2:
         p = True
     elif selection=="2shower_glee" and glee_showers==2:
@@ -1936,6 +1957,8 @@ def PassSelection(selection, all_df, i):
     elif selection=="2shower_lantern" and lantern_vtxfv>-1 and lantern_showers==2:
         p = True
     elif selection=="2shower_all" and enu>0.0 and wc_showers==2 and pelee_showers==2 and glee_showers==2 and (lantern_vtxfv>-1 and lantern_showers==2):
+        p = True
+    elif selection=="2photon_all" and enu>0.0 and nphotons_wc==2 and pelee_showers==2 and glee_showers==2 and (lantern_vtxfv>-1 and lantern_showers==2):
         p = True
     elif selection=="2shower_any" and ((enu>0.0 and wc_showers==2) or pelee_showers==2 or glee_showers==2 or (lantern_vtxfv>-1 and lantern_showers==2)):
         p = True
@@ -2542,6 +2565,8 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
     c.Update()
     #c.Draw()
     c.Print(plot_folder+'/datamc/'+title+'.png')
+
+    c.Draw()
     
     print(title)
     
@@ -2985,7 +3010,7 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
                 print(selected_true_event_type_sig[i])
                 seen_new_type.append(selected_true_event_type_sig[i])
                 seen_new_cat.append(selected_true_event_type_name_sig[i])
-                seen_new_color.append(selected_true_event_type_color_sig[i])
+                seen_new_color.append(int(selected_true_event_type_color_sig[i]))
                 h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
                 new_var = []
                 new_w = []
@@ -3049,14 +3074,18 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
                 "#nu_{#mu}CC 1#gamma #mu<100MeV("+str(round(sum(selected_numuCC1g_w),2))+")",
                 "out of FV 1#gamma("+str(round(sum(selected_out1g_w),2))+")"]
     
+    colors_new = []
+    colors_new = colors.copy()
     for i in range(len(seen_new_type)):
         pred_var.append(selected_new_var[i])
         mc_weights.append(selected_new_w[i])
         mc_labels.append("{} ({})".format(seen_new_cat[i], round(sum(selected_new_w[i]),2)))
+        colors_new.append(ROOT.gROOT.GetColor(seen_new_color[i]).AsHexString())
+        #colors.append(ROOT.gROOT.GetColor(880+10).AsHexString())
 
     mc_var_hist,mc_bins_var,patches_var = plt.hist(pred_var, bins=bin_edges, alpha=0.7, weights=mc_weights, 
                                                       histtype='barstacked', 
-                                  color=colors, range=(start_edge,end_edge), label=mc_labels)
+                                  color=colors_new, range=(start_edge,end_edge), label=mc_labels)
 
 
     for patch_set, hatch in zip(patches_var, hatches):
@@ -3320,6 +3349,8 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     c.Update()
     #c.Draw()
     c.Print(plot_folder+'/mc_only/'+title+'.png')
+
+    c.Draw()
     
     return h_sig, h_bkg
 
@@ -4073,7 +4104,7 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
 def GetInvariantMass(gamma1, gamma2):
     """
     Function to calculate the invariant mass of a system of particles.
-    This function assumes that the DataFrame `all_df` contains the necessary columns for the calculation.
+    gamma1 and gamma2 are 4 vectors of the two photons' momenta.
     """
     # Calculate the invariant mass of two particles given their 4-momenta
     # gamma1 and gamma2 should be DataFrames with columns: 'px', 'py', 'pz', 'E'
@@ -4627,7 +4658,17 @@ pfeval_variables = [
     "reco_showervtxY",
     "reco_showervtxZ",
     "reco_showerMomentum",
-    "reco_muonMomentum"
+    "reco_muonMomentum",
+    "reco_Ntrack",
+    "reco_id",
+    "reco_pdg",
+    "reco_process",
+    "reco_mother",
+    "reco_startXYZT",
+    "reco_endXYZT",
+    "reco_startMomentum",
+    "reco_endMomentum",
+    "reco_daughters"
 ]
 
 #"nuvtx_diff",
@@ -5335,5 +5376,34 @@ lantern_reco_variables = [
     "kpMaxPosZ",
     "nTracks",
     "nShowers",
+    "showerIsSecondary",
+    "showerPID",
+    "showerPhScore",
+    "showerElScore",
+    "showerMuScore",
+    "showerPiScore",
+    "showerPrScore",
+    "showerCharge",
+    "showerPurity",
+    "showerComp",
+    "showerPrimaryScore",
+    "showerFromNeutralScore",
+    "showerFromChargedScore",
+    "showerCosTheta",
+    "showerCosThetaY",
+    "showerDistToVtx",
+    "showerStartDirX",
+    "showerStartDirY",
+    "showerStartDirZ",
+    "showerRecoE",
+    "trackIsSecondary",
+    "trackClassified",
+    "trackCharge",
+    "trackComp",
+    "trackPurity",
+    "trackPID",
+    "trackMuScore",
+    "trackPiScore",
+    "trackPrScore"
 ]
 
