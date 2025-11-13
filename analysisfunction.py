@@ -82,6 +82,14 @@ def AddTruthCat(all_df, catname, catnum, catcolor):
     newcat = []
     newcatname = []
     newcatcolor = []
+    photon1_mom = []
+    photon2_mom = []
+    photon1_process = []
+    photon2_process = []
+    photon1_XYZT = []
+    photon2_XYZT = []
+    photon1_mother = []
+    photon2_mother = []
     true_event_types = all_df["true_event_type"].to_numpy()
     truth_Ntrack = all_df["truth_Ntrack"].to_numpy()
     truth_pdg = all_df["truth_pdg"].to_numpy()
@@ -94,12 +102,30 @@ def AddTruthCat(all_df, catname, catnum, catcolor):
             newcat.append(12)
             newcatname.append("Extbnb")
             newcatcolor.append(ROOT.kGray)
+            photon1_mom.append([-999.,-999.,-999.,-999.])
+            photon2_mom.append([-999.,-999.,-999.,-999.])
+            photon1_process.append("none")
+            photon2_process.append("none")
+            photon1_XYZT.append([-999.,-999.,-999.,-999.])
+            photon2_XYZT.append([-999.,-999.,-999.,-999.])
+            photon1_mother.append(-999)
+            photon2_mother.append(-999)
         elif true_event_types[i] == 13:
             newcat.append(13)
             newcatname.append("Data")
             newcatcolor.append(ROOT.kBlack)
+            photon1_mom.append([-999.,-999.,-999.,-999.])
+            photon2_mom.append([-999.,-999.,-999.,-999.])
+            photon1_process.append("none")
+            photon2_process.append("none")
+            photon1_XYZT.append([-999.,-999.,-999.,-999.])
+            photon2_XYZT.append([-999.,-999.,-999.,-999.])
+            photon1_mother.append(-999)
+            photon2_mother.append(-999)
         else:
             nphotons = 0
+            photon1 = False
+            photon2 = False
             for j in range(int(truth_Ntrack[i])):
                 ex = truth_endXYZT[i][j][0]
                 ey = truth_endXYZT[i][j][1]
@@ -108,6 +134,18 @@ def AddTruthCat(all_df, catname, catnum, catcolor):
                     if truth_process[i][j] != "eBrem" and truth_process[i][j] != "annihil":
                         if ex > 3.0 and ex < 253.0 and ey > -113.0 and ey < 114.0 and ez > 3.0 and ez < 1034.0: #same as single photons
                             nphotons += 1
+                            if not photon1:
+                                photon1 = True
+                                photon1_mom.append(truth_startMomentum[i][j])
+                                photon1_process.append(truth_process[i][j])
+                                photon1_XYZT.append(truth_endXYZT[i][j])
+                                photon1_mother.append(truth_mother[i][j])
+                            elif not photon2:
+                                photon2 = True
+                                photon2_mom.append(truth_startMomentum[i][j])
+                                photon2_process.append(truth_process[i][j])
+                                photon2_XYZT.append(truth_endXYZT[i][j])
+                                photon2_mother.append(truth_mother[i][j])
             if catname == "2 true photons" and nphotons == 2:
                 newcat.append(catnum)
                 newcatname.append(catname)
@@ -116,12 +154,28 @@ def AddTruthCat(all_df, catname, catnum, catcolor):
                 newcat.append(true_event_types[i])
                 newcatname.append("old cat")
                 newcatcolor.append(ROOT.kWhite)
-
-
+                if not photon1:
+                    photon1_mom.append([-999.,-999.,-999.,-999.])
+                    photon1_process.append("none")
+                    photon1_XYZT.append([-999.,-999.,-999.,-999.])
+                    photon1_mother.append(-999)
+                if not photon2:
+                    photon2_mom.append([-999.,-999.,-999.,-999.])
+                    photon2_process.append("none")
+                    photon2_XYZT.append([-999.,-999.,-999.,-999.])
+                    photon2_mother.append(-999)
 
     all_df["true_event_type"] = newcat
     all_df["true_event_type_name"] = newcatname
     all_df["true_event_type_color"] = newcatcolor
+    all_df["truth_photon1_mom"] = photon1_mom
+    all_df["truth_photon2_mom"] = photon2_mom
+    all_df["truth_photon1_process"] = photon1_process
+    all_df["truth_photon2_process"] = photon2_process
+    all_df["truth_photon1_XYZT"] = photon1_XYZT
+    all_df["truth_photon2_XYZT"] = photon2_XYZT
+    all_df["truth_photon1_mother"] = photon1_mother
+    all_df["truth_photon2_mother"] = photon2_mother
 
     return all_df
 
@@ -1747,112 +1801,83 @@ def CalculateWeights(all_df, dataPOT, ExtBnbPOT, pot_vars, run4 = False, run5 = 
 ###
 def PassSelection(selection, all_df, i):
     #returns a boolean that indicates if events pass selection
-    numu_score = all_df["single_photon_numu_score"].to_numpy()[i]
-    other_score = all_df["single_photon_other_score"].to_numpy()[i]
-    ncpi0_score = all_df["single_photon_ncpi0_score"].to_numpy()[i]
-    nue_score = all_df["single_photon_nue_score"].to_numpy()[i]
-    num_shw = all_df["shw_sp_n_20mev_showers"].to_numpy()[i]
-    num_pro = all_df["N_protons"].to_numpy()[i]
-    r = all_df["run"].to_numpy()[i]
-    s = all_df["subrun"].to_numpy()[i]
-    e = all_df["event"].to_numpy()[i]
-    enu = all_df["kine_reco_Enu"].to_numpy()[i]
-    wc_showers = all_df["shw_sp_n_20br1_showers"].to_numpy()[i]
-    pelee_showers = all_df["n_showers_contained"].to_numpy()[i]
-    glee_showers = all_df["reco_asso_showers"].to_numpy()[i]
-    lantern_showers = all_df["nShowers"].to_numpy()[i]
-    lantern_vtxfv = all_df["vtxIsFiducial"].to_numpy()[i]
-
-    reco_Ntrack = all_df_in_bdt_ncpi0["reco_Ntrack"].to_numpy()
-    reco_pdg = all_df_in_bdt_ncpi0["reco_pdg"].to_numpy()
-    reco_startMomentum = all_df_in_bdt_ncpi0["reco_startMomentum"].to_numpy()
-    reco_startXYZT = all_df_in_bdt_ncpi0["reco_startXYZT"].to_numpy()
-
-    nphotons_wc = 0
-    for j in range(int(reco_Ntrack[i])):
-        ex = reco_startXYZT[i][j][0]
-        ey = reco_startXYZT[i][j][1]
-        ez = reco_startXYZT[i][j][2]
-        #kine_energy_particle = np.array(kine_energy_particle_vec[i]) 
-        #kine_particle_type = kine_particle_type_vec[i]
-        #proton_mask = (np.abs(kine_particle_type) == 2212) & (kine_energy_particle > 35)
-        #num_protons = np.sum(proton_mask)
-        if reco_pdg[i][j] == 22 and reco_startMomentum[i][j][3] > 0.02:
-            if ex > 3.0 and ex < 253.0 and ey > -113.0 and ey < 114.0 and ez > 3.0 and ez < 1034.0: #same as single photons
-                nphotons_wc += 1
-
-
     p = False
-    if selection=="numu_sideband" and numu_score < 0.1 and numu_score > -20.0:
+
+    if selection=="all":
         p = True
-    elif selection=="other_sideband" and numu_score > 0.1 and other_score < -0.4 and other_score > -20.0:
-        p = True
-    elif selection=="ncpi0_sideband" and numu_score > 0.1 and other_score > -0.4 and ncpi0_score < -0.4 and ncpi0_score > -20.0:
-        p = True
-    elif selection=="nue_sideband" and numu_score > 0.1 and other_score > -0.4 and ncpi0_score > -0.4 and nue_score < -3.0 and nue_score > -20.0 and num_shw==1:
-        p = True
-    elif selection=="eff" and numu_score > 0.1 and other_score > -0.4 and ncpi0_score > -0.4 and nue_score > -3.0 and num_shw==1:
-        p = True
-    elif selection=="eff_numu" and numu_score > 0.1:
-        p = True
-    elif selection=="eff_other" and numu_score > 0.1 and other_score > -0.4:
-        p = True
-    elif selection=="eff_ncpi0" and numu_score > 0.1 and other_score > -0.4 and ncpi0_score > -0.4 :
-        p = True
-    elif selection=="eff_nue" and numu_score > 0.1 and other_score > -0.4 and ncpi0_score > -0.4 and nue_score > -3.0:
-        p = True
-    elif selection=="pur" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1:
-        p = True
-    elif selection=="singshw" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and num_shw==1:
-        p = True
-    elif selection=="pur_numu" and numu_score > 0.4:
-        p = True
-    elif selection=="pur_other" and numu_score > 0.4 and other_score > 0.2:
-        p = True
-    elif selection=="pur_ncpi0" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05:
-        p = True 
-    elif selection=="pur_nue" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1:
-        p = True
-    elif selection=="0p" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro==0:
-        p = True
-    elif selection=="Np" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro>0:
-        p = True
-    elif selection=="noother" and numu_score > 0.4 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1:
-        p = True
-    elif selection=="noother_0p" and numu_score > 0.4 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro==0:
-        p = True
-    elif selection=="noother_Np" and numu_score > 0.4 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro>0:
-        p = True
-    elif selection=="lessother_0p" and numu_score > 0.4 and other_score > 0.0 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro==0:
-        p = True
-    elif selection=="moreother_0p" and numu_score > 0.4 and other_score > 1.0 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro==0:
-        p = True
-    elif selection=="allshw" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0:
-        p = True
-    elif selection=="all":
-        p = True
-    elif selection=="preselection" and numu_score>-15.0:
-        p = True
-    elif selection=="generic" and enu > 0.0:
-        p = True
-    elif selection=="test" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > 0.5 and nue_score > -1.0 and num_shw==1:
-        p = True
-    elif selection=="pawel":
-        # Open the file
-        with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_pawel.txt', 'r') as file1:
-            # Create a dictionary to hold the events
-            #events = {}
-            # Read the file line by line
-            for line in file1:
-                r_p, s_p, e_p, energy_p = map(float, line.split()) # Split the line into parts
-                # Store in the dictionary
-                #events[(r, s, e)] = energy
-                if (r_p==r and s_p==s and e_p==e):
-                    p = True
-                    break
-    elif selection=="pawel_overlap":
-        # Open the file
-        if (numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1):
+    else:
+        numu_score = all_df["single_photon_numu_score"].to_numpy()[i]
+        other_score = all_df["single_photon_other_score"].to_numpy()[i]
+        ncpi0_score = all_df["single_photon_ncpi0_score"].to_numpy()[i]
+        nue_score = all_df["single_photon_nue_score"].to_numpy()[i]
+        num_shw = all_df["shw_sp_n_20mev_showers"].to_numpy()[i]
+        num_pro = all_df["N_protons"].to_numpy()[i]
+        r = all_df["run"].to_numpy()[i]
+        s = all_df["subrun"].to_numpy()[i]
+        e = all_df["event"].to_numpy()[i]
+        enu = all_df["kine_reco_Enu"].to_numpy()[i]
+        wc_showers = all_df["shw_sp_n_20br1_showers"].to_numpy()[i]
+        pelee_showers = all_df["n_showers_contained"].to_numpy()[i]
+        glee_showers = all_df["reco_asso_showers"].to_numpy()[i]
+        lantern_showers = all_df["nShowers"].to_numpy()[i]
+        lantern_vtxfv = all_df["vtxIsFiducial"].to_numpy()[i]
+        pelee_flash_matched = all_df["slice_orig_pass_id"].to_numpy()[i]
+        pelee_top_score =  all_df["topological_score"].to_numpy()[i]
+
+        if selection=="numu_sideband" and numu_score < 0.1 and numu_score > -20.0:
+            p = True
+        elif selection=="other_sideband" and numu_score > 0.1 and other_score < -0.4 and other_score > -20.0:
+            p = True
+        elif selection=="ncpi0_sideband" and numu_score > 0.1 and other_score > -0.4 and ncpi0_score < -0.4 and ncpi0_score > -20.0:
+            p = True
+        elif selection=="nue_sideband" and numu_score > 0.1 and other_score > -0.4 and ncpi0_score > -0.4 and nue_score < -3.0 and nue_score > -20.0 and num_shw==1:
+            p = True
+        elif selection=="eff" and numu_score > 0.1 and other_score > -0.4 and ncpi0_score > -0.4 and nue_score > -3.0 and num_shw==1:
+            p = True
+        elif selection=="eff_numu" and numu_score > 0.1:
+            p = True
+        elif selection=="eff_other" and numu_score > 0.1 and other_score > -0.4:
+            p = True
+        elif selection=="eff_ncpi0" and numu_score > 0.1 and other_score > -0.4 and ncpi0_score > -0.4 :
+            p = True
+        elif selection=="eff_nue" and numu_score > 0.1 and other_score > -0.4 and ncpi0_score > -0.4 and nue_score > -3.0:
+            p = True
+        elif selection=="pur" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1:
+            p = True
+        elif selection=="singshw" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and num_shw==1:
+            p = True
+        elif selection=="pur_numu" and numu_score > 0.4:
+            p = True
+        elif selection=="pur_other" and numu_score > 0.4 and other_score > 0.2:
+            p = True
+        elif selection=="pur_ncpi0" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05:
+            p = True 
+        elif selection=="pur_nue" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1:
+            p = True
+        elif selection=="0p" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro==0:
+            p = True
+        elif selection=="Np" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro>0:
+            p = True
+        elif selection=="noother" and numu_score > 0.4 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1:
+            p = True
+        elif selection=="noother_0p" and numu_score > 0.4 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro==0:
+            p = True
+        elif selection=="noother_Np" and numu_score > 0.4 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro>0:
+            p = True
+        elif selection=="lessother_0p" and numu_score > 0.4 and other_score > 0.0 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro==0:
+            p = True
+        elif selection=="moreother_0p" and numu_score > 0.4 and other_score > 1.0 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro==0:
+            p = True
+        elif selection=="allshw" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0:
+            p = True
+        elif selection=="preselection" and numu_score>-15.0:
+            p = True
+        elif selection=="generic" and enu > 0.0:
+            p = True
+        elif selection=="test" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > 0.5 and nue_score > -1.0 and num_shw==1:
+            p = True
+        elif selection=="pawel":
+            # Open the file
             with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_pawel.txt', 'r') as file1:
                 # Create a dictionary to hold the events
                 #events = {}
@@ -1864,104 +1889,159 @@ def PassSelection(selection, all_df, i):
                     if (r_p==r and s_p==s and e_p==e):
                         p = True
                         break
-    elif selection=="pawel_nonoverlap":
-        # Open the file
-        if ( not (numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1)):
-            with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_pawel.txt', 'r') as file1:
+        elif selection=="pawel_overlap":
+            # Open the file
+            if (numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1):
+                with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_pawel.txt', 'r') as file1:
+                    # Create a dictionary to hold the events
+                    #events = {}
+                    # Read the file line by line
+                    for line in file1:
+                        r_p, s_p, e_p, energy_p = map(float, line.split()) # Split the line into parts
+                        # Store in the dictionary
+                        #events[(r, s, e)] = energy
+                        if (r_p==r and s_p==s and e_p==e):
+                            p = True
+                            break
+        elif selection=="pawel_nonoverlap":
+            # Open the file
+            if ( not (numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1)):
+                with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_pawel.txt', 'r') as file1:
+                    # Create a dictionary to hold the events
+                    #events = {}
+                    # Read the file line by line
+                    for line in file1:
+                        r_p, s_p, e_p, energy_p = map(float, line.split()) # Split the line into parts
+                        # Store in the dictionary
+                        #events[(r, s, e)] = energy
+                        if (r_p==r and s_p==s and e_p==e):
+                            p = True
+                            break
+        elif selection=="pawel_nonoverlap_1shw":
+            # Open the file
+            if ( not(numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1) and num_shw==1):
+                with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_pawel.txt', 'r') as file1:
+                    # Create a dictionary to hold the events
+                    #events = {}
+                    # Read the file line by line
+                    for line in file1:
+                        r_p, s_p, e_p, energy_p = map(float, line.split()) # Split the line into parts
+                        # Store in the dictionary
+                        #events[(r, s, e)] = energy
+                        if (r_p==r and s_p==s and e_p==e):
+                            p = True
+                            break
+        elif selection=="mark":
+            # Open the file
+            with open('/home/erin/Documents/MicroBoone/consistency_checks/glee_epem_rse.txt', 'r') as file2:
                 # Create a dictionary to hold the events
                 #events = {}
                 # Read the file line by line
-                for line in file1:
-                    r_p, s_p, e_p, energy_p = map(float, line.split()) # Split the line into parts
+                for line in file2:
+                    r_p, s_p, e_p = map(float, line.split()) # Split the line into parts
                     # Store in the dictionary
                     #events[(r, s, e)] = energy
                     if (r_p==r and s_p==s and e_p==e):
                         p = True
                         break
-    elif selection=="pawel_nonoverlap_1shw":
-        # Open the file
-        if ( not(numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1) and num_shw==1):
-            with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_pawel.txt', 'r') as file1:
+        elif selection=="mark_expanded":
+            # Open the file
+            with open('/home/erin/Documents/MicroBoone/consistency_checks/glee_epem_expanded_angle_rse.txt', 'r') as file3:
                 # Create a dictionary to hold the events
                 #events = {}
                 # Read the file line by line
-                for line in file1:
-                    r_p, s_p, e_p, energy_p = map(float, line.split()) # Split the line into parts
+                for line in file3:
+                    r_p, s_p, e_p = map(float, line.split()) # Split the line into parts
                     # Store in the dictionary
                     #events[(r, s, e)] = energy
                     if (r_p==r and s_p==s and e_p==e):
                         p = True
                         break
-    elif selection=="mark":
-        # Open the file
-        with open('/home/erin/Documents/MicroBoone/consistency_checks/glee_epem_rse.txt', 'r') as file2:
-            # Create a dictionary to hold the events
-            #events = {}
-            # Read the file line by line
-            for line in file2:
-                r_p, s_p, e_p = map(float, line.split()) # Split the line into parts
-                # Store in the dictionary
-                #events[(r, s, e)] = energy
-                if (r_p==r and s_p==s and e_p==e):
-                    p = True
-                    break
-    elif selection=="mark_expanded":
-        # Open the file
-        with open('/home/erin/Documents/MicroBoone/consistency_checks/glee_epem_expanded_angle_rse.txt', 'r') as file3:
-            # Create a dictionary to hold the events
-            #events = {}
-            # Read the file line by line
-            for line in file3:
-                r_p, s_p, e_p = map(float, line.split()) # Split the line into parts
-                # Store in the dictionary
-                #events[(r, s, e)] = energy
-                if (r_p==r and s_p==s and e_p==e):
-                    p = True
-                    break
-    elif selection=="infv_bdt_pass":
-        # Open the file
-        if  numu_score > -15.0:
-            with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_infv_bdt_score.txt', 'r') as file4:
-                # Create a dictionary to hold the events
-                #events = {}
-                # Read the file line by line
-                for line in file4:
-                    r_p, s_p, e_p, score_p = map(float, line.split()) # Split the line into parts
-                    # Store in the dictionary
-                    #events[(r, s, e)] = energy
-                    if (score_p>=1.0 and e_p==e and s_p==s and r_p==r):
-                        p = True
-                        break
-    elif selection=="infv_bdt_notpass":
-        # Open the file
-        if  numu_score > -15.0:
-            with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_infv_bdt_score.txt', 'r') as file4:
-                # Create a dictionary to hold the events
-                #events = {}
-                # Read the file line by line
-                for line in file4:
-                    r_p, s_p, e_p, score_p = map(float, line.split()) # Split the line into parts
-                    # Store in the dictionary
-                    #events[(r, s, e)] = energy
-                    if (score_p<1.0 and e_p==e and s_p==s and r_p==r):
-                        p = True
-                        break
-    elif selection=="2shower_wc" and enu>0.0 and wc_showers==2:
-        p = True
-    elif selection=="2photon_wc" and enu>0.0 and nphotons_wc==2:
-        p = True
-    elif selection=="2shower_pelee" and pelee_showers==2:
-        p = True
-    elif selection=="2shower_glee" and glee_showers==2:
-        p = True
-    elif selection=="2shower_lantern" and lantern_vtxfv>-1 and lantern_showers==2:
-        p = True
-    elif selection=="2shower_all" and enu>0.0 and wc_showers==2 and pelee_showers==2 and glee_showers==2 and (lantern_vtxfv>-1 and lantern_showers==2):
-        p = True
-    elif selection=="2photon_all" and enu>0.0 and nphotons_wc==2 and pelee_showers==2 and glee_showers==2 and (lantern_vtxfv>-1 and lantern_showers==2):
-        p = True
-    elif selection=="2shower_any" and ((enu>0.0 and wc_showers==2) or pelee_showers==2 or glee_showers==2 or (lantern_vtxfv>-1 and lantern_showers==2)):
-        p = True
+        elif selection=="infv_bdt_pass":
+            # Open the file
+            if  numu_score > -15.0:
+                with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_infv_bdt_score.txt', 'r') as file4:
+                    # Create a dictionary to hold the events
+                    #events = {}
+                    # Read the file line by line
+                    for line in file4:
+                        r_p, s_p, e_p, score_p = map(float, line.split()) # Split the line into parts
+                        # Store in the dictionary
+                        #events[(r, s, e)] = energy
+                        if (score_p>=1.0 and e_p==e and s_p==s and r_p==r):
+                            p = True
+                            break
+        elif selection=="infv_bdt_notpass":
+            # Open the file
+            if  numu_score > -15.0:
+                with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_infv_bdt_score.txt', 'r') as file4:
+                    # Create a dictionary to hold the events
+                    #events = {}
+                    # Read the file line by line
+                    for line in file4:
+                        r_p, s_p, e_p, score_p = map(float, line.split()) # Split the line into parts
+                        # Store in the dictionary
+                        #events[(r, s, e)] = energy
+                        if (score_p<1.0 and e_p==e and s_p==s and r_p==r):
+                            p = True
+                            break
+        #2 showers
+        elif selection=="2shower_wc" and enu>0.0 and wc_showers==2:
+            p = True
+        elif selection=="2shower_pelee" and (pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and pelee_showers==2:
+            p = True
+        elif selection=="2shower_glee" and glee_showers==2:
+            p = True
+        elif selection=="2shower_lantern" and lantern_vtxfv>-1 and lantern_showers==2:
+            p = True
+        elif selection=="2shower_all" and enu>0.0 and wc_showers==2 and ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and pelee_showers==2) and glee_showers==2 and (lantern_vtxfv>-1 and lantern_showers==2):
+            p = True
+        elif selection=="2shower_any" and ((enu>0.0 and wc_showers==2) or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and pelee_showers==2) or glee_showers==2 or (lantern_vtxfv>-1 and lantern_showers==2)):
+            p = True
+        elif selection=="2shower_wcpelee" and ((enu>0.0 and wc_showers==2) or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and pelee_showers==2)):
+            p = True
+        elif selection=="2shower_wclantern" and ((enu>0.0 and wc_showers==2) or (lantern_vtxfv>-1 and lantern_showers==2)):
+            p = True
+        elif selection=="2shower_lanternpelee" and (((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and pelee_showers==2) or glee_showers==2 or (lantern_vtxfv>-1 and lantern_showers==2)):
+            p = True
+        elif selection=="2shower_all_noglee" and enu>0.0 and wc_showers==2 and ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and pelee_showers==2) and (lantern_vtxfv>-1 and lantern_showers==2):
+            p = True
+        elif selection=="2shower_any_noglee" and ((enu>0.0 and wc_showers==2) or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and pelee_showers==2) or (lantern_vtxfv>-1 and lantern_showers==2)):
+            p = True
+        #2 photons
+        elif selection=="2photon_wc" or selection=="2photon_lantern" or selection=="2photon_all" or selection=="2photon_any" or selection=="2photon_all_noglee" or selection=="2photon_any_noglee":
+            #get the WC number of photons (takes too long to do for all selections)
+             # ensure the dataframe has the reco_startMomentum column to avoid KeyError later
+            if selection!="2photon_lantern":
+                nphotons_wc = -1
+
+                if "nphotons_wc" in all_df.columns:
+                    nphotons_wc = all_df["nphotons_wc"].to_numpy()[i]
+                elif "reco_startMomentum" in all_df.columns:
+                    nphotons_wc = 0
+                    reco_Ntrack = all_df["reco_Ntrack"].to_numpy()[i]
+                    reco_pdg = all_df["reco_pdg"].to_numpy()[i]
+                    reco_startMomentum = all_df["reco_startMomentum"].to_numpy()[i]
+                    reco_startXYZT = all_df["reco_startXYZT"].to_numpy()[i]
+                    for j in range(int(reco_Ntrack)):
+                        ex = reco_startXYZT[j][0]
+                        ey = reco_startXYZT[j][1]
+                        ez = reco_startXYZT[j][2]
+                        #kine_energy_particle = np.array(kine_energy_particle_vec[i]) 
+                        #kine_particle_type = kine_particle_type_vec[i]
+                        #proton_mask = (np.abs(kine_particle_type) == 2212) & (kine_energy_particle > 35)
+                        #num_protons = np.sum(proton_mask)
+                        if reco_pdg[j] == 22 and reco_startMomentum[j][3] > 0.02:
+                            if ex > 3.0 and ex < 253.0 and ey > -113.0 and ey < 114.0 and ez > 3.0 and ez < 1034.0: #same as single photons
+                                nphotons_wc += 1
+            #if selection!="2photon_wc":
+            ##do the selections
+            if selection=="2photon_wc" and enu>0.0 and nphotons_wc==2:
+                p = True
+            elif selection=="2photon_all" and enu>0.0 and nphotons_wc==2 and pelee_showers==2 and glee_showers==2 and (lantern_vtxfv>-1 and lantern_showers==2):
+                p = True
+            elif selection=="2photon_all_noglee" and enu>0.0 and nphotons_wc==2 and pelee_showers==2 and (lantern_vtxfv>-1 and lantern_showers==2):
+                p = True
             
         
     
@@ -4100,6 +4180,59 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     return h_stack
     #return c,h_data,h_ext,h_dirt,h_cos,h_outFV,h_numuCCpi0,h_numuCC,h_NCpi0,h_NC,h_nueCC,h_NCpi1g,h_NCdel,h_NCother,h_numuCC1g
 
+def Get2Photons(all_df, reco):
+    photon1_mom = []
+    photon2_mom = []
+    photon1_XYZT = []
+    photon2_XYZT = []
+    photon1_mother = []
+    photon2_mother = []
+    nphotons_wc_list = []
+    if reco == "wc":
+        reco_Ntrack = all_df["reco_Ntrack"].to_numpy()
+        reco_startXYZT = all_df["reco_startXYZT"].to_numpy()
+        reco_startMomentum = all_df["reco_startMomentum"].to_numpy()
+        reco_pdg = all_df["reco_pdg"].to_numpy()
+        reco_mother = all_df["reco_mother"].to_numpy()
+        for i in range(len(reco_Ntrack)):
+            nphotons_wc = 0
+            photon1 = False
+            photon2 = False
+            for j in range(int(reco_Ntrack[i])):
+                ex = reco_startXYZT[i][j][0]
+                ey = reco_startXYZT[i][j][1]
+                ez = reco_startXYZT[i][j][2]
+                #kine_energy_particle = np.array(kine_energy_particle_vec[i]) 
+                #kine_particle_type = kine_particle_type_vec[i]
+                #proton_mask = (np.abs(kine_particle_type) == 2212) & (kine_energy_particle > 35)
+                #num_protons = np.sum(proton_mask)
+                if reco_pdg[i][j] == 22 and reco_startMomentum[i][j][3] > 0.02:
+                    if ex > 3.0 and ex < 253.0 and ey > -113.0 and ey < 114.0 and ez > 3.0 and ez < 1034.0: #same as single photons
+                        nphotons_wc += 1
+                        if not photon1:
+                            photon1 = True
+                            photon1_mom.append(reco_startMomentum[i][j])
+                            photon1_XYZT.append(reco_startXYZT[i][j])
+                            photon1_mother.append(reco_mother[i][j])
+                        elif not photon2:
+                            photon2 = True
+                            photon2_mom.append(reco_startMomentum[i][j])
+                            photon2_XYZT.append(reco_startXYZT[i][j])
+                            photon2_mother.append(reco_mother[i][j])
+            nphotons_wc_list.append(nphotons_wc)
+
+        all_df["nphotons_wc"] = nphotons_wc_list
+        all_df["photon1_mom_wc"] = photon1_mom
+        all_df["photon2_mom_wc"] = photon2_mom
+        all_df["photon1_XYZT_wc"] = photon1_XYZT
+        all_df["photon2_XYZT_wc"] = photon2_XYZT
+        all_df["photon1_mother_wc"] = photon1_mother
+        all_df["photon2_mother_wc"] = photon2_mother
+
+    return all_df
+
+
+
 ###
 def GetInvariantMass(gamma1, gamma2):
     """
@@ -4667,8 +4800,8 @@ pfeval_variables = [
     "reco_startXYZT",
     "reco_endXYZT",
     "reco_startMomentum",
-    "reco_endMomentum",
-    "reco_daughters"
+    "reco_endMomentum"
+    #"reco_daughters"
 ]
 
 #"nuvtx_diff",
@@ -4700,8 +4833,8 @@ truth_variables = [
     "truth_process",
     "truth_startXYZT",
     "truth_endXYZT",
-    "truth_endMomentum",
-    "truth_daughters"
+    "truth_endMomentum"
+    #"truth_daughters"
 ]
 
 eval_variables = [
@@ -4805,7 +4938,9 @@ pelee_variables = [
         # "trk_dir_x_v",
         # "trk_dir_y_v",
         # "trk_dir_z_v",
-        "n_showers_contained"
+        "n_showers_contained",
+        #new for SURPRISE
+        "slice_orig_pass_id"
     ]
 
 pelee_mcf_variables = [
@@ -5009,9 +5144,9 @@ glee_reco_variables = [
  "run_number",
  "subrun_number",   
  "event_number",
- "pot_per_event", 
- "pot_per_subrun",
- "number_of_events_in_subrun",
+ #"pot_per_event", 
+ #"pot_per_subrun",
+ #"number_of_events_in_subrun",
  "genie_spline_weight",
  "genie_CV_tune_weight",
  "photonu_weight_low",
@@ -5051,93 +5186,93 @@ glee_reco_variables = [
  #"isolation_nearest_shr_hit_to_trk_time",
  #"isolation_nearest_unassoc_hit_to_trk_wire",
  #"isolation_nearest_unassoc_hit_to_trk_time",
- "sss_num_unassociated_hits",
- "sss_num_unassociated_hits_below_threshold",
- "sss_num_associated_hits",
- "sss_num_candidates",
- "sss_candidate_veto_score",
- "sss_candidate_in_nu_slice",
- "sss_candidate_num_hits",
- "sss_candidate_num_wires",
- "sss_candidate_num_ticks",
- "sss_candidate_plane",
- "sss_candidate_PCA",
- "sss_candidate_mean_ADC",
- "sss_candidate_ADC_RMS",
- "sss_candidate_impact_parameter",
- "sss_candidate_fit_slope",
- "sss_candidate_fit_constant",
- "sss_candidate_mean_tick",
- "sss_candidate_max_tick",
- "sss_candidate_min_tick",
- "sss_candidate_mean_wire",
- "sss_candidate_max_wire",
- "sss_candidate_min_wire",
- "sss_candidate_min_dist",
- "sss_candidate_wire_tick_based_length",
- "sss_candidate_energy",
- "sss_candidate_angle_to_shower",
- "sss_candidate_closest_neighbour",
- "sss_candidate_remerge",
- "sss_candidate_matched",
- "sss_candidate_pdg",
- "sss_candidate_parent_pdg",
- "sss_candidate_trackid",
- "sss_candidate_true_energy",
- "sss_candidate_overlay_fraction",
- "sss_candidate_matched_energy_fraction_best_plane",
- "sss3d_ioc_ranked_en",
- "sss3d_ioc_ranked_conv",
- "sss3d_ioc_ranked_invar",
- "sss3d_ioc_ranked_implied_invar",
- "sss3d_ioc_ranked_ioc",
- "sss3d_ioc_ranked_opang",
- "sss3d_ioc_ranked_implied_opang",
- "sss3d_ioc_ranked_id",
- "sss3d_invar_ranked_en",
- "sss3d_invar_ranked_conv",
- "sss3d_invar_ranked_invar",
- "sss3d_invar_ranked_implied_invar",
- "sss3d_invar_ranked_ioc",
- "sss3d_invar_ranked_opang",
- "sss3d_invar_ranked_implied_opang",
- "sss3d_invar_ranked_id",
- "sss2d_ioc_ranked_en",
- "sss2d_ioc_ranked_conv",
- "sss2d_ioc_ranked_ioc",
- "sss2d_ioc_ranked_pca",
- "sss2d_ioc_ranked_invar",
- "sss2d_ioc_ranked_angle_to_shower",
- "sss2d_ioc_ranked_num_planes",
- "sss2d_invar_ranked_en",
- "sss2d_invar_ranked_conv",
- "sss2d_invar_ranked_ioc",
- "sss2d_invar_ranked_pca",
- "sss2d_invar_ranked_invar",
- "sss2d_invar_ranked_angle_to_shower",
- "sss2d_invar_ranked_num_planes",
- "sss2d_conv_ranked_en",
- "sss2d_conv_ranked_conv",
- "sss2d_conv_ranked_ioc",
- "sss2d_conv_ranked_pca",
- "sss2d_conv_ranked_invar",
- "sss2d_conv_ranked_angle_to_shower",
- "sss2d_conv_ranked_num_planes",
- "sss3d_num_showers",
- "sss3d_shower_start_x",
- "sss3d_shower_start_y",
- "sss3d_shower_start_z",
- "sss3d_shower_dir_x",
- "sss3d_shower_dir_y",
- "sss3d_shower_dir_z",
- "sss3d_shower_length",
- "sss3d_shower_conversion_dist",
- "sss3d_shower_invariant_mass",
- "sss3d_shower_implied_invariant_mass",
- "sss3d_shower_impact_parameter",
- "sss3d_shower_ioc_ratio",
- "sss3d_shower_energy_max",
- "sss3d_shower_score",
+ #"sss_num_unassociated_hits",
+ #"sss_num_unassociated_hits_below_threshold",
+ #"sss_num_associated_hits",
+ #"sss_num_candidates",
+ #"sss_candidate_veto_score",
+ #"sss_candidate_in_nu_slice",
+ #"sss_candidate_num_hits",
+ #"sss_candidate_num_wires",
+ #"sss_candidate_num_ticks",
+ #"sss_candidate_plane",
+ #"sss_candidate_PCA",
+ #"sss_candidate_mean_ADC",
+ #"sss_candidate_ADC_RMS",
+ #"sss_candidate_impact_parameter",
+ #"sss_candidate_fit_slope",
+ #"sss_candidate_fit_constant",
+ #"sss_candidate_mean_tick",
+ #"sss_candidate_max_tick",
+ #"sss_candidate_min_tick",
+ #"sss_candidate_mean_wire",
+ #"sss_candidate_max_wire",
+ #"sss_candidate_min_wire",
+ #"sss_candidate_min_dist",
+ #"sss_candidate_wire_tick_based_length",
+ #"sss_candidate_energy",
+ #"sss_candidate_angle_to_shower",
+ #"sss_candidate_closest_neighbour",
+ #"sss_candidate_remerge",
+ #"sss_candidate_matched",
+ #"sss_candidate_pdg",
+ #"sss_candidate_parent_pdg",
+ #"sss_candidate_trackid",
+ #"sss_candidate_true_energy",
+ #"sss_candidate_overlay_fraction",
+ #"sss_candidate_matched_energy_fraction_best_plane",
+ #"sss3d_ioc_ranked_en",
+ #"sss3d_ioc_ranked_conv",
+ #"sss3d_ioc_ranked_invar",
+ #"sss3d_ioc_ranked_implied_invar",
+ #"sss3d_ioc_ranked_ioc",
+ #"sss3d_ioc_ranked_opang",
+ #"sss3d_ioc_ranked_implied_opang",
+ #"sss3d_ioc_ranked_id",
+ #"sss3d_invar_ranked_en",
+ #"sss3d_invar_ranked_conv",
+ #"sss3d_invar_ranked_invar",
+ #"sss3d_invar_ranked_implied_invar",
+ #"sss3d_invar_ranked_ioc",
+ #"sss3d_invar_ranked_opang",
+ #"sss3d_invar_ranked_implied_opang",
+ #"sss3d_invar_ranked_id",
+ #"sss2d_ioc_ranked_en",
+ #"sss2d_ioc_ranked_conv",
+ #"sss2d_ioc_ranked_ioc",
+ #"sss2d_ioc_ranked_pca",
+ #"sss2d_ioc_ranked_invar",
+ #"sss2d_ioc_ranked_angle_to_shower",
+ #"sss2d_ioc_ranked_num_planes",
+ #"sss2d_invar_ranked_en",
+ #"sss2d_invar_ranked_conv",
+ #"sss2d_invar_ranked_ioc",
+ #"sss2d_invar_ranked_pca",
+ #"sss2d_invar_ranked_invar",
+ #"sss2d_invar_ranked_angle_to_shower",
+ #"sss2d_invar_ranked_num_planes",
+ #"sss2d_conv_ranked_en",
+ #"sss2d_conv_ranked_conv",
+ #"sss2d_conv_ranked_ioc",
+ #"sss2d_conv_ranked_pca",
+ #"sss2d_conv_ranked_invar",
+ #"sss2d_conv_ranked_angle_to_shower",
+ #"sss2d_conv_ranked_num_planes",
+ #"sss3d_num_showers",
+ #"sss3d_shower_start_x",
+ #"sss3d_shower_start_y",
+ #"sss3d_shower_start_z",
+ #"sss3d_shower_dir_x",
+ #"sss3d_shower_dir_y",
+ #"sss3d_shower_dir_z",
+ #"sss3d_shower_length",
+ #"sss3d_shower_conversion_dist",
+ #"sss3d_shower_invariant_mass",
+ #"sss3d_shower_implied_invariant_mass",
+ #"sss3d_shower_impact_parameter",
+ #"sss3d_shower_ioc_ratio",
+ #"sss3d_shower_energy_max",
+ #"sss3d_shower_score",
 # "trackstub_num_unassociated_hits",
 # "trackstub_unassociated_hits_below_threshold",
 # "trackstub_associated_hits",
