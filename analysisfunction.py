@@ -4395,12 +4395,12 @@ def Get2Photons(all_df, reco):
             nphotons_list.append(nphotons_pandora)
 
         all_df["nphotons_pandora"] = nphotons_list
-        all_df["photon1_mom_lantern"] = photon1_mom
-        all_df["photon2_mom_lantern"] = photon2_mom
-        all_df["photon1_XYZT_lantern"] = photon1_XYZT
-        all_df["photon2_XYZT_lantern"] = photon2_XYZT
-        all_df["photon1_process_lantern"] = photon1_mother
-        all_df["photon2_process_lantern"] = photon2_mother
+        all_df["photon1_mom_pandora"] = photon1_mom
+        all_df["photon2_mom_pandora"] = photon2_mom
+        all_df["photon1_XYZT_pandora"] = photon1_XYZT
+        all_df["photon2_XYZT_pandora"] = photon2_XYZT
+        all_df["photon1_process_pandora"] = photon1_mother
+        all_df["photon2_process_pandora"] = photon2_mother
 
     return all_df
 
