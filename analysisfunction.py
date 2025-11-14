@@ -233,7 +233,7 @@ def LoadTreesTruth(file1, file2, file3, su = False):
 
     if su:
         with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data_1 = f_in_time_data.arrays(time_variables + time_truth_variables, library="pd")
+            all_df_in_time_data_1 = f_in_time_data.arrays(time_variables + time_truth_variables + larpid_reco_variables + larpid_truth_variables, library="pd")
         with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
             all_df_in_pelee_data_1 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd")
         with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
@@ -258,7 +258,7 @@ def LoadTreesTruth(file1, file2, file3, su = False):
 
     if su:
         with uproot.open(file2)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data_2 = f_in_time_data.arrays(time_variables + time_truth_variables, library="pd")
+            all_df_in_time_data_2 = f_in_time_data.arrays(time_variables + time_truth_variables  + larpid_reco_variables + larpid_truth_variables, library="pd")
         with uproot.open(file2)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
             all_df_in_pelee_data_2 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd")
         with uproot.open(file2)["singlephotonana/vertex_tree"] as f_in_glee_data:
@@ -282,7 +282,7 @@ def LoadTreesTruth(file1, file2, file3, su = False):
 
     if su:
         with uproot.open(file3)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data_3 = f_in_time_data.arrays(time_variables + time_truth_variables, library="pd")
+            all_df_in_time_data_3 = f_in_time_data.arrays(time_variables + time_truth_variables  + larpid_reco_variables + larpid_truth_variables, library="pd")
         with uproot.open(file3)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
             all_df_in_pelee_data_3 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd")
         with uproot.open(file3)["singlephotonana/vertex_tree"] as f_in_glee_data:
@@ -360,7 +360,7 @@ def LoadTreesTruth1(file1, su = False):
 
     if su:
         with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data = f_in_time_data.arrays(time_variables + time_truth_variables, library="pd")
+            all_df_in_time_data = f_in_time_data.arrays(time_variables + time_truth_variables  + larpid_reco_variables + larpid_truth_variables, library="pd")
         with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
             all_df_in_pelee_data = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd")
         with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
@@ -387,7 +387,7 @@ def LoadTreesData(file1, file2, file3, su = False):
 
     if su:
         with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data_1 = f_in_time_data.arrays(time_variables, library="pd")
+            all_df_in_time_data_1 = f_in_time_data.arrays(time_variables  + larpid_reco_variables, library="pd")
         with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
             all_df_in_pelee_data_1 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd")
         with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
@@ -411,7 +411,7 @@ def LoadTreesData(file1, file2, file3, su = False):
 
     if su:
         with uproot.open(file2)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data_2 = f_in_time_data.arrays(time_variables, library="pd")
+            all_df_in_time_data_2 = f_in_time_data.arrays(time_variables  + larpid_reco_variables, library="pd")
         with uproot.open(file2)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
             all_df_in_pelee_data_2 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd")
         with uproot.open(file2)["singlephotonana/vertex_tree"] as f_in_glee_data:
@@ -435,7 +435,7 @@ def LoadTreesData(file1, file2, file3, su = False):
 
     if su:
         with uproot.open(file3)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data_3 = f_in_time_data.arrays(time_variables, library="pd")
+            all_df_in_time_data_3 = f_in_time_data.arrays(time_variables +  larpid_reco_variables, library="pd")
         with uproot.open(file3)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
             all_df_in_pelee_data_3 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd")
         with uproot.open(file3)["singlephotonana/vertex_tree"] as f_in_glee_data:
@@ -513,7 +513,7 @@ def LoadTreesData1(file1, su = False):
 
     if su:
         with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data = f_in_time_data.arrays(time_variables, library="pd")
+            all_df_in_time_data = f_in_time_data.arrays(time_variables  + larpid_reco_variables, library="pd")
         with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
             all_df_in_pelee_data = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd")
         with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
@@ -2048,12 +2048,13 @@ def PassSelection(selection, all_df, i):
         elif selection=="2shower_any_noglee" and ((enu>0.0 and wc_showers==2) or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and pelee_showers==2) or (lantern_vtxfv>-1 and lantern_showers==2)):
             p = True
         #2 photons
-        elif selection=="2photon_wc" or selection=="2photon_lantern" or selection=="2photon_all" or selection=="2photon_any" or selection=="2photon_all_noglee" or selection=="2photon_any_noglee":
+        elif selection=="2photon_wc" or selection=="2photon_lantern" or selection=="2photon_pandora" or selection=="2photon_all" or selection=="2photon_any" or selection=="2photon_all_noglee" or selection=="2photon_any_noglee":
             #get the WC number of photons (takes too long to do for all selections)
              # ensure the dataframe has the reco_startMomentum column to avoid KeyError later
             nphotons_wc = -1
             nphotons_lantern = -1
-            if selection!="2photon_lantern":
+            nphotons_pandora = -1
+            if selection!="2photon_lantern" and selection!="2photon_pandora":
                 if "nphotons_wc" in all_df.columns:
                     nphotons_wc = all_df["nphotons_wc"].to_numpy()[i]
                 elif "reco_startMomentum" in all_df.columns:
@@ -2073,22 +2074,39 @@ def PassSelection(selection, all_df, i):
                         if reco_pdg[j] == 22 and reco_startMomentum[j][3] > 0.02:
                             if ex > 3.0 and ex < 253.0 and ey > -113.0 and ey < 114.0 and ez > 3.0 and ez < 1034.0: #same as single photons
                                 nphotons_wc += 1
-            if selection!="2photon_wc":
-                nphotons_lantern = 0
-                showerPID = all_df["showerPID"].to_numpy()[i]
-                for pid in showerPID:
-                    if pid == 22:
-                        nphotons_lantern += 1
-
-
+            if selection!="2photon_wc" and selection!="2photon_pandora":
+                if "nphotons_lantern" in all_df.columns:
+                    nphotons_lantern = all_df["nphotons_lantern"].to_numpy()[i]
+                elif "showerPID" in all_df.columns:
+                    nphotons_lantern = 0
+                    showerPID = all_df["showerPID"].to_numpy()[i]
+                    for pid in showerPID:
+                        if pid == 22:
+                            nphotons_lantern += 1
+            if selection!="2photon_wc" and selection!="2photon_lantern":
+                if "nphotons_pandora" in all_df.columns:
+                    nphotons_pandora = all_df["nphotons_pandora"].to_numpy()[i]
+                else:
+                    nphotons_pandora = pelee_showers
             ##do the selections
             if selection=="2photon_wc" and enu>0.0 and nphotons_wc==2:
                 p = True
-            elif selection=="2photon_all" and enu>0.0 and nphotons_wc==2 and pelee_showers==2 and glee_showers==2 and (lantern_vtxfv>-1 and lantern_showers==2):
+            elif selection=="2photon_pandora" and ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and nphotons_pandora==2):
                 p = True
-            elif selection=="2photon_all_noglee" and enu>0.0 and nphotons_wc==2 and pelee_showers==2 and (lantern_vtxfv>-1 and lantern_showers==2):
+            elif selection=="2photon_lantern" and (lantern_vtxfv>-1 and nphotons_lantern==2):
                 p = True
-            
+            elif selection=="2photon_all" and enu>0.0 and nphotons_wc==2 and ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and nphotons_pandora==2) and glee_showers==2 and (lantern_vtxfv>-1 and nphotons_lantern==2):
+                p = True
+            elif selection=="2photon_all_noglee" and enu>0.0 and nphotons_wc==2 and ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and nphotons_pandora==2) and (lantern_vtxfv>-1 and nphotons_lantern==2):
+                p = True
+            elif selection=="2photon_any" and ((enu>0.0 and nphotons_wc==2) or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and nphotons_pandora==2) or glee_showers==2 or (lantern_vtxfv>-1 and nphotons_lantern==2)):
+                p = True
+            elif selection=="2photon_any_noglee" and ((enu>0.0 and nphotons_wc==2) or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and nphotons_pandora==2) or (lantern_vtxfv>-1 and nphotons_lantern==2)):
+                p = True
+            elif selection=="2photon_any_gen" and enu>0.0 and (nphotons_wc==2 or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and nphotons_pandora==2) or (lantern_vtxfv>-1 and nphotons_lantern==2)):
+                p = True
+            #elif selection=="2photon_any_vertex" and ((enu>0.0 and nphotons_wc==2) or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and nphotons_pandora==2) or (lantern_vtxfv>-1 and nphotons_lantern==2)):
+            #    p = True
         
     
     return p
@@ -4226,7 +4244,18 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     return h_stack
     #return c,h_data,h_ext,h_dirt,h_cos,h_outFV,h_numuCCpi0,h_numuCC,h_NCpi0,h_NC,h_nueCC,h_NCpi1g,h_NCdel,h_NCother,h_numuCC1g
 
-def Get2Photons(all_df, reco):
+def FindWCMother(p, Ntrack, id, pdg):
+    m = -9999.
+    if p == 0:
+        m = 0
+    else:
+        for j in range(int(Ntrack)):
+            if (id[j] == p):
+                m = pdg[j]
+                break
+    return m
+
+def Get2Photons(all_df, reco, data):
     photon1_mom = []
     photon2_mom = []
     photon1_XYZT = []
@@ -4234,36 +4263,44 @@ def Get2Photons(all_df, reco):
     photon1_mother = []
     photon2_mother = []
     nphotons_list = []
+    inv_mass = []
+    em_charge_scale = 1.0
     num_evts = all_df.shape[0]
     if reco == "wc":
+        em_charge_scale = 0.95
         reco_Ntrack = all_df["reco_Ntrack"].to_numpy()
         reco_startXYZT = all_df["reco_startXYZT"].to_numpy()
         reco_startMomentum = all_df["reco_startMomentum"].to_numpy()
         reco_pdg = all_df["reco_pdg"].to_numpy()
         reco_mother = all_df["reco_mother"].to_numpy()
+        reco_id = all_df["reco_id"].to_numpy()
         for i in range(num_evts):
             nphotons_wc = 0
             photon1 = False
             photon2 = False
+            mass = -9999.
             for j in range(int(reco_Ntrack[i])):
                 ex = reco_startXYZT[i][j][0]
                 ey = reco_startXYZT[i][j][1]
                 ez = reco_startXYZT[i][j][2]
-                #kine_energy_particle = np.array(kine_energy_particle_vec[i]) 
-                #kine_particle_type = kine_particle_type_vec[i]
-                #proton_mask = (np.abs(kine_particle_type) == 2212) & (kine_energy_particle > 35)
-                #num_protons = np.sum(proton_mask)
-                if reco_pdg[i][j] == 22 and reco_startMomentum[i][j][3] > 0.02:
+                mother = FindWCMother(reco_mother[i][j], reco_Ntrack[i], reco_id[i], reco_pdg[i])
+                mom = reco_startMomentum[i][j]
+                if data:
+                    mom[0] *= em_charge_scale
+                    mom[1] *= em_charge_scale
+                    mom[2] *= em_charge_scale
+                    mom[3] *= em_charge_scale
+                if reco_pdg[i][j] == 22 and mother != 11 and mother != 22 and mom[3] > 0.02:
                     if ex > 3.0 and ex < 253.0 and ey > -113.0 and ey < 114.0 and ez > 3.0 and ez < 1034.0: #same as single photons
                         nphotons_wc += 1
                         if not photon1:
                             photon1 = True
-                            photon1_mom.append(reco_startMomentum[i][j])
+                            photon1_mom.append(mom)
                             photon1_XYZT.append(reco_startXYZT[i][j])
                             photon1_mother.append(reco_mother[i][j])
                         elif not photon2:
                             photon2 = True
-                            photon2_mom.append(reco_startMomentum[i][j])
+                            photon2_mom.append(mom)
                             photon2_XYZT.append(reco_startXYZT[i][j])
                             photon2_mother.append(reco_mother[i][j])
             if not photon1:
@@ -4274,7 +4311,10 @@ def Get2Photons(all_df, reco):
                 photon2_mom.append([-9999.,-9999.,-9999.,-9999.])
                 photon2_XYZT.append([-9999.,-9999.,-9999.,-9999.])
                 photon2_mother.append(-9999)
+            else:
+                mass = GetInvariantMass(photon1_mom[i], photon2_mom[i])
             nphotons_list.append(nphotons_wc)
+            inv_mass.append(mass)
 
         all_df["nphotons_wc"] = nphotons_list
         all_df["photon1_mom_wc"] = photon1_mom
@@ -4283,6 +4323,7 @@ def Get2Photons(all_df, reco):
         all_df["photon2_XYZT_wc"] = photon2_XYZT
         all_df["photon1_mother_wc"] = photon1_mother
         all_df["photon2_mother_wc"] = photon2_mother
+        all_df["photon_inv_mass_wc"] = inv_mass
     
     if reco == "lantern":
         nShowers = all_df["nShowers"].to_numpy()
@@ -4299,6 +4340,7 @@ def Get2Photons(all_df, reco):
             nphotons_lantern = 0
             photon1 = False
             photon2 = False
+            mass = -9999.
             for j in range(nShowers[i]):
                 if showerPID[i][j] == 22:
                     nphotons_lantern += 1
@@ -4324,7 +4366,10 @@ def Get2Photons(all_df, reco):
                 photon2_mom.append([-9999.,-9999.,-9999.,-9999.])
                 photon2_XYZT.append([-9999.,-9999.,-9999.,-9999.])
                 photon2_mother.append(-9999)
+            else:
+                mass = GetInvariantMass(photon1_mom[i], photon2_mom[i])
             nphotons_list.append(nphotons_lantern)
+            inv_mass.append(mass)
 
         all_df["nphotons_lantern"] = nphotons_list
         all_df["photon1_mom_lantern"] = photon1_mom
@@ -4333,6 +4378,7 @@ def Get2Photons(all_df, reco):
         all_df["photon2_XYZT_lantern"] = photon2_XYZT
         all_df["photon1_process_lantern"] = photon1_mother
         all_df["photon2_process_lantern"] = photon2_mother
+        all_df["photon_inv_mass_lantern"] = inv_mass
 
     if reco == "pandora":
         n_showers_contained = all_df["n_showers_contained"].to_numpy()
@@ -4353,6 +4399,7 @@ def Get2Photons(all_df, reco):
             nphotons_pandora = 0
             photon1 = False
             photon2 = False
+            mass = -9999.
             nphotons_pandora = n_showers_contained[i]
             if pi0_energy1_Y[i] > 0.:
                 photon1 = True
@@ -4392,7 +4439,10 @@ def Get2Photons(all_df, reco):
                 photon2_mom.append([-9999.,-9999.,-9999.,-9999.])
                 photon2_XYZT.append([-9999.,-9999.,-9999.,-9999.])
                 photon2_mother.append(-9999)
+            else:
+                mass = GetInvariantMass(photon1_mom[i], photon2_mom[i])
             nphotons_list.append(nphotons_pandora)
+            inv_mass.append(mass)
 
         all_df["nphotons_pandora"] = nphotons_list
         all_df["photon1_mom_pandora"] = photon1_mom
@@ -4401,6 +4451,10 @@ def Get2Photons(all_df, reco):
         all_df["photon2_XYZT_pandora"] = photon2_XYZT
         all_df["photon1_process_pandora"] = photon1_mother
         all_df["photon2_process_pandora"] = photon2_mother
+        all_df["photon_inv_mass_pandora"] = inv_mass
+
+    #if reco == "nugraph":
+
 
     return all_df
 
@@ -5274,6 +5328,9 @@ pelee_pi0_variables = [
         "pi0_mass_Y",
         "pi0_mass_V",
         "pi0_mass_U",
+        "pi0_rc_vtx_x",
+        "pi0_rc_vtx_y",
+        "pi0_rc_vtx_z",
         "pi0_nshower",
         "pi0_dir2_x",
         "pi0_dir2_y",
@@ -5494,48 +5551,48 @@ glee_reco_variables = [
  #"sss3d_shower_ioc_ratio",
  #"sss3d_shower_energy_max",
  #"sss3d_shower_score",
-# "trackstub_num_unassociated_hits",
-# "trackstub_unassociated_hits_below_threshold",
-# "trackstub_associated_hits",
-# "trackstub_num_candidates",
-# "trackstub_candidate_in_nu_slice",
-# "trackstub_candidate_num_hits",
-# "trackstub_candidate_num_wires",
-# "trackstub_candidate_num_ticks",
-# "trackstub_candidate_plane",
-# "trackstub_candidate_PCA",
-# "trackstub_candidate_mean_ADC",
-# "trackstub_candidate_ADC_RMS",
-# "trackstub_candidate_veto_score",
-# "trackstub_candidate_mean_tick",
-# "trackstub_candidate_max_tick",
-# "trackstub_candidate_min_tick",
-# "trackstub_candidate_min_wire",
-# "trackstub_candidate_max_wire",
-# "trackstub_candidate_mean_wire",
-# "trackstub_candidate_min_dist",
-# "trackstub_candidate_min_impact_parameter_to_shower",
-# "trackstub_candidate_min_conversion_dist_to_shower_start",
-# "trackstub_candidate_min_ioc_to_shower_start",
-# "trackstub_candidate_ioc_based_length",
-# "trackstub_candidate_wire_tick_based_length",
-# "trackstub_candidate_mean_ADC_first_half",
-# "trackstub_candidate_mean_ADC_second_half",
-# "trackstub_candidate_mean_ADC_first_to_second_ratio",
-# "trackstub_candidate_track_angle_wrt_shower_direction",
-# "trackstub_candidate_linear_fit_chi2",
-# "trackstub_candidate_energy",
-# "trackstub_candidate_remerge",
-# "trackstub_candidate_matched",
-# "trackstub_candidate_matched_energy_fraction_best_plane",
-# "trackstub_candidate_pdg",
-# "trackstub_candidate_parent_pdg",
-# "trackstub_candidate_trackid",
-# "trackstub_candidate_true_energy",
-# "trackstub_candidate_overlay_fraction",
-# "trackstub_num_candidate_groups",
-# "grouped_trackstub_candidate_indices",
-# "trackstub_candidate_group_timeoverlap_fraction",
+ "trackstub_num_unassociated_hits",
+ "trackstub_unassociated_hits_below_threshold",
+ "trackstub_associated_hits",
+ "trackstub_num_candidates",
+ "trackstub_candidate_in_nu_slice",
+ "trackstub_candidate_num_hits",
+ "trackstub_candidate_num_wires",
+ "trackstub_candidate_num_ticks",
+ "trackstub_candidate_plane",
+ "trackstub_candidate_PCA",
+ "trackstub_candidate_mean_ADC",
+ "trackstub_candidate_ADC_RMS",
+ "trackstub_candidate_veto_score",
+ "trackstub_candidate_mean_tick",
+ "trackstub_candidate_max_tick",
+ "trackstub_candidate_min_tick",
+ "trackstub_candidate_min_wire",
+ "trackstub_candidate_max_wire",
+ "trackstub_candidate_mean_wire",
+ "trackstub_candidate_min_dist",
+ "trackstub_candidate_min_impact_parameter_to_shower",
+ "trackstub_candidate_min_conversion_dist_to_shower_start",
+ "trackstub_candidate_min_ioc_to_shower_start",
+ "trackstub_candidate_ioc_based_length",
+ "trackstub_candidate_wire_tick_based_length",
+ "trackstub_candidate_mean_ADC_first_half",
+ "trackstub_candidate_mean_ADC_second_half",
+ "trackstub_candidate_mean_ADC_first_to_second_ratio",
+ "trackstub_candidate_track_angle_wrt_shower_direction",
+ "trackstub_candidate_linear_fit_chi2",
+ "trackstub_candidate_energy",
+ "trackstub_candidate_remerge",
+ "trackstub_candidate_matched",
+ "trackstub_candidate_matched_energy_fraction_best_plane",
+ "trackstub_candidate_pdg",
+ "trackstub_candidate_parent_pdg",
+ "trackstub_candidate_trackid",
+ "trackstub_candidate_true_energy",
+ "trackstub_candidate_overlay_fraction",
+ "trackstub_num_candidate_groups",
+ "grouped_trackstub_candidate_indices",
+ "trackstub_candidate_group_timeoverlap_fraction",
 # "beamgate_flash_start",
 # "beamgate_flash_end",
 # "reco_num_flashes",
@@ -5699,6 +5756,29 @@ glee_reco_variables = [
  #"reco_shower_kalman_dEdx_plane0_mean",
  #"reco_shower_kalman_dEdx_plane1_mean",
  #"reco_shower_kalman_dEdx_plane2_mean"
+]
+
+larpid_reco_variables = [
+ "reco_larpid_classified",
+ "reco_larpid_proccess",
+ "reco_larpid_completeness",
+ "reco_larpid_purity",
+ "reco_larpid_pidScore_el",
+ "reco_larpid_pidScore_ph",
+ "reco_larpid_pidScore_mu",
+ "reco_larpid_pidScore_pi",
+ "reco_larpid_pidScore_pr",
+ "reco_larpid_procScore_prim",
+ "reco_larpid_procScore_ntrl",
+ "reco_larpid_procScore_chgd"
+]
+
+larpid_truth_variables = [
+ "reco_truthMatch_pdg",
+ "reco_truthMatch_id",
+ "reco_truthMatch_purity",
+ "reco_truthMatch_completeness",
+ "reco_truthMatch_nSimParts"
 ]
 
 lantern_reco_variables = [
