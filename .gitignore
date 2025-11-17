@@ -3,3 +3,4 @@
 plots/
 pyBumpHunter/
 data/
+__pycache__/

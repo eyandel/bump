@@ -2883,7 +2883,8 @@ def MakeDataPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y
 ###
 def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_label, 
                    selection, POT, plot_folder, array_sig = [0,1,2,3,111], ignore_cat = [], 
-                   plotlog = False, changey = False, y_lim = 0, legx1 = 0.45, legy1 = 0.55, legx2 = 0.85, legy2 = 0.85, systdir=""):
+                   plotlog = False, changey = False, y_lim = 0, legx1 = 0.45, legy1 = 0.55, 
+                   legx2 = 0.85, legy2 = 0.85, systdir="", gausfit = False):
     #function to make a mc plot for a variable, will use whatever cut value and part of chain comes before
         #the call to the function
     #inputs:
@@ -3370,6 +3371,20 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
         h_stack.Add(h_new[i])
 
     h_stack.Draw("hist")
+
+    if gausfit:
+        #ROOT.gStyle.SetOptFit(1011)
+        # Create the fit function
+        fitFunc = ROOT.TF1("fitFunc", "[0] * exp(-0.5 * ((x - [1]) / [2])**2) + [3]", start_edge, end_edge)
+
+        # Set initial parameter values
+        fitFunc.SetParameters(100, 0, 1, 10)
+
+        # Set parameter names
+        fitFunc.SetParNames("Amplitude", "Mean", "Sigma", "Offset")
+
+        # Fit the histogram
+        h_data.Fit("fitFunc", "M")
 
     #make syst errors from existing TLEE file
     if systdir != "":
@@ -4285,6 +4300,10 @@ def Get2Photons(all_df, reco, data):
                 ez = reco_startXYZT[i][j][2]
                 mother = FindWCMother(reco_mother[i][j], reco_Ntrack[i], reco_id[i], reco_pdg[i])
                 mom = reco_startMomentum[i][j]
+                mom[0] *= 1000
+                mom[1] *= 1000
+                mom[2] *= 1000
+                mom[3] *= 1000
                 if data:
                     mom[0] *= em_charge_scale
                     mom[1] *= em_charge_scale
