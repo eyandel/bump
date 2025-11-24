@@ -1774,8 +1774,8 @@ def GetEffPur(all_df, selection, array_sig = [0,1,2,3,111], ignore_cat = []):
         pur = sel_sig / (sel_sig + sel_bkg)
 
     print(selection)
-    print("eff: %.1f%" % eff*100.0)
-    print("pur: %.1f%" % pur*100.0)
+    print("eff: %.1f%%" % (eff*100.0))
+    print("pur: %.1f%%" % (pur*100.0))
 
     return eff, pur
 
