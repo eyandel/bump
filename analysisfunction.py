@@ -4513,8 +4513,8 @@ def Get2Photons(all_df, reco):
 
     if reco == "pandora":
         n_showers_contained = all_df["pelee_n_showers_contained"].to_numpy()
-        pi0_energy1_Y = [x/0.83 for x in all_df["pelee_pi0_energy1_Y"].to_numpy()]
-        pi0_energy2_Y = [x/0.83 for x in all_df["pelee_pi0_energy2_Y"].to_numpy()]
+        pi0_energy1_Y = [(x/0.83) * 1.10 for x in all_df["pelee_pi0_energy1_Y"].to_numpy()]
+        pi0_energy2_Y = [(x/0.83) * 1.10 for x in all_df["pelee_pi0_energy2_Y"].to_numpy()]
         pi0_dir1_x = all_df["pelee_pi0_dir1_x"].to_numpy()
         pi0_dir1_y = all_df["pelee_pi0_dir1_y"].to_numpy()
         pi0_dir1_z = all_df["pelee_pi0_dir1_z"].to_numpy()
