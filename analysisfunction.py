@@ -30,6 +30,28 @@ import itertools
 
 import matplotlib as mpl
 import matplotlib.lines as mlines
+
+import polars as pl
+import sys
+#import os
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '../uboone_ngem')))
+
+from src.plot_helpers import make_histogram_plot
+from src.df_helpers import get_vals
+from src.systematics import *
+
+#from src.signal_categories import topological_category_labels, topological_category_colors, topological_category_labels_latex, topological_category_hatches, topological_categories_dic
+#from src.signal_categories import filetype_category_labels, filetype_category_colors, filetype_category_hatches
+#from src.signal_categories import del1g_detailed_category_labels, del1g_detailed_category_colors, del1g_detailed_category_labels_latex, del1g_detailed_category_hatches, del1g_detailed_categories_dic
+#from src.signal_categories import del1g_simple_category_labels, del1g_simple_category_colors, del1g_simple_category_labels_latex, del1g_simple_category_hatches, del1g_simple_categories_dic
+#from src.signal_categories import train_category_labels, train_category_labels_latex
+
+#from src.ntuple_variables.pandora_variables import pandora_scalar_second_half_training_vars
+#from src.ntuple_variables.variables import combined_training_vars
+
+#from src.file_locations import intermediate_files_location
+
+
 mpl.rcParams['savefig.dpi'] = 300
 #mpl.rcParams['mathtext.fallback_to_cm'] = False
 #mpl.rcParams['font.size'] = 10
@@ -1778,6 +1800,126 @@ def GetEffPur(all_df, selection, array_sig = [0,1,2,3,111], ignore_cat = []):
     print("pur: %.1f%%" % (pur*100.0))
 
     return eff, pur
+
+###
+def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat = []):
+    #return a table of efficiency and purity for multiple selections
+    num_evts = all_df.shape[0]
+    effs = []
+    purs = []
+    m_sigmas = []
+    wcs = []
+    pelees = []
+    lanterns = []
+    glees = []
+    other_cuts = []
+    orands = []
+
+    if "photon_inv_mass" not in all_df.columns:
+        all_df = CombinePhotonVars(all_df, "photon_inv_mass")
+
+    for sel in selections:
+        eff, pur = GetEffPur(all_df, sel, array_sig, ignore_cat)
+        effs.append(eff * 100.0)
+        purs.append(pur * 100.0)
+        sel_name = "-"
+        has1reco = False
+        has2reco = False
+        if sel.contains("2photon"):
+            sel_name = "2 Photon"
+        elif sel.contains("2shower"):
+            sel_name = "2 Shower"
+
+        if sel.contains("any") or sel.contains("all"):
+            wcs.append(sel_name)
+            pelees.append(sel_name)
+            lanterns.append(sel_name)
+            if sel == "2shower_any" or sel == "2photon_any" or sel == "2shower_all" or sel == "2photon_all":
+                glees.append(sel_name)
+            else:
+                glees.append("-")
+        else:     
+            if sel.contains("wc"):
+                wcs.append(sel_name)
+                if has1reco:
+                    has2reco = True
+                else:
+                    has1reco = True
+            else:
+                wcs.append("-")
+            if sel.contains("pelee"):
+                pelees.append(sel_name)
+                if has1reco:
+                    has2reco = True
+                else:
+                    has1reco = True
+            else:
+                pelees.append("-")
+            if sel.contains("lantern"):
+                lanterns.append(sel_name)
+                if has1reco:
+                    has2reco = True
+                else:
+                    has1reco = True
+            else:
+                lanterns.append("-")
+            glees.append("-")
+
+        if sel.contains("gen"):
+            other_cuts.append("Generic Neutrino")
+        if sel.contains("wpdist"):
+            other_cuts.append("|WC - Pan Vtx Dist| < 5cm")
+        elif sel.contains("wldist"):
+            other_cuts.append("|WC - Lantern Vtx Dist| < 5cm")
+        elif sel.contains("lpdist"):
+            other_cuts.append("|Lantern - Pan Vtx Dist| < 5cm")
+        elif sel.contains("wpdist"):
+            other_cuts.append("|WC - Pan Vtx Dist| < 5cm")
+        elif sel.contains("dist"):
+            other_cuts.append("All Vtx dists < 5cm")
+        else:
+            other_cuts.append("-")
+
+        if sel.contains("any"):
+            orands.append("OR")
+        elif sel.contains("all"):
+            orands.append("AND")
+        elif has2reco:
+            orands.append("AND")
+        else:
+            orands.append("-")
+
+        hmc = ROOT.TH1F("hmc", "hmc", 30, 0.0, 300.0)
+        selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, "photon_inv_mass", "selected_var", array_sig=array_sig, selection=sel, ignore_cat=ignore_cat)
+        for i in range(len(selected_var_sig)):
+            hmc.Fill(selected_var_sig[i])
+        for i in range(len(selected_var_bkg)):
+            hmc.Fill(selected_var_bkg[i])
+            
+        hmc.Draw("hist same")
+        ROOT.gStyle.SetOptFit(1011)
+        # Create the fit function
+        fitFunc = ROOT.TF1("fitFunc", "[0] * exp(-0.5 * ((x - [1]) / [2])**2) + [3]", 0.0, 300.0)
+
+        # Set initial parameter values
+        fitFunc.SetParameters(100, 0, 1, 10)
+
+        # Set parameter names
+        fitFunc.SetParNames("Amplitude", "Mean", "Sigma", "Offset")
+
+        # Fit the histogram
+        #hmc.Fit("fitFunc", "M")
+        hmc.Fit("gaus", "M")
+        mean = fitFunc.GetParameter(1)
+        sigma = fitFunc.GetParameter(2)
+        m_sigmas.append(sigma)
+                
+        
+
+    selection_table = pd.DataFrame({'Selection': selections, 'WC': wcs, 'PeLEE': pelees, 'Lantern': lanterns, 'gLEE': glees, 'Other Cuts': other_cuts, 'OR/AND': orands, 'Efficiency': effs, 'Purity': purs, 'Eff*Pur': [(effs[i]/100.0)*(purs[i]/100.0) for i in range(len(effs))], 'Mass Sigma': m_sigmas, 'Eff*Pur / Sigma': [(effs[i]/100.0)*(purs[i]/100.0)/(m_sigmas[i]) if m_sigmas[i] != 0 else 0 for i in range(len(effs))]})
+    print(selection_table.sort_values(by='Eff*Pur / Sigma', ascending=False))
+
+    return selection_table
 
 ###
 def GetPOT(file):
@@ -4650,6 +4792,30 @@ def CombinePhotonVars(all_df, var):
     all_df[var] = var_list
     
     return var_list
+
+
+###
+def MakeCovMatrix(selected_mc_df, weight_dict, var, bin_width, start_edge, end_edge):
+    bins = np.arange(start_edge, end_edge + bin_width, bin_width)
+    rw_sys_frac_cov_dic = create_rw_frac_cov_matrices(selected_mc_df, var, bins, weights_df=None)
+
+    combined_rw_sys_frac_cov = np.zeros((len(bins)-1, len(bins)-1))
+    for rw_sys_frac_cov_name, rw_sys_frac_cov in rw_sys_frac_cov_dic.items():
+        combined_rw_sys_frac_cov += rw_sys_frac_cov
+    combined_rw_sys_cov = combined_rw_sys_frac_cov * np.outer(mc_pred_counts, mc_pred_counts) # fractional uncertainty on the MC pred, not including EXT
+    data_stat_cov = get_data_stat_cov(data_counts, pred_counts)
+    pred_stat_cov = get_pred_stat_cov(get_vals(pred_sel_df, var), pred_sel_df.get_column("wc_net_weight").to_numpy(), bins)
+    nodetvar_sys_cov = combined_rw_sys_cov + data_stat_cov + pred_stat_cov
+    nodetvar_sys_frac_cov = nodetvar_sys_cov / np.outer(pred_counts, pred_counts)
+    nodetvar_sys_frac_cov = np.nan_to_num(nodetvar_sys_frac_cov, nan=0, posinf=0, neginf=0)
+    nodetvar_pred_sys_cov = combined_rw_sys_cov + pred_stat_cov
+    nodetvar_pred_sys_frac_cov = nodetvar_pred_sys_cov / np.outer(pred_counts, pred_counts)
+    nodetvar_pred_sys_frac_cov = np.nan_to_num(nodetvar_pred_sys_frac_cov, nan=0, posinf=0, neginf=0)
+    nodetvar_pred_sys_frac_errors = np.sqrt(np.diag(nodetvar_pred_sys_frac_cov))
+
+    cov_matrix = nodetvar_pred_sys_frac_cov
+
+    return cov_matrix
 
 
 
