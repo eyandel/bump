@@ -1816,21 +1816,22 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
     orands = []
 
     if "photon_inv_mass" not in all_df.columns:
-        all_df = CombinePhotonVars(all_df, "photon_inv_mass")
+        photon_inv_mass = CombinePhotonVars(all_df, "photon_inv_mass")
 
     for sel in selections:
-        eff, pur = GetEffPur(all_df, sel, array_sig, ignore_cat)
+        #print(sel)
+        eff, pur = GetEffPur(all_df, sel, array_sig = array_sig, ignore_cat = ignore_cat)
         effs.append(eff * 100.0)
         purs.append(pur * 100.0)
         sel_name = "-"
         has1reco = False
         has2reco = False
-        if sel.contains("2photon"):
+        if "2photon" in sel:
             sel_name = "2 Photon"
-        elif sel.contains("2shower"):
+        elif "2shower" in sel:
             sel_name = "2 Shower"
 
-        if sel.contains("any") or sel.contains("all"):
+        if "any" in sel or "all" in sel:
             wcs.append(sel_name)
             pelees.append(sel_name)
             lanterns.append(sel_name)
@@ -1839,7 +1840,7 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
             else:
                 glees.append("-")
         else:     
-            if sel.contains("wc"):
+            if "wc" in sel:
                 wcs.append(sel_name)
                 if has1reco:
                     has2reco = True
@@ -1847,7 +1848,7 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
                     has1reco = True
             else:
                 wcs.append("-")
-            if sel.contains("pelee"):
+            if "pelee" in sel:
                 pelees.append(sel_name)
                 if has1reco:
                     has2reco = True
@@ -1855,7 +1856,7 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
                     has1reco = True
             else:
                 pelees.append("-")
-            if sel.contains("lantern"):
+            if "lantern" in sel:
                 lanterns.append(sel_name)
                 if has1reco:
                     has2reco = True
@@ -1865,24 +1866,24 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
                 lanterns.append("-")
             glees.append("-")
 
-        if sel.contains("gen"):
+        if "gen" in sel:
             other_cuts.append("Generic Neutrino")
-        if sel.contains("wpdist"):
+        if "wpdist" in sel:
             other_cuts.append("|WC - Pan Vtx Dist| < 5cm")
-        elif sel.contains("wldist"):
+        elif "wldist" in sel:
             other_cuts.append("|WC - Lantern Vtx Dist| < 5cm")
-        elif sel.contains("lpdist"):
+        elif "lpdist" in sel:
             other_cuts.append("|Lantern - Pan Vtx Dist| < 5cm")
-        elif sel.contains("wpdist"):
+        elif "wpdist" in sel:
             other_cuts.append("|WC - Pan Vtx Dist| < 5cm")
-        elif sel.contains("dist"):
+        elif "dist" in sel:
             other_cuts.append("All Vtx dists < 5cm")
         else:
             other_cuts.append("-")
 
-        if sel.contains("any"):
+        if "any" in sel:
             orands.append("OR")
-        elif sel.contains("all"):
+        elif "all" in sel:
             orands.append("AND")
         elif has2reco:
             orands.append("AND")
