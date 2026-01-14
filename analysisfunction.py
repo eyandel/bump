@@ -1826,6 +1826,10 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
         sel_name = "-"
         has1reco = False
         has2reco = False
+        selected_var_sig = [] 
+        selected_var_bkg = [] 
+        selected_var_data = []
+
         if "2photon" in sel:
             sel_name = "2 Photon"
         elif "2shower" in sel:
@@ -1868,7 +1872,7 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
 
         if "gen" in sel:
             other_cuts.append("Generic Neutrino")
-        if "wpdist" in sel:
+        elif "wpdist" in sel:
             other_cuts.append("|WC - Pan Vtx Dist| < 5cm")
         elif "wldist" in sel:
             other_cuts.append("|WC - Lantern Vtx Dist| < 5cm")
@@ -1889,33 +1893,58 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
             orands.append("AND")
         else:
             orands.append("-")
-
+        
+        print("making hist for selection: " + sel)
         hmc = ROOT.TH1F("hmc", "hmc", 30, 0.0, 300.0)
-        selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, "photon_inv_mass", "selected_var", array_sig=array_sig, selection=sel, ignore_cat=ignore_cat)
+        selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, "photon_inv_mass", "photon_inv_mass", array_sig=array_sig, selection=sel, ignore_cat=ignore_cat)
+        del selected_var_data
+        print("Filling histogram for selection: " + sel)
         for i in range(len(selected_var_sig)):
             hmc.Fill(selected_var_sig[i])
         for i in range(len(selected_var_bkg)):
             hmc.Fill(selected_var_bkg[i])
+        
+        del selected_var_sig
+        del selected_var_bkg
+        del selected_var_data
             
-        hmc.Draw("hist same")
+        print("Drawing histogram for selection: " + sel)
+        hmc.Draw()
         ROOT.gStyle.SetOptFit(1011)
         # Create the fit function
-        fitFunc = ROOT.TF1("fitFunc", "[0] * exp(-0.5 * ((x - [1]) / [2])**2) + [3]", 0.0, 300.0)
+        #fitFunc = ROOT.TF1("fitFunc", "[0] * exp(-0.5 * ((x - [1]) / [2])**2) + [3]", 0.0, 300.0)
 
         # Set initial parameter values
-        fitFunc.SetParameters(100, 0, 1, 10)
+        #fitFunc.SetParameters(100, 0, 1, 10)
 
         # Set parameter names
-        fitFunc.SetParNames("Amplitude", "Mean", "Sigma", "Offset")
+        #fitFunc.SetParNames("Amplitude", "Mean", "Sigma", "Offset")
 
         # Fit the histogram
         #hmc.Fit("fitFunc", "M")
-        hmc.Fit("gaus", "M")
+        print("Fitting selection: " + sel)
+        hmc.Fit("gaus", "MQ")
+        fitFunc = ROOT.TF1(hmc.GetFunction("gaus"))
         mean = fitFunc.GetParameter(1)
         sigma = fitFunc.GetParameter(2)
+        print("Mean: %.2f, Sigma: %.2f" % (mean, sigma))
         m_sigmas.append(sigma)
+
+        hmc.Delete()
+        fitFunc.Update()
+        del hmc
+        del fitFunc
                 
-        
+    #print("selections: " + str(len(selections)))
+    #print("effs: " + str(len(effs)))
+    #print("purs: " + str(len(purs)))
+    #print("m_sigmas: " + str(len(m_sigmas)))
+    #print("wcs: " + str(len(wcs)))
+    #print("pelees: " + str(len(pelees)))
+    #print("lanterns: " + str(len(lanterns)))
+    #print("glees: " + str(len(glees)))
+    #print("other_cuts: " + str(len(other_cuts)))
+    #print("orands: " + str(len(orands)))
 
     selection_table = pd.DataFrame({'Selection': selections, 'WC': wcs, 'PeLEE': pelees, 'Lantern': lanterns, 'gLEE': glees, 'Other Cuts': other_cuts, 'OR/AND': orands, 'Efficiency': effs, 'Purity': purs, 'Eff*Pur': [(effs[i]/100.0)*(purs[i]/100.0) for i in range(len(effs))], 'Mass Sigma': m_sigmas, 'Eff*Pur / Sigma': [(effs[i]/100.0)*(purs[i]/100.0)/(m_sigmas[i]) if m_sigmas[i] != 0 else 0 for i in range(len(effs))]})
     print(selection_table.sort_values(by='Eff*Pur / Sigma', ascending=False))
