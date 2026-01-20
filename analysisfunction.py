@@ -113,99 +113,138 @@ def AddTruthCat(all_df, catname, catnum, catcolor):
     photon1_mother = []
     photon2_mother = []
     true_event_types = all_df["true_event_type"].to_numpy()
-    truth_Ntrack = all_df["wc_truth_Ntrack"].to_numpy()
-    truth_pdg = all_df["wc_truth_pdg"].to_numpy()
-    truth_startMomentum = all_df["wc_truth_startMomentum"].to_numpy()
-    truth_process = all_df["wc_truth_process"].to_numpy()
-    truth_mother = all_df["wc_truth_mother"].to_numpy()
-    truth_endXYZT = all_df["wc_truth_endXYZT"].to_numpy()
-    for i in range(len(true_event_types)):
-        if true_event_types[i] == 12:
-            newcat.append(12)
-            newcatname.append("Extbnb")
-            newcatcolor.append(ROOT.kGray)
-            photon1_mom.append([-999.,-999.,-999.,-999.])
-            photon2_mom.append([-999.,-999.,-999.,-999.])
-            photon1_process.append("none")
-            photon2_process.append("none")
-            photon1_XYZT.append([-999.,-999.,-999.,-999.])
-            photon2_XYZT.append([-999.,-999.,-999.,-999.])
-            photon1_mother.append(-999)
-            photon2_mother.append(-999)
-        elif true_event_types[i] == 13:
-            newcat.append(13)
-            newcatname.append("Data")
-            newcatcolor.append(ROOT.kBlack)
-            photon1_mom.append([-999.,-999.,-999.,-999.])
-            photon2_mom.append([-999.,-999.,-999.,-999.])
-            photon1_process.append("none")
-            photon2_process.append("none")
-            photon1_XYZT.append([-999.,-999.,-999.,-999.])
-            photon2_XYZT.append([-999.,-999.,-999.,-999.])
-            photon1_mother.append(-999)
-            photon2_mother.append(-999)
-        else:
-            nphotons = 0
-            photon1 = False
-            photon2 = False
-            vis5mev = 0
-            vis50mev = 0
-            for j in range(int(truth_Ntrack[i])):
-                ex = truth_endXYZT[i][j][0]
-                ey = truth_endXYZT[i][j][1]
-                ez = truth_endXYZT[i][j][2]
-                pdg = abs(truth_pdg[i][j])
-                if truth_process[i][j] == "primary" and (pdg == 11 or pdg == 13 or pdg == 211 or pdg == 2212 or pdg == 321):
-                    if truth_startMomentum[i][j][3] > 0.005:
-                        vis5mev += 1
-                        if truth_startMomentum[i][j][3] > 0.05:
-                            vis50mev += 1
-                if truth_pdg[i][j] == 22 and truth_startMomentum[i][j][3] > 0.02:
-                    if truth_process[i][j] != "eBrem" and truth_process[i][j] != "annihil":
-                        if ex > 3.0 and ex < 253.0 and ey > -113.0 and ey < 114.0 and ez > 3.0 and ez < 1034.0: #same as single photons
-                            nphotons += 1
-                            if not photon1:
-                                photon1 = True
-                                photon1_mom.append(truth_startMomentum[i][j])
-                                photon1_process.append(truth_process[i][j])
-                                photon1_XYZT.append(truth_endXYZT[i][j])
-                                photon1_mother.append(truth_mother[i][j])
-                            elif not photon2:
-                                photon2 = True
-                                photon2_mom.append(truth_startMomentum[i][j])
-                                photon2_process.append(truth_process[i][j])
-                                photon2_XYZT.append(truth_endXYZT[i][j])
-                                photon2_mother.append(truth_mother[i][j])
-            if catname == "2 true photons" and nphotons == 2:
-                newcat.append(catnum)
-                newcatname.append(catname)
-                newcatcolor.append(catcolor)
+    truth_isCC = all_df["wc_truth_isCC"].to_numpy()
+    if catname == "2 true photons":
+        truth_Ntrack = all_df["wc_truth_Ntrack"].to_numpy()
+        truth_pdg = all_df["wc_truth_pdg"].to_numpy()
+        truth_startMomentum = all_df["wc_truth_startMomentum"].to_numpy()
+        truth_process = all_df["wc_truth_process"].to_numpy()
+        truth_mother = all_df["wc_truth_mother"].to_numpy()
+        truth_endXYZT = all_df["wc_truth_endXYZT"].to_numpy()
+        for i in range(len(true_event_types)):
+            if true_event_types[i] == 12:
+                newcat.append(12)
+                newcatname.append("Extbnb")
+                newcatcolor.append(ROOT.kGray)
+                photon1_mom.append([-999.,-999.,-999.,-999.])
+                photon2_mom.append([-999.,-999.,-999.,-999.])
+                photon1_process.append("none")
+                photon2_process.append("none")
+                photon1_XYZT.append([-999.,-999.,-999.,-999.])
+                photon2_XYZT.append([-999.,-999.,-999.,-999.])
+                photon1_mother.append(-999)
+                photon2_mother.append(-999)
+            elif true_event_types[i] == 13:
+                newcat.append(13)
+                newcatname.append("Data")
+                newcatcolor.append(ROOT.kBlack)
+                photon1_mom.append([-999.,-999.,-999.,-999.])
+                photon2_mom.append([-999.,-999.,-999.,-999.])
+                photon1_process.append("none")
+                photon2_process.append("none")
+                photon1_XYZT.append([-999.,-999.,-999.,-999.])
+                photon2_XYZT.append([-999.,-999.,-999.,-999.])
+                photon1_mother.append(-999)
+                photon2_mother.append(-999)
             else:
-                newcat.append(true_event_types[i])
-                newcatname.append("old cat")
-                newcatcolor.append(ROOT.kWhite)
-                if not photon1:
-                    photon1_mom.append([-999.,-999.,-999.,-999.])
-                    photon1_process.append("none")
-                    photon1_XYZT.append([-999.,-999.,-999.,-999.])
-                    photon1_mother.append(-999)
-                if not photon2:
-                    photon2_mom.append([-999.,-999.,-999.,-999.])
-                    photon2_process.append("none")
-                    photon2_XYZT.append([-999.,-999.,-999.,-999.])
-                    photon2_mother.append(-999)
+                nphotons = 0
+                photon1 = False
+                photon2 = False
+                vis5mev = 0
+                vis50mev = 0
+                for j in range(int(truth_Ntrack[i])):
+                    ex = truth_endXYZT[i][j][0]
+                    ey = truth_endXYZT[i][j][1]
+                    ez = truth_endXYZT[i][j][2]
+                    pdg = abs(truth_pdg[i][j])
+                    if truth_process[i][j] == "primary" and (pdg == 11 or pdg == 13 or pdg == 211 or pdg == 2212 or pdg == 321):
+                        if truth_startMomentum[i][j][3] > 0.005:
+                            vis5mev += 1
+                            if truth_startMomentum[i][j][3] > 0.05:
+                                vis50mev += 1
+                    if truth_pdg[i][j] == 22 and truth_startMomentum[i][j][3] > 0.02:
+                        if truth_process[i][j] != "eBrem" and truth_process[i][j] != "annihil":
+                            if ex > 3.0 and ex < 253.0 and ey > -113.0 and ey < 114.0 and ez > 3.0 and ez < 1034.0: #same as single photons
+                                nphotons += 1
+                                if not photon1:
+                                    photon1 = True
+                                    photon1_mom.append(truth_startMomentum[i][j])
+                                    photon1_process.append(truth_process[i][j])
+                                    photon1_XYZT.append(truth_endXYZT[i][j])
+                                    photon1_mother.append(truth_mother[i][j])
+                                elif not photon2:
+                                    photon2 = True
+                                    photon2_mom.append(truth_startMomentum[i][j])
+                                    photon2_process.append(truth_process[i][j])
+                                    photon2_XYZT.append(truth_endXYZT[i][j])
+                                    photon2_mother.append(truth_mother[i][j])
+                if catname == "2 true photons" and nphotons == 2:
+                    newcat.append(catnum)
+                    newcatname.append(catname)
+                    newcatcolor.append(catcolor)
+                else:
+                    newcat.append(true_event_types[i])
+                    newcatname.append("old cat")
+                    newcatcolor.append(ROOT.kWhite)
+                    if not photon1:
+                        photon1_mom.append([-999.,-999.,-999.,-999.])
+                        photon1_process.append("none")
+                        photon1_XYZT.append([-999.,-999.,-999.,-999.])
+                        photon1_mother.append(-999)
+                    if not photon2:
+                        photon2_mom.append([-999.,-999.,-999.,-999.])
+                        photon2_process.append("none")
+                        photon2_XYZT.append([-999.,-999.,-999.,-999.])
+                        photon2_mother.append(-999)
+
+    elif catname == "CC gg" or catname == "NC gg":
+        if "true_event_type_name" not in all_df.columns:
+            print("Error: must add 2 photon truth category before adding gg categories")
+            return all_df
+        elif 222 not in all_df["true_event_type"].values:
+            print("Error: must add 2 photon truth category before adding gg categories")
+            return all_df
+        else:
+            true_event_type_name = all_df["true_event_type_name"].to_numpy()
+            true_event_type_color = all_df["true_event_type_color"].to_numpy()
+            for i in range(len(true_event_types)):
+                if true_event_types[i] == 222:
+                    isCC = truth_isCC[i]
+                    if isCC:
+                        if catname == "CC gg":
+                            newcat.append(catnum)
+                            newcatname.append(catname)
+                            newcatcolor.append(catcolor)
+                        else:
+                            newcat.append(true_event_types[i])
+                            newcatname.append(true_event_type_name[i])
+                            newcatcolor.append(true_event_type_color[i])
+                    else:
+                        if catname == "NC gg":
+                            newcat.append(catnum)
+                            newcatname.append(catname)
+                            newcatcolor.append(catcolor)
+                        else:
+                            newcat.append(true_event_types[i])
+                            newcatname.append(true_event_type_name[i])
+                            newcatcolor.append(true_event_type_color[i])
+                else:
+                        newcat.append(true_event_types[i])
+                        newcatname.append(true_event_type_name[i])
+                        newcatcolor.append(true_event_type_color[i])
 
     all_df["true_event_type"] = newcat
     all_df["true_event_type_name"] = newcatname
     all_df["true_event_type_color"] = newcatcolor
-    all_df["truth_photon1_mom"] = photon1_mom
-    all_df["truth_photon2_mom"] = photon2_mom
-    all_df["truth_photon1_process"] = photon1_process
-    all_df["truth_photon2_process"] = photon2_process
-    all_df["truth_photon1_XYZT"] = photon1_XYZT
-    all_df["truth_photon2_XYZT"] = photon2_XYZT
-    all_df["truth_photon1_mother"] = photon1_mother
-    all_df["truth_photon2_mother"] = photon2_mother
+    if catname == "2 true photons":
+        all_df["truth_photon1_mom"] = photon1_mom
+        all_df["truth_photon2_mom"] = photon2_mom
+        all_df["truth_photon1_process"] = photon1_process
+        all_df["truth_photon2_process"] = photon2_process
+        all_df["truth_photon1_XYZT"] = photon1_XYZT
+        all_df["truth_photon2_XYZT"] = photon2_XYZT
+        all_df["truth_photon1_mother"] = photon1_mother
+        all_df["truth_photon2_mother"] = photon2_mother
 
     return all_df
 
@@ -611,6 +650,12 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
     true_N_protons = []
     kine_energy_particle_vec = all_df_in_kine_over["kine_energy_particle"].to_numpy()
     kine_particle_type_vec = all_df_in_kine_over["kine_particle_type"].to_numpy()
+    truth_Ntrack =        all_df_in_pfeval_over["truth_Ntrack"].to_numpy()
+    truth_pdg =           all_df_in_pfeval_over["truth_pdg"].to_numpy()
+    truth_startMomentum = all_df_in_pfeval_over["truth_startMomentum"].to_numpy()
+    truth_process =       all_df_in_pfeval_over["truth_process"].to_numpy()
+    truth_mother =        all_df_in_pfeval_over["truth_mother"].to_numpy()
+    truth_endXYZT =       all_df_in_pfeval_over["truth_endXYZT"].to_numpy()
 
     r = all_df_in_pfeval_over["run"].to_numpy()
     s = all_df_in_pfeval_over["subrun"].to_numpy()
@@ -689,14 +734,14 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
             else:
                 true_event_types.append(10)
         
-        #num_true_protons = 0
-        #for j in range(all_df_in_pfeval_over["truth_Ntrack"].to_numpy()[i]):
-        #        pdgcode = (all_df_in_pfeval_over["truth_pdg"].to_numpy()[i])[j]
-        #        mother = (all_df_in_pfeval_over["truth_mother"].to_numpy()[i])[j]
-        #        energy = (all_df_in_pfeval_over["truth_startMomentum"].to_numpy()[i])[j][3]
-        #        if(abs(pdgcode)==2212 and mother==0 and energy - 0.938272 > 0.035):
-        #            num_true_protons += 1;
-        #true_N_protons.append(num_true_protons)
+        num_true_protons = 0
+        for j in range(truth_Ntrack[i]):
+                pdgcode = truth_pdg[i][j]
+                mother = truth_mother[i][j]
+                energy = truth_startMomentum[i][j][3]
+                if(abs(pdgcode)==2212 and mother==0 and energy - 0.938272 > 0.035):
+                    num_true_protons += 1
+        true_N_protons.append(num_true_protons)
 
         #for getting eff/pur of preselection
         #if (kine_reco_Enu_vec[i] >= 0):
@@ -799,6 +844,7 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
     all_df_in_bdt_over["truth_energyInside"] = truth_energyInside_vec
     all_df_in_bdt_over["truth_showerKE"] = truth_showerKE_vec
     all_df_in_bdt_over["N_protons"] = N_protons
+    all_df_in_bdt_over["true_N_protons"] = true_N_protons
     all_df_in_bdt_over["run"] = r
     all_df_in_bdt_over["subrun"] = s
     all_df_in_bdt_over["event"] = e
@@ -861,9 +907,15 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
     truth_showerKE_vec = all_df_in_pfeval_dirt["truth_showerKE"].to_numpy()
     truth_nuPdg = (all_df_in_eval_dirt["truth_nuPdg"].to_numpy())
     N_protons = []
+    true_N_protons = []
     kine_energy_particle_vec = all_df_in_kine_dirt["kine_energy_particle"].to_numpy()
     kine_particle_type_vec = all_df_in_kine_dirt["kine_particle_type"].to_numpy()
-
+    truth_Ntrack =        all_df_in_pfeval_dirt["truth_Ntrack"].to_numpy()
+    truth_pdg =           all_df_in_pfeval_dirt["truth_pdg"].to_numpy()
+    truth_startMomentum = all_df_in_pfeval_dirt["truth_startMomentum"].to_numpy()
+    truth_process =       all_df_in_pfeval_dirt["truth_process"].to_numpy()
+    truth_mother =        all_df_in_pfeval_dirt["truth_mother"].to_numpy()
+    truth_endXYZT =       all_df_in_pfeval_dirt["truth_endXYZT"].to_numpy()
     r = all_df_in_pfeval_dirt["run"].to_numpy()
     s = all_df_in_pfeval_dirt["subrun"].to_numpy()
     e = all_df_in_pfeval_dirt["event"].to_numpy()
@@ -952,6 +1004,15 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
         proton_mask = (np.abs(kine_particle_type) == 2212) & (kine_energy_particle > 35)
         num_protons = np.sum(proton_mask)
         N_protons.append(num_protons)
+
+        num_true_protons = 0
+        for j in range(truth_Ntrack[i]):
+                pdgcode = truth_pdg[i][j]
+                mother = truth_mother[i][j]
+                energy = truth_startMomentum[i][j][3]
+                if(abs(pdgcode)==2212 and mother==0 and energy - 0.938272 > 0.035):
+                    num_true_protons += 1
+        true_N_protons.append(num_true_protons)
         
         if (kine_reco_Enu_vec[i] >= 0 and shw_sp_n_20mev_showers_vec[i]>0 and reco_nuvtxX_vec[i]>5.0 and reco_nuvtxX_vec[i]<250.0):
             if (math.isnan(all_df_in_bdt_dirt["single_photon_numu_score"].to_numpy()[i])):
@@ -1013,6 +1074,7 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
     all_df_in_bdt_dirt["truth_showerMomentum2"] = truth_showerMomentum2_vec
     all_df_in_bdt_dirt["truth_showerMomentum3"] = truth_showerMomentum3_vec
     all_df_in_bdt_dirt["N_protons"] = N_protons
+    all_df_in_bdt_dirt["true_N_protons"] = true_N_protons
     all_df_in_bdt_dirt["run"] = r
     all_df_in_bdt_dirt["subrun"] = s
     all_df_in_bdt_dirt["event"] = e
@@ -1498,6 +1560,12 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
     true_N_protons = []
     kine_energy_particle_vec = all_df_in_kine_over["kine_energy_particle"].to_numpy()
     kine_particle_type_vec = all_df_in_kine_over["kine_particle_type"].to_numpy()
+    truth_Ntrack = all_df_in_pfeval_over["truth_Ntrack"].to_numpy()
+    truth_pdg = all_df_in_pfeval_over["truth_pdg"].to_numpy()
+    truth_startMomentum = all_df_in_pfeval_over["truth_startMomentum"].to_numpy()
+    truth_process = all_df_in_pfeval_over["truth_process"].to_numpy()
+    truth_mother = all_df_in_pfeval_over["truth_mother"].to_numpy()
+    truth_endXYZT = all_df_in_pfeval_over["truth_endXYZT"].to_numpy()
 
     r = all_df_in_pfeval_over["run"].to_numpy()
     s = all_df_in_pfeval_over["subrun"].to_numpy()
@@ -1577,14 +1645,14 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
             else:
                 true_event_types_sub.append(10)
 
-        #num_true_protons = 0
-        #for j in range(all_df_in_pfeval_over["truth_Ntrack"].to_numpy()[i]):
-        #        pdgcode = (all_df_in_pfeval_over["truth_pdg"].to_numpy()[i])[j]
-        #        mother = (all_df_in_pfeval_over["truth_mother"].to_numpy()[i])[j]
-        #        energy = (all_df_in_pfeval_over["truth_startMomentum"].to_numpy()[i])[j][3]
-        #        if(abs(pdgcode)==2212 and mother==0 and energy - 0.938272 > 0.035):
-        #            num_true_protons += 1;
-        #true_N_protons.append(num_true_protons)
+        num_true_protons = 0
+        for j in range(truth_Ntrack[i]):
+                pdgcode = truth_pdg[i][j]
+                mother = truth_mother[i][j]
+                energy = truth_startMomentum[i][j][3]
+                if(abs(pdgcode)==2212 and mother==0 and energy - 0.938272 > 0.035):
+                    num_true_protons += 1
+        true_N_protons.append(num_true_protons)
 
         #for getting eff/pur of preselection
         #if (kine_reco_Enu_vec[i] >= 0):
@@ -1687,6 +1755,7 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
     all_df_in_bdt_over["truth_energyInside"] = truth_energyInside_vec
     all_df_in_bdt_over["truth_showerKE"] = truth_showerKE_vec
     all_df_in_bdt_over["N_protons"] = N_protons
+    all_df_in_bdt_over["true_N_protons"] = true_N_protons
     all_df_in_bdt_over["run"] = r
     all_df_in_bdt_over["subrun"] = s
     all_df_in_bdt_over["event"] = e
@@ -1807,6 +1876,10 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
     num_evts = all_df.shape[0]
     effs = []
     purs = []
+    cc_effs = []
+    cc_purs = []
+    nc_effs = []
+    nc_purs = []
     m_sigmas = []
     wcs = []
     pelees = []
@@ -1820,9 +1893,18 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
 
     for sel in selections:
         #print(sel)
+        sel2 = sel.replace("_CC","").replace("_NC","")
         eff, pur = GetEffPur(all_df, sel, array_sig = array_sig, ignore_cat = ignore_cat)
         effs.append(eff * 100.0)
         purs.append(pur * 100.0)
+        if 2221 in array_sig:
+            cc_eff, cc_pur = GetEffPur(all_df, sel, array_sig = [2221], ignore_cat = ignore_cat)
+            cc_effs.append(cc_eff * 100.0)
+            cc_purs.append(cc_pur * 100.0)
+        if 2220 in array_sig:
+            nc_eff, nc_pur = GetEffPur(all_df, sel, array_sig = [2220], ignore_cat = ignore_cat)
+            nc_effs.append(nc_eff * 100.0)
+            nc_purs.append(nc_pur * 100.0)
         sel_name = "-"
         has1reco = False
         has2reco = False
@@ -1831,15 +1913,15 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
         selected_var_data = []
 
         if "2photon" in sel:
-            sel_name = "2 Photon"
+            sel_name = "2-Photon"
         elif "2shower" in sel:
-            sel_name = "2 Shower"
+            sel_name = "2-Shower"
 
         if "any" in sel or "all" in sel:
             wcs.append(sel_name)
             pelees.append(sel_name)
             lanterns.append(sel_name)
-            if sel == "2shower_any" or sel == "2photon_any" or sel == "2shower_all" or sel == "2photon_all":
+            if sel2 == "2shower_any" or sel2 == "2photon_any" or sel2 == "2shower_all" or sel2 == "2photon_all":
                 glees.append(sel_name)
             else:
                 glees.append("-")
@@ -1873,13 +1955,13 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
         if "gen" in sel:
             other_cuts.append("Generic Neutrino")
         elif "wpdist" in sel:
-            other_cuts.append("|WC - Pan Vtx Dist| < 5cm")
+            other_cuts.append("WC - Pan Vtx Dist < 5cm")
         elif "wldist" in sel:
-            other_cuts.append("|WC - Lantern Vtx Dist| < 5cm")
+            other_cuts.append("WC - Lantern Vtx Dist < 5cm")
         elif "lpdist" in sel:
-            other_cuts.append("|Lantern - Pan Vtx Dist| < 5cm")
+            other_cuts.append("Lantern - Pan Vtx Dist < 5cm")
         elif "wpdist" in sel:
-            other_cuts.append("|WC - Pan Vtx Dist| < 5cm")
+            other_cuts.append("WC - Pan Vtx Dist < 5cm")
         elif "dist" in sel:
             other_cuts.append("All Vtx dists < 5cm")
         else:
@@ -1895,6 +1977,7 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
             orands.append("-")
         
         print("making hist for selection: " + sel)
+        #m_sigmas.append(1.0)
         hmc = ROOT.TH1F("hmc", "hmc", 30, 0.0, 300.0)
         selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, "photon_inv_mass", "photon_inv_mass", array_sig=array_sig, selection=sel, ignore_cat=ignore_cat)
         del selected_var_data
@@ -1906,7 +1989,7 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
         
         del selected_var_sig
         del selected_var_bkg
-        del selected_var_data
+        #del selected_var_data
             
         print("Drawing histogram for selection: " + sel)
         hmc.Draw()
@@ -1929,11 +2012,11 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
         sigma = fitFunc.GetParameter(2)
         print("Mean: %.2f, Sigma: %.2f" % (mean, sigma))
         m_sigmas.append(sigma)
-
-        hmc.Delete()
-        fitFunc.Update()
-        del hmc
-        del fitFunc
+#
+        #hmc.Delete()
+        #fitFunc.Update()
+        #del hmc
+        #del fitFunc
                 
     #print("selections: " + str(len(selections)))
     #print("effs: " + str(len(effs)))
@@ -1946,8 +2029,15 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
     #print("other_cuts: " + str(len(other_cuts)))
     #print("orands: " + str(len(orands)))
 
-    selection_table = pd.DataFrame({'Selection': selections, 'WC': wcs, 'PeLEE': pelees, 'Lantern': lanterns, 'gLEE': glees, 'Other Cuts': other_cuts, 'OR/AND': orands, 'Efficiency': effs, 'Purity': purs, 'Eff*Pur': [(effs[i]/100.0)*(purs[i]/100.0) for i in range(len(effs))], 'Mass Sigma': m_sigmas, 'Eff*Pur / Sigma': [(effs[i]/100.0)*(purs[i]/100.0)/(m_sigmas[i]) if m_sigmas[i] != 0 else 0 for i in range(len(effs))]})
-    print(selection_table.sort_values(by='Eff*Pur / Sigma', ascending=False))
+    
+    selection_table = pd.DataFrame({'Selection': selections, 'WC': wcs, 'PeLEE': pelees, 'Lantern': lanterns, 'gLEE': glees, 'Other Cuts': other_cuts, 'OR/AND': orands, 'Efficiency': effs, 'Purity': purs, 'Eff*Pur': [(effs[i]/100.0)*(purs[i]/100.0) for i in range(len(effs))], 'Mass Sigma': m_sigmas, 'Eff*Pur / Sigma^2': [(effs[i]/100.0)*(purs[i]/100.0)/(pow(m_sigmas[i],2)) if m_sigmas[i] != 0 else 0 for i in range(len(effs))]})
+    if len(cc_effs) > 0:
+        selection_table['CC Efficiency'] = cc_effs
+        selection_table['CC Purity'] = cc_purs
+    if len(nc_effs) > 0:
+        selection_table['NC Efficiency'] = nc_effs
+        selection_table['NC Purity'] = nc_purs
+    print(selection_table.sort_values(by='Eff*Pur / Sigma^2', ascending=False))
 
     return selection_table
 
@@ -2266,9 +2356,31 @@ def PassSelection(selection, all_df, i):
             p = True
         #2 photons
         elif "2photon" in selection:
-        #selection=="2photon_wc" or selection=="2photon_lantern" or selection=="2photon_pandora" or selection=="2photon_all" or selection=="2photon_any" or selection=="2photon_all_noglee" or selection=="2photon_any_noglee":
-            #get the WC number of photons (takes too long to do for all selections)
-             # ensure the dataframe has the reco_startMomentum column to avoid KeyError later
+            ##CC and NC
+            if "_CC" or "_NC" in selection:
+                nmuon_lantern = 0
+                nmuon_pandora = 0
+                nmuon_wc = 0
+                trackPID = all_df["lantern_trackPID"].to_numpy()[i]
+                for pid in trackPID:
+                    if abs(pid) == 13:
+                        nmuon_lantern += 1
+                pfng2mipfrac = all_df["pelee_pfng2mipfrac"].to_numpy()[i]
+                for pid in pfng2mipfrac:
+                    if pid >= 0.4:
+                        nmuon_pandora += 1
+                reco_pdg = all_df["wc_reco_pdg"].to_numpy()[i]
+                for pdg in reco_pdg:
+                    if abs(pdg) == 13:
+                        nmuon_wc += 1
+                if PassSelection(selection.replace("_CC","").replace("_NC",""), all_df, i):
+                    if "_CC" in selection and nmuon_lantern > 0 or nmuon_pandora > 0 or nmuon_wc > 0:
+                        p = True
+                    elif "_NC" in selection and nmuon_lantern==0 and nmuon_pandora==0 and nmuon_wc==0:
+                        p = True
+                return p
+            
+            ##get number of photons from each reconstruction
             nphotons_wc = -1
             nphotons_lantern = -1
             nphotons_pandora = -1
@@ -3785,7 +3897,7 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
 
     c.Draw()
     
-    return h_sig, h_bkg
+    return h_sig, h_bkg, hmc
 
 def MakeVarPlots(all_df, var_list, num_bins, folder_name, plot_folder_name, selection):
     #make and save data/mc hists for all variables in var_list with any cuts made before function call
