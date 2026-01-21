@@ -2,7 +2,7 @@
 #import xgboost as xgb
 from ast import For
 import matplotlib.pyplot as plt
-import uproot as uproot
+import uproot as uproot # type: ignore
 import pandas as pd
 import numpy as np
 #from sklearn.model_selection import train_test_split
@@ -31,14 +31,14 @@ import itertools
 import matplotlib as mpl
 import matplotlib.lines as mlines
 
-import polars as pl
+import polars as pl # type: ignore
 import sys
 #import os
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '../uboone_ngem')))
 
-from src.plot_helpers import make_histogram_plot
-from src.df_helpers import get_vals
-from src.systematics import *
+from src.plot_helpers import make_histogram_plot # type: ignore
+from src.df_helpers import get_vals # type: ignore
+from src.systematics import * # type: ignore
 
 #from src.signal_categories import topological_category_labels, topological_category_colors, topological_category_labels_latex, topological_category_hatches, topological_categories_dic
 #from src.signal_categories import filetype_category_labels, filetype_category_colors, filetype_category_hatches
@@ -2357,7 +2357,7 @@ def PassSelection(selection, all_df, i):
         #2 photons
         elif "2photon" in selection:
             ##CC and NC
-            if "_CC" or "_NC" in selection:
+            if "_CC" in selection or "_NC" in selection:
                 nmuon_lantern = 0
                 nmuon_pandora = 0
                 nmuon_wc = 0
