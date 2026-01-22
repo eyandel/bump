@@ -1894,7 +1894,6 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
     for sel in selections:
         #print(sel)
         sel2 = sel.replace("_CC","").replace("_NC","")
-        print(sel)
         eff, pur = GetEffPur(all_df, sel, array_sig = array_sig, ignore_cat = ignore_cat)
         effs.append(eff * 100.0)
         purs.append(pur * 100.0)
