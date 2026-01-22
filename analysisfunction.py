@@ -1894,6 +1894,7 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
     for sel in selections:
         #print(sel)
         sel2 = sel.replace("_CC","").replace("_NC","")
+        print(sel)
         eff, pur = GetEffPur(all_df, sel, array_sig = array_sig, ignore_cat = ignore_cat)
         effs.append(eff * 100.0)
         purs.append(pur * 100.0)
@@ -2354,32 +2355,39 @@ def PassSelection(selection, all_df, i):
             p = True
         elif selection=="2shower_any_noglee" and ((enu>0.0 and wc_showers==2) or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and pelee_showers==2) or (lantern_vtxfv>-1 and lantern_showers==2)):
             p = True
-        #2 photons
-        elif "2photon" in selection:
-            ##CC and NC
-            if "_CC" in selection or "_NC" in selection:
-                nmuon_lantern = 0
-                nmuon_pandora = 0
-                nmuon_wc = 0
+        ##CC and NC
+        elif "_CC" in selection or "_NC" in selection:
+            nmuon_lantern = 0
+            nmuon_pandora = 0
+            nmuon_wc = 0
+            if "nmuons_lantern" in all_df.columns:
+                nmuon_lantern = all_df["nmuons_lantern"].to_numpy()[i]
+            else:
                 trackPID = all_df["lantern_trackPID"].to_numpy()[i]
                 for pid in trackPID:
                     if abs(pid) == 13:
                         nmuon_lantern += 1
+            if "nmuons_pandora" in all_df.columns:
+                nmuon_pandora = all_df["nmuons_pandora"].to_numpy()[i]
+            else:
                 pfng2mipfrac = all_df["pelee_pfng2mipfrac"].to_numpy()[i]
                 for pid in pfng2mipfrac:
                     if pid >= 0.4:
                         nmuon_pandora += 1
+            if "nmuons_wc" in all_df.columns:
+                nmuon_wc = all_df["nmuons_wc"].to_numpy()[i]
+            else:
                 reco_pdg = all_df["wc_reco_pdg"].to_numpy()[i]
                 for pdg in reco_pdg:
                     if abs(pdg) == 13:
                         nmuon_wc += 1
-                if PassSelection(selection.replace("_CC","").replace("_NC",""), all_df, i):
-                    if "_CC" in selection and nmuon_lantern > 0 or nmuon_pandora > 0 or nmuon_wc > 0:
-                        p = True
-                    elif "_NC" in selection and nmuon_lantern==0 and nmuon_pandora==0 and nmuon_wc==0:
-                        p = True
-                return p
-            
+            if PassSelection(selection.replace("_CC","").replace("_NC",""), all_df, i):
+                if "_CC" in selection and nmuon_lantern > 0 or nmuon_pandora > 0 or nmuon_wc > 0:
+                    p = True
+                elif "_NC" in selection and nmuon_lantern==0 and nmuon_pandora==0 and nmuon_wc==0:
+                    p = True
+        #2 photons
+        elif "2photon" in selection:
             ##get number of photons from each reconstruction
             nphotons_wc = -1
             nphotons_lantern = -1
@@ -4871,6 +4879,48 @@ def Get2Photons(all_df, reco):
         all_df["photon1_process_pandora"] = photon1_mother
         all_df["photon2_process_pandora"] = photon2_mother
         all_df["photon_inv_mass_pandora"] = inv_mass
+
+    #if reco == "nugraph":
+
+
+    return all_df
+
+def GetMuons(all_df, reco):
+    nmuons_list = []
+    num_evts = all_df.shape[0]
+
+    if reco == "wc":
+        reco_pdg = all_df["wc_reco_pdg"].to_numpy()
+        for i in range(num_evts):
+            nmuon_wc = 0
+            for pdg in reco_pdg[i]:
+                if abs(pdg) == 13:
+                    nmuon_wc += 1
+            nmuons_list.append(nmuon_wc)
+
+        all_df["nmuons_wc"] = nmuons_list
+    
+    if reco == "lantern":
+        trackPID = all_df["lantern_trackPID"].to_numpy()
+        for i in range(num_evts):
+            nmuon_lantern = 0
+            for pid in trackPID[i]:
+                if abs(pid) == 13:
+                    nmuon_lantern += 1
+            nmuons_list.append(nmuon_lantern)
+
+        all_df["nmuons_lantern"] = nmuons_list
+
+    if reco == "pandora":
+        pfng2mipfrac = all_df["pelee_pfng2mipfrac"].to_numpy()
+        for i in range(num_evts):
+            nmuon_pandora = 0
+            for pid in pfng2mipfrac[i]:
+                if pid >= 0.4:
+                    nmuon_pandora += 1
+            nmuons_list.append(nmuon_pandora)
+
+        all_df["nmuons_pandora"] = nmuons_list
 
     #if reco == "nugraph":
 
