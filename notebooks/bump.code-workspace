@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../uboone_ngem"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"gen_data.C": "cpp",
+			"MakeHistsFromConstrained.C": "cpp"
+		}
+	}
+}
