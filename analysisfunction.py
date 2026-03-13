@@ -1805,9 +1805,10 @@ def GetVariableArrays(all_df, var, array_name, array_sig = [0,1,2,3,111], select
 
     y = all_df["true_event_type"].to_numpy()
     num_evts = all_df.shape[0]
+    passed_sel = PassSelection(selection, all_df, -1)
 
     for i in range(num_evts):
-        if y[i] not in ignore_cat and PassSelection(selection, all_df, i):
+        if y[i] not in ignore_cat and passed_sel[i]:
             if y[i] in array_sig:
                 var_array_sig.append(var_array[i])
             elif y[i] == 13:
@@ -1830,6 +1831,7 @@ def GetEffPur(all_df, selection, array_sig = [0,1,2,3,111], ignore_cat = []):
 
     y = all_df["true_event_type"].to_numpy()
     num_evts = all_df.shape[0]
+    passed_sel = PassSelection(selection, all_df, -1)
 
     tot_sig = 0.0
     sel_sig = 0.0
@@ -1842,15 +1844,15 @@ def GetEffPur(all_df, selection, array_sig = [0,1,2,3,111], ignore_cat = []):
         if y[i] not in ignore_cat: #and PassSelection(selection, all_df, i):
             if y[i] in array_sig:
                 tot_sig+=1.0
-                if PassSelection(selection, all_df, i):
+                if passed_sel[i]:
                     sel_sig+=1.0
             elif y[i] == 13:
                 tot_data+=1.0
-                if PassSelection(selection, all_df, i):
+                if passed_sel[i]:
                     sel_data+=1.0
             elif y[i] > -1: #y[i]>3 and y[i]!=13 and y[i]<100:
                 tot_bkg+=1.0
-                if PassSelection(selection, all_df, i):
+                if passed_sel[i]:
                     sel_bkg+=1.0
 
     
@@ -2149,318 +2151,292 @@ def PassSelection(selection, all_df, i):
     #returns a boolean that indicates if events pass selection
     p = False
 
-    if selection=="all":
-        p = True
-    else:
-        numu_score = all_df["wc_single_photon_numu_score"].to_numpy()[i]
-        other_score = all_df["wc_single_photon_other_score"].to_numpy()[i]
-        ncpi0_score = all_df["wc_single_photon_ncpi0_score"].to_numpy()[i]
-        nue_score = all_df["wc_single_photon_nue_score"].to_numpy()[i]
-        num_shw = all_df["wc_shw_sp_n_20mev_showers"].to_numpy()[i]
-        num_pro = all_df["wc_N_protons"].to_numpy()[i]
-        r = all_df["wc_run"].to_numpy()[i]
-        s = all_df["wc_subrun"].to_numpy()[i]
-        e = all_df["wc_event"].to_numpy()[i]
-        enu = all_df["wc_kine_reco_Enu"].to_numpy()[i]
-        wc_showers = all_df["wc_shw_sp_n_20br1_showers"].to_numpy()[i]
-        pelee_showers = all_df["pelee_n_showers_contained"].to_numpy()[i]
-        glee_showers = all_df["glee_reco_asso_showers"].to_numpy()[i]
-        lantern_showers = all_df["lantern_nShowers"].to_numpy()[i]
-        lantern_vtxfv = all_df["lantern_vtxIsFiducial"].to_numpy()[i]
-        pelee_flash_matched = all_df["pelee_slice_orig_pass_id"].to_numpy()[i]
-        pelee_top_score =  all_df["pelee_topological_score"].to_numpy()[i]
-
-        if selection=="numu_sideband" and numu_score < 0.1 and numu_score > -20.0:
-            p = True
-        elif selection=="other_sideband" and numu_score > 0.1 and other_score < -0.4 and other_score > -20.0:
-            p = True
-        elif selection=="ncpi0_sideband" and numu_score > 0.1 and other_score > -0.4 and ncpi0_score < -0.4 and ncpi0_score > -20.0:
-            p = True
-        elif selection=="nue_sideband" and numu_score > 0.1 and other_score > -0.4 and ncpi0_score > -0.4 and nue_score < -3.0 and nue_score > -20.0 and num_shw==1:
-            p = True
-        elif selection=="eff" and numu_score > 0.1 and other_score > -0.4 and ncpi0_score > -0.4 and nue_score > -3.0 and num_shw==1:
-            p = True
-        elif selection=="eff_numu" and numu_score > 0.1:
-            p = True
-        elif selection=="eff_other" and numu_score > 0.1 and other_score > -0.4:
-            p = True
-        elif selection=="eff_ncpi0" and numu_score > 0.1 and other_score > -0.4 and ncpi0_score > -0.4 :
-            p = True
-        elif selection=="eff_nue" and numu_score > 0.1 and other_score > -0.4 and ncpi0_score > -0.4 and nue_score > -3.0:
-            p = True
-        elif selection=="pur" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1:
-            p = True
-        elif selection=="singshw" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and num_shw==1:
-            p = True
-        elif selection=="pur_numu" and numu_score > 0.4:
-            p = True
-        elif selection=="pur_other" and numu_score > 0.4 and other_score > 0.2:
-            p = True
-        elif selection=="pur_ncpi0" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05:
-            p = True 
-        elif selection=="pur_nue" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1:
-            p = True
-        elif selection=="0p" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro==0:
-            p = True
-        elif selection=="Np" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro>0:
-            p = True
-        elif selection=="noother" and numu_score > 0.4 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1:
-            p = True
-        elif selection=="noother_0p" and numu_score > 0.4 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro==0:
-            p = True
-        elif selection=="noother_Np" and numu_score > 0.4 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro>0:
-            p = True
-        elif selection=="lessother_0p" and numu_score > 0.4 and other_score > 0.0 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro==0:
-            p = True
-        elif selection=="moreother_0p" and numu_score > 0.4 and other_score > 1.0 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1 and num_pro==0:
-            p = True
-        elif selection=="allshw" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0:
-            p = True
-        elif selection=="preselection" and numu_score>-15.0:
-            p = True
-        elif selection=="generic" and enu > 0.0:
-            p = True
-        elif selection=="test" and numu_score > 0.4 and other_score > 0.2 and ncpi0_score > 0.5 and nue_score > -1.0 and num_shw==1:
-            p = True
-        elif selection=="pawel":
-            # Open the file
-            with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_pawel.txt', 'r') as file1:
-                # Create a dictionary to hold the events
-                #events = {}
-                # Read the file line by line
-                for line in file1:
-                    r_p, s_p, e_p, energy_p = map(float, line.split()) # Split the line into parts
-                    # Store in the dictionary
-                    #events[(r, s, e)] = energy
-                    if (r_p==r and s_p==s and e_p==e):
-                        p = True
-                        break
-        elif selection=="pawel_overlap":
-            # Open the file
-            if (numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1):
-                with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_pawel.txt', 'r') as file1:
-                    # Create a dictionary to hold the events
-                    #events = {}
-                    # Read the file line by line
-                    for line in file1:
-                        r_p, s_p, e_p, energy_p = map(float, line.split()) # Split the line into parts
-                        # Store in the dictionary
-                        #events[(r, s, e)] = energy
-                        if (r_p==r and s_p==s and e_p==e):
-                            p = True
-                            break
-        elif selection=="pawel_nonoverlap":
-            # Open the file
-            if ( not (numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1)):
-                with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_pawel.txt', 'r') as file1:
-                    # Create a dictionary to hold the events
-                    #events = {}
-                    # Read the file line by line
-                    for line in file1:
-                        r_p, s_p, e_p, energy_p = map(float, line.split()) # Split the line into parts
-                        # Store in the dictionary
-                        #events[(r, s, e)] = energy
-                        if (r_p==r and s_p==s and e_p==e):
-                            p = True
-                            break
-        elif selection=="pawel_nonoverlap_1shw":
-            # Open the file
-            if ( not(numu_score > 0.4 and other_score > 0.2 and ncpi0_score > -0.05 and nue_score > -1.0 and num_shw==1) and num_shw==1):
-                with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_pawel.txt', 'r') as file1:
-                    # Create a dictionary to hold the events
-                    #events = {}
-                    # Read the file line by line
-                    for line in file1:
-                        r_p, s_p, e_p, energy_p = map(float, line.split()) # Split the line into parts
-                        # Store in the dictionary
-                        #events[(r, s, e)] = energy
-                        if (r_p==r and s_p==s and e_p==e):
-                            p = True
-                            break
-        elif selection=="mark":
-            # Open the file
-            with open('/home/erin/Documents/MicroBoone/consistency_checks/glee_epem_rse.txt', 'r') as file2:
-                # Create a dictionary to hold the events
-                #events = {}
-                # Read the file line by line
-                for line in file2:
-                    r_p, s_p, e_p = map(float, line.split()) # Split the line into parts
-                    # Store in the dictionary
-                    #events[(r, s, e)] = energy
-                    if (r_p==r and s_p==s and e_p==e):
-                        p = True
-                        break
-        elif selection=="mark_expanded":
-            # Open the file
-            with open('/home/erin/Documents/MicroBoone/consistency_checks/glee_epem_expanded_angle_rse.txt', 'r') as file3:
-                # Create a dictionary to hold the events
-                #events = {}
-                # Read the file line by line
-                for line in file3:
-                    r_p, s_p, e_p = map(float, line.split()) # Split the line into parts
-                    # Store in the dictionary
-                    #events[(r, s, e)] = energy
-                    if (r_p==r and s_p==s and e_p==e):
-                        p = True
-                        break
-        elif selection=="infv_bdt_pass":
-            # Open the file
-            if  numu_score > -15.0:
-                with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_infv_bdt_score.txt', 'r') as file4:
-                    # Create a dictionary to hold the events
-                    #events = {}
-                    # Read the file line by line
-                    for line in file4:
-                        r_p, s_p, e_p, score_p = map(float, line.split()) # Split the line into parts
-                        # Store in the dictionary
-                        #events[(r, s, e)] = energy
-                        if (score_p>=1.0 and e_p==e and s_p==s and r_p==r):
-                            p = True
-                            break
-        elif selection=="infv_bdt_notpass":
-            # Open the file
-            if  numu_score > -15.0:
-                with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_infv_bdt_score.txt', 'r') as file4:
-                    # Create a dictionary to hold the events
-                    #events = {}
-                    # Read the file line by line
-                    for line in file4:
-                        r_p, s_p, e_p, score_p = map(float, line.split()) # Split the line into parts
-                        # Store in the dictionary
-                        #events[(r, s, e)] = energy
-                        if (score_p<1.0 and e_p==e and s_p==s and r_p==r):
-                            p = True
-                            break
-        #2 showers
-        elif selection=="2shower_wc" and enu>0.0 and wc_showers==2:
-            p = True
-        elif selection=="2shower_pelee" and (pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and pelee_showers==2:
-            p = True
-        elif selection=="2shower_glee" and glee_showers==2:
-            p = True
-        elif selection=="2shower_lantern" and lantern_vtxfv>-1 and lantern_showers==2:
-            p = True
-        elif selection=="2shower_all" and enu>0.0 and wc_showers==2 and ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and pelee_showers==2) and glee_showers==2 and (lantern_vtxfv>-1 and lantern_showers==2):
-            p = True
-        elif selection=="2shower_any" and ((enu>0.0 and wc_showers==2) or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and pelee_showers==2) or glee_showers==2 or (lantern_vtxfv>-1 and lantern_showers==2)):
-            p = True
-        elif selection=="2shower_wcpelee" and ((enu>0.0 and wc_showers==2) or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and pelee_showers==2)):
-            p = True
-        elif selection=="2shower_wclantern" and ((enu>0.0 and wc_showers==2) or (lantern_vtxfv>-1 and lantern_showers==2)):
-            p = True
-        elif selection=="2shower_lanternpelee" and (((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and pelee_showers==2) or glee_showers==2 or (lantern_vtxfv>-1 and lantern_showers==2)):
-            p = True
-        elif selection=="2shower_all_noglee" and enu>0.0 and wc_showers==2 and ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and pelee_showers==2) and (lantern_vtxfv>-1 and lantern_showers==2):
-            p = True
-        elif selection=="2shower_any_noglee" and ((enu>0.0 and wc_showers==2) or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and pelee_showers==2) or (lantern_vtxfv>-1 and lantern_showers==2)):
-            p = True
-        ##CC and NC
-        elif "_CC" in selection or "_NC" in selection:
-            nmuon_lantern = 0
-            nmuon_pandora = 0
-            nmuon_wc = 0
-            if "nmuons_lantern" in all_df.columns:
-                nmuon_lantern = all_df["nmuons_lantern"].to_numpy()[i]
-            else:
-                trackPID = all_df["lantern_trackPID"].to_numpy()[i]
-                for pid in trackPID:
-                    if abs(pid) == 13:
-                        nmuon_lantern += 1
-            if "nmuons_pandora" in all_df.columns:
-                nmuon_pandora = all_df["nmuons_pandora"].to_numpy()[i]
-            else:
-                pfng2mipfrac = all_df["pelee_pfng2mipfrac"].to_numpy()[i]
-                for pid in pfng2mipfrac:
-                    if pid >= 0.4:
-                        nmuon_pandora += 1
-            if "nmuons_wc" in all_df.columns:
-                nmuon_wc = all_df["nmuons_wc"].to_numpy()[i]
-            else:
-                reco_pdg = all_df["wc_reco_pdg"].to_numpy()[i]
-                for pdg in reco_pdg:
-                    if abs(pdg) == 13:
-                        nmuon_wc += 1
-            if PassSelection(selection.replace("_CC","").replace("_NC",""), all_df, i):
-                if "_CC" in selection and nmuon_lantern > 0 or nmuon_pandora > 0 or nmuon_wc > 0:
-                    p = True
-                elif "_NC" in selection and nmuon_lantern==0 and nmuon_pandora==0 and nmuon_wc==0:
-                    p = True
-        #2 photons
-        elif "2photon" in selection:
-            ##get number of photons from each reconstruction
-            nphotons_wc = -1
-            nphotons_lantern = -1
-            nphotons_pandora = -1
-            if selection!="2photon_lantern" and selection!="2photon_pandora":
-                if "nphotons_wc" in all_df.columns:
-                    nphotons_wc = all_df["nphotons_wc"].to_numpy()[i]
-                elif "wc_reco_startMomentum" in all_df.columns:
-                    nphotons_wc = 0
-                    reco_Ntrack = all_df["wc_reco_Ntrack"].to_numpy()[i]
-                    reco_pdg = all_df["wc_reco_pdg"].to_numpy()[i]
-                    reco_startMomentum = all_df["wc_reco_startMomentum"].to_numpy()[i]
-                    reco_startXYZT = all_df["wc_reco_startXYZT"].to_numpy()[i]
-                    for j in range(int(reco_Ntrack)):
-                        ex = reco_startXYZT[j][0]
-                        ey = reco_startXYZT[j][1]
-                        ez = reco_startXYZT[j][2]
-                        #kine_energy_particle = np.array(kine_energy_particle_vec[i]) 
-                        #kine_particle_type = kine_particle_type_vec[i]
-                        #proton_mask = (np.abs(kine_particle_type) == 2212) & (kine_energy_particle > 35)
-                        #num_protons = np.sum(proton_mask)
-                        if reco_pdg[j] == 22 and reco_startMomentum[j][3] > 0.02:
-                            if ex > 3.0 and ex < 253.0 and ey > -113.0 and ey < 114.0 and ez > 3.0 and ez < 1034.0: #same as single photons
-                                nphotons_wc += 1
-            if selection!="2photon_wc" and selection!="2photon_pandora":
-                if "nphotons_lantern" in all_df.columns:
-                    nphotons_lantern = all_df["nphotons_lantern"].to_numpy()[i]
-                elif "lantern_showerPID" in all_df.columns:
-                    nphotons_lantern = 0
-                    showerPID = all_df["lantern_showerPID"].to_numpy()[i]
-                    for pid in showerPID:
-                        if pid == 22:
-                            nphotons_lantern += 1
-            if selection!="2photon_wc" and selection!="2photon_lantern":
-                if "nphotons_pandora" in all_df.columns:
-                    nphotons_pandora = all_df["nphotons_pandora"].to_numpy()[i]
-                else:
-                    nphotons_pandora = pelee_showers
+    #if i < 0, return array of bools for all events in the dataframe
+    if (i < 0):
+        p = []
+        num_evts = all_df.shape[0]
+        if selection=="all":
+            p = [True for j in range(num_evts)]
+        else:
+            p = [False for j in range(num_evts)]
+            numu_score = all_df["wc_single_photon_numu_score"].to_numpy()
+            other_score = all_df["wc_single_photon_other_score"].to_numpy()
+            ncpi0_score = all_df["wc_single_photon_ncpi0_score"].to_numpy()
+            nue_score = all_df["wc_single_photon_nue_score"].to_numpy()
+            num_shw = all_df["wc_shw_sp_n_20mev_showers"].to_numpy()
+            num_pro = all_df["wc_N_protons"].to_numpy()
+            r = all_df["wc_run"].to_numpy()
+            s = all_df["wc_subrun"].to_numpy()
+            e = all_df["wc_event"].to_numpy()
+            enu = all_df["wc_kine_reco_Enu"].to_numpy()
+            wc_showers = all_df["wc_shw_sp_n_20br1_showers"].to_numpy()
+            pelee_showers = all_df["pelee_n_showers_contained"].to_numpy()
+            glee_showers = all_df["glee_reco_asso_showers"].to_numpy()
+            lantern_showers = all_df["lantern_nShowers"].to_numpy()
+            lantern_vtxfv = all_df["lantern_vtxIsFiducial"].to_numpy()
+            pelee_flash_matched = all_df["pelee_slice_orig_pass_id"].to_numpy()
+            pelee_top_score =  all_df["pelee_topological_score"].to_numpy()
+            #get number of photons from each reconstruction
+            nphotons_wc = []
+            nphotons_lantern = []
+            nphotons_pandora = []
+            if "2photon" in selection:
+                if "nphotons_wc" not in all_df.columns:
+                    all_df = Get2Photons(all_df, "wc")
+                    all_df = Get2Photons(all_df, "lantern")
+                    all_df = Get2Photons(all_df, "pandora")
+                nphotons_wc = all_df["nphotons_wc"].to_numpy()
+                nphotons_lantern = all_df["nphotons_lantern"].to_numpy()
+                nphotons_pandora = all_df["nphotons_pandora"].to_numpy()
+            #get the vertex distance between reconstructions
+            wc_pandora_dist = [-99999.0 for j in range(num_evts)]
+            wc_lantern_dist = [-99999.0 for j in range(num_evts)]
+            lantern_pandora_dist = [-99999.0 for j in range(num_evts)]
             if "wc_pandora_dist" in all_df.columns:
-                wc_pandora_dist = all_df["wc_pandora_dist"].to_numpy()[i]
-                wc_lantern_dist = all_df["wc_lantern_dist"].to_numpy()[i]
-                lantern_pandora_dist = all_df["lantern_pandora_dist"].to_numpy()[i]
-            else:
-                wc_pandora_dist = -9999.
-            ##do the selections
-            if selection=="2photon_wc" and enu>0.0 and nphotons_wc==2:
-                p = True
-            elif selection=="2photon_pandora" and ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and nphotons_pandora==2):
-                p = True
-            elif selection=="2photon_lantern" and (lantern_vtxfv>-1 and nphotons_lantern==2):
-                p = True
-            elif selection=="2photon_wclantern" and enu>0.0 and nphotons_wc==2 and (lantern_vtxfv>-1 and nphotons_lantern==2):
-                p = True
-            elif selection=="2photon_wclantern_wpdist" and wc_pandora_dist < 5 and enu>0.0 and nphotons_wc==2 and (lantern_vtxfv>-1 and nphotons_lantern==2):
-                p = True
-            elif selection=="2photon_all" and enu>0.0 and nphotons_wc==2 and ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and nphotons_pandora==2) and glee_showers==2 and (lantern_vtxfv>-1 and nphotons_lantern==2):
-                p = True
-            elif selection=="2photon_all_noglee" and enu>0.0 and nphotons_wc==2 and ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and nphotons_pandora==2) and (lantern_vtxfv>-1 and nphotons_lantern==2):
-                p = True
-            elif selection=="2photon_any" and ((enu>0.0 and nphotons_wc==2) or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and nphotons_pandora==2) or glee_showers==2 or (lantern_vtxfv>-1 and nphotons_lantern==2)):
-                p = True
-            elif selection=="2photon_any_noglee" and ((enu>0.0 and nphotons_wc==2) or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and nphotons_pandora==2) or (lantern_vtxfv>-1 and nphotons_lantern==2)):
-                p = True
-            elif selection=="2photon_any_gen" and enu>0.0 and (nphotons_wc==2 or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and nphotons_pandora==2) or (lantern_vtxfv>-1 and nphotons_lantern==2)):
-                p = True
-            elif selection=="2photon_any_wpdist" and enu>0.0 and wc_pandora_dist < 5 and (nphotons_wc==2 or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and nphotons_pandora==2) or (lantern_vtxfv>-1 and nphotons_lantern==2)):
-                p = True
-            elif selection=="2photon_any_wldist" and enu>0.0 and wc_lantern_dist < 5 and (nphotons_wc==2 or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and nphotons_pandora==2) or (lantern_vtxfv>-1 and nphotons_lantern==2)):
-                p = True
-            elif selection=="2photon_any_lpdist" and enu>0.0 and lantern_pandora_dist < 5 and (nphotons_wc==2 or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and nphotons_pandora==2) or (lantern_vtxfv>-1 and nphotons_lantern==2)):
-                p = True
-            elif selection=="2photon_any_dist" and enu>0.0 and wc_pandora_dist < 5 and wc_lantern_dist < 5 and lantern_pandora_dist < 5 and (nphotons_wc==2 or ((pelee_flash_matched==1 or (pelee_flash_matched==0 and pelee_top_score > 0.67)) and nphotons_pandora==2) or (lantern_vtxfv>-1 and nphotons_lantern==2)):
-                p = True
-        
+                wc_pandora_dist = all_df["wc_pandora_dist"].to_numpy()
+                wc_lantern_dist = all_df["wc_lantern_dist"].to_numpy()
+                lantern_pandora_dist = all_df["lantern_pandora_dist"].to_numpy()
+            #get the number of muons from each reconstruction
+            nmuon_lantern = []
+            nmuon_pandora = []
+            nmuon_wc = []
+            pass_CCNC = []
+            if "_CC" in selection or "_NC" in selection:
+                if "nmuons_wc" not in all_df.columns:
+                    all_df = GetMuons(all_df, "wc")
+                    all_df = GetMuons(all_df, "lantern")
+                    all_df = GetMuons(all_df, "pandora")
+                nmuon_lantern = all_df["nmuons_lantern"].to_numpy()
+                nmuon_pandora = all_df["nmuons_pandora"].to_numpy()
+                nmuon_wc = all_df["nmuons_wc"].to_numpy()
+                pass_CCNC = PassSelection(selection.replace("_CC","").replace("_NC",""), all_df, -1)
+
+            for j in range(num_evts):
+                if selection=="numu_sideband" and numu_score[j] < 0.1 and numu_score[j] > -20.0:
+                    p[j] = True
+                elif selection=="other_sideband" and numu_score[j] > 0.1 and other_score[j] < -0.4 and other_score[j] > -20.0:
+                    p[j] = True
+                elif selection=="ncpi0_sideband" and numu_score[j] > 0.1 and other_score[j] > -0.4 and ncpi0_score[j] < -0.4 and ncpi0_score[j] > -20.0:
+                    p[j] = True
+                elif selection=="nue_sideband" and numu_score[j] > 0.1 and other_score[j] > -0.4 and ncpi0_score[j] > -0.4 and nue_score[j] < -3.0 and nue_score[j] > -20.0 and num_shw[j]==1:
+                    p[j] = True
+                elif selection=="eff" and numu_score[j] > 0.1 and other_score[j] > -0.4 and ncpi0_score[j] > -0.4 and nue_score[j] > -3.0 and num_shw[j]==1:
+                    p[j] = True
+                elif selection=="eff_numu" and numu_score[j] > 0.1:
+                    p[j] = True
+                elif selection=="eff_other" and numu_score[j] > 0.1 and other_score[j] > -0.4:
+                    p[j] = True
+                elif selection=="eff_ncpi0" and numu_score[j] > 0.1 and other_score[j] > -0.4 and ncpi0_score[j] > -0.4 :
+                    p[j] = True
+                elif selection=="eff_nue" and numu_score[j] > 0.1 and other_score[j] > -0.4 and ncpi0_score[j] > -0.4 and nue_score[j] > -3.0:
+                    p[j] = True
+                elif selection=="pur" and numu_score[j] > 0.4 and other_score[j] > 0.2 and ncpi0_score[j] > -0.05 and nue_score[j] > -1.0 and num_shw[j]==1:
+                    p[j] = True
+                elif selection=="singshw" and numu_score[j] > 0.4 and other_score[j] > 0.2 and ncpi0_score[j] > -0.05 and num_shw[j]==1:
+                    p[j] = True
+                elif selection=="pur_numu" and numu_score[j] > 0.4:
+                    p[j] = True
+                elif selection=="pur_other" and numu_score[j] > 0.4 and other_score[j] > 0.2:
+                    p[j] = True
+                elif selection=="pur_ncpi0" and numu_score[j] > 0.4 and other_score[j] > 0.2 and ncpi0_score[j] > -0.05:
+                    p[j] = True 
+                elif selection=="pur_nue" and numu_score[j] > 0.4 and other_score[j] > 0.2 and ncpi0_score[j] > -0.05 and nue_score[j] > -1:
+                    p[j] = True
+                elif selection=="0p" and numu_score[j] > 0.4 and other_score[j] > 0.2 and ncpi0_score[j] > -0.05 and nue_score[j] > -1.0 and num_shw[j]==1 and num_pro[j]==0:
+                    p[j] = True
+                elif selection=="Np" and numu_score[j] > 0.4 and other_score[j] > 0.2 and ncpi0_score[j] > -0.05 and nue_score[j] > -1.0 and num_shw[j]==1 and num_pro[j]>0:
+                    p[j] = True
+                elif selection=="noother" and numu_score[j] > 0.4 and ncpi0_score[j] > -0.05 and nue_score[j] > -1.0 and num_shw[j]==1:
+                    p[j] = True
+                elif selection=="noother_0p" and numu_score[j] > 0.4 and ncpi0_score[j] > -0.05 and nue_score[j] > -1.0 and num_shw[j]==1 and num_pro[j]==0:
+                    p[j] = True
+                elif selection=="noother_Np" and numu_score[j] > 0.4 and ncpi0_score[j] > -0.05 and nue_score[j] > -1.0 and num_shw[j]==1 and num_pro[j]>0:
+                    p[j] = True
+                elif selection=="lessother_0p" and numu_score[j] > 0.4 and other_score[j] > 0.0 and ncpi0_score[j] > -0.05 and nue_score[j] > -1.0 and num_shw[j]==1 and num_pro[j]==0:
+                    p[j] = True
+                elif selection=="moreother_0p" and numu_score[j] > 0.4 and other_score[j] > 1.0 and ncpi0_score[j] > -0.05 and nue_score[j] > -1.0 and num_shw[j]==1 and num_pro[j]==0:
+                    p[j] = True
+                elif selection=="allshw" and numu_score[j] > 0.4 and other_score[j] > 0.2 and ncpi0_score[j] > -0.05 and nue_score[j] > -1.0:
+                    p[j] = True
+                elif selection=="preselection" and numu_score[j]>-15.0:
+                    p[j] = True
+                elif selection=="generic" and enu[j] > 0.0:
+                    p[j] = True
+                elif selection=="test" and numu_score[j] > 0.4 and other_score[j] > 0.2 and ncpi0_score[j] > 0.5 and nue_score[j] > -1.0 and num_shw[j]==1:
+                    p[j] = True
+                elif selection=="pawel":
+                    # Open the file
+                    with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_pawel.txt', 'r') as file1:
+                        # Create a dictionary to hold the events
+                        #events = {}
+                        # Read the file line by line
+                        for line in file1:
+                            r_p, s_p, e_p, energy_p = map(float, line.split()) # Split the line into parts
+                            # Store in the dictionary
+                            #events[(r, s, e)] = energy
+                            if (r_p==r[j] and s_p==s[j] and e_p==e[j]):
+                                p[j] = True
+                                break
+                elif selection=="pawel_overlap":
+                    # Open the file
+                    if (numu_score[j] > 0.4 and other_score[j] > 0.2 and ncpi0_score[j] > -0.05 and nue_score[j] > -1.0 and num_shw[j]==1):
+                        with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_pawel.txt', 'r') as file1:
+                            # Create a dictionary to hold the events
+                            #events = {}
+                            # Read the file line by line
+                            for line in file1:
+                                r_p, s_p, e_p, energy_p = map(float, line.split()) # Split the line into parts
+                                # Store in the dictionary
+                                #events[(r, s, e)] = energy
+                                if (r_p==r[j] and s_p==s[j] and e_p==e[j]):
+                                    p[j] = True
+                                    break
+                elif selection=="pawel_nonoverlap":
+                    # Open the file
+                    if ( not (numu_score[j] > 0.4 and other_score[j] > 0.2 and ncpi0_score[j] > -0.05 and nue_score[j] > -1.0 and num_shw[j]==1)):
+                        with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_pawel.txt', 'r') as file1:
+                            # Create a dictionary to hold the events
+                            #events = {}
+                            # Read the file line by line
+                            for line in file1:
+                                r_p, s_p, e_p, energy_p = map(float, line.split()) # Split the line into parts
+                                # Store in the dictionary
+                                #events[(r, s, e)] = energy
+                                if (r_p==r[j] and s_p==s[j] and e_p==e[j]):
+                                    p[j] = True
+                                    break
+                elif selection=="pawel_nonoverlap_1shw":
+                    # Open the file
+                    if ( not(numu_score[j] > 0.4 and other_score[j] > 0.2 and ncpi0_score[j] > -0.05 and nue_score[j] > -1.0 and num_shw[j]==1) and num_shw[j]==1):
+                        with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_pawel.txt', 'r') as file1:
+                            # Create a dictionary to hold the events
+                            #events = {}
+                            # Read the file line by line
+                            for line in file1:
+                                r_p, s_p, e_p, energy_p = map(float, line.split()) # Split the line into parts
+                                # Store in the dictionary
+                                #events[(r, s, e)] = energy
+                                if (r_p==r and s_p==s and e_p==e):
+                                    p[j] = True
+                                    break
+                elif selection=="mark":
+                    # Open the file
+                    with open('/home/erin/Documents/MicroBoone/consistency_checks/glee_epem_rse.txt', 'r') as file2:
+                        # Create a dictionary to hold the events
+                        #events = {}
+                        # Read the file line by line
+                        for line in file2:
+                            r_p, s_p, e_p = map(float, line.split()) # Split the line into parts
+                            # Store in the dictionary
+                            #events[(r, s, e)] = energy
+                            if (r_p==r[j] and s_p==s[j] and e_p==e[j]):
+                                p[j] = True
+                                break
+                elif selection=="mark_expanded":
+                    # Open the file
+                    with open('/home/erin/Documents/MicroBoone/consistency_checks/glee_epem_expanded_angle_rse.txt', 'r') as file3:
+                        # Create a dictionary to hold the events
+                        #events = {}
+                        # Read the file line by line
+                        for line in file3:
+                            r_p, s_p, e_p = map(float, line.split()) # Split the line into parts
+                            # Store in the dictionary
+                            #events[(r, s, e)] = energy
+                            if (r_p==r[j] and s_p==s[j] and e_p==e[j]):
+                                p[j] = True
+                                break
+                elif selection=="infv_bdt_pass":
+                    # Open the file
+                    if  numu_score[j] > -15.0:
+                        with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_infv_bdt_score.txt', 'r') as file4:
+                            # Create a dictionary to hold the events
+                            #events = {}
+                            # Read the file line by line
+                            for line in file4:
+                                r_p, s_p, e_p, score_p = map(float, line.split()) # Split the line into parts
+                                # Store in the dictionary
+                                #events[(r, s, e)] = energy
+                                if (score_p>=1.0 and e_p==e[j] and s_p==s[j] and r_p==r[j]):
+                                    p[j] = True
+                                    break
+                elif selection=="infv_bdt_notpass":
+                    # Open the file
+                    if  numu_score[j] > -15.0:
+                        with open('/home/erin/Documents/MicroBoone/consistency_checks/rse_infv_bdt_score.txt', 'r') as file4:
+                            # Create a dictionary to hold the events
+                            #events = {}
+                            # Read the file line by line
+                            for line in file4:
+                                r_p, s_p, e_p, score_p = map(float, line.split()) # Split the line into parts
+                                # Store in the dictionary
+                                #events[(r, s, e)] = energy
+                                if (score_p<1.0 and e_p==e[j] and s_p==s[j] and r_p==r[j]):
+                                    p[j] = True
+                                    break
+                #2 showers
+                elif selection=="2shower_wc" and enu[j]>0.0 and wc_showers[j]==2:
+                    p[j] = True
+                elif selection=="2shower_pelee" and (pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and pelee_showers[j]==2:
+                    p[j] = True
+                elif selection=="2shower_glee" and glee_showers[j]==2:
+                    p[j] = True
+                elif selection=="2shower_lantern" and lantern_vtxfv[j]>-1 and lantern_showers[j]==2:
+                    p[j] = True
+                elif selection=="2shower_all" and enu[j]>0.0 and wc_showers[j]==2 and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and pelee_showers[j]==2) and glee_showers[j]==2 and (lantern_vtxfv[j]>-1 and lantern_showers[j]==2):
+                    p[j] = True
+                elif selection=="2shower_any" and ((enu[j]>0.0 and wc_showers[j]==2) or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and pelee_showers[j]==2) or glee_showers[j]==2 or (lantern_vtxfv[j]>-1 and lantern_showers[j]==2)):
+                    p[j] = True
+                elif selection=="2shower_wcpelee" and ((enu[j]>0.0 and wc_showers[j]==2) or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and pelee_showers[j]==2)):
+                    p[j] = True
+                elif selection=="2shower_wclantern" and ((enu[j]>0.0 and wc_showers[j]==2) or (lantern_vtxfv[j]>-1 and lantern_showers[j]==2)):
+                    p[j] = True
+                elif selection=="2shower_lanternpelee" and (((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and pelee_showers[j]==2) or glee_showers[j]==2 or (lantern_vtxfv[j]>-1 and lantern_showers[j]==2)):
+                    p[j] = True
+                elif selection=="2shower_all_noglee" and enu[j]>0.0 and wc_showers[j]==2 and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and pelee_showers[j]==2) and (lantern_vtxfv[j]>-1 and lantern_showers[j]==2):
+                    p[j] = True
+                elif selection=="2shower_any_noglee" and ((enu[j]>0.0 and wc_showers[j]==2) or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and pelee_showers[j]==2) or (lantern_vtxfv[j]>-1 and lantern_showers[j]==2)):
+                    p[j] = True
+                ##CC and NC
+                elif "_CC" in selection or "_NC" in selection:
+                    if pass_CCNC[j]:
+                        if "_CC" in selection and (nmuon_lantern[j] > 0 or nmuon_pandora[j] > 0 or nmuon_wc[j] > 0):
+                            p[j] = True
+                        elif "_NC" in selection and not (nmuon_lantern[j] > 0 or nmuon_pandora[j] > 0 or nmuon_wc[j] > 0):
+                            p[j] = True
+                #2 photons
+                elif "2photon" in selection:
+                    if selection=="2photon_wc" and enu[j]>0.0 and nphotons_wc[j]==2:
+                        p[j] = True
+                    elif selection=="2photon_pandora" and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2):
+                        p[j] = True
+                    elif selection=="2photon_lantern" and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2):
+                        p[j] = True
+                    elif selection=="2photon_wclantern" and enu[j]>0.0 and nphotons_wc[j]==2 and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2):
+                        p[j] = True
+                    elif selection=="2photon_wclantern_wpdist" and wc_pandora_dist[j] < 5 and enu[j]>0.0 and nphotons_wc[j]==2 and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2):
+                        p[j] = True
+                    elif selection=="2photon_all" and enu[j]>0.0 and nphotons_wc[j]==2 and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) and pelee_showers[j]==2 and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2):
+                        p[j] = True
+                    elif selection=="2photon_all_noglee" and enu[j]>0.0 and nphotons_wc[j]==2 and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2):
+                        p[j] = True
+                    elif selection=="2photon_any" and ((enu[j]>0.0 and nphotons_wc[j]==2) or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) or pelee_showers[j]==2 or (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2)):
+                        p[j] = True
+                    elif selection=="2photon_any_noglee" and ((enu[j]>0.0 and nphotons_wc[j]==2) or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) or (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2)):
+                        p[j] = True
+                    elif selection=="2photon_any_gen" and enu[j]>0.0 and (nphotons_wc[j]==2 or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) or (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2)):
+                        p[j] = True
+                    elif selection=="2photon_any_wpdist" and enu[j]>0.0 and wc_pandora_dist[j] < 5 and (nphotons_wc[j]==2 or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) or (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2)):
+                        p[j] = True
+                    elif selection=="2photon_any_wldist" and enu[j]>0.0 and wc_lantern_dist[j] < 5 and (nphotons_wc[j]==2 or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) or (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2)):
+                        p[j] = True
+                    elif selection=="2photon_any_lpdist" and enu[j]>0.0 and lantern_pandora_dist[j] < 5 and (nphotons_wc[j]==2 or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) or (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2)):
+                        p[j] = True
+                    elif selection=="2photon_any_dist" and enu[j]>0.0 and wc_pandora_dist[j] < 5 and wc_lantern_dist[j] < 5 and lantern_pandora_dist[j] < 5 and (nphotons_wc[j]==2 or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) or (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2)):
+                        p[j] = True
+
+    else:
+        pass_vec = PassSelection(selection, all_df, -1)
+        p = pass_vec[i]  
     
     return p
 
@@ -4968,14 +4944,18 @@ def CombinePhotonVars(all_df, var):
     var_pandora = all_df[var+"_pandora"].to_numpy()
     var_lantern = all_df[var+"_lantern"].to_numpy()
 
+    passed_wc = PassSelection("2photon_wc", all_df, -1)
+    passed_pandora = PassSelection("2photon_pandora", all_df, -1)
+    passed_lantern = PassSelection("2photon_lantern", all_df, -1)
+
     num_evts = all_df.shape[0]
 
     for i in range(num_evts):
-        if PassSelection("2photon_wc", all_df, i):
+        if passed_wc[i]:
             var_list.append(var_wc[i])
-        elif PassSelection("2photon_pandora", all_df, i):
+        elif passed_pandora[i]:
             var_list.append(var_pandora[i])
-        elif PassSelection("2photon_lantern", all_df, i):
+        elif passed_lantern[i]:
             var_list.append(var_lantern[i])
         else:
             var_list.append(-9999.)
