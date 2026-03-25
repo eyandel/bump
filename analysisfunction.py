@@ -287,129 +287,71 @@ def AddRecoVars(all_df):
     all_df["lantern_pandora_dist"] = lantern_pandora_dist
     return all_df
 
-def LoadTreesTruth(file1, file2, file3, su = False):
-    with uproot.open(file1)["wcpselection/T_BDTvars"] as f_in_bdt_over:
-        all_df_in_bdt_over_1 = f_in_bdt_over.arrays(bdt_variables, library="pd")
-
-    with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_pfeval_over:
-        all_df_in_pfeval_over_1 = f_in_pfeval_over.arrays(pfeval_variables + truth_variables, library="pd")
-
-    with uproot.open(file1)["wcpselection/T_KINEvars"] as f_in_kine_over:
-        all_df_in_kine_over_1 = f_in_kine_over.arrays(kine_variables, library="pd")
-
-    with uproot.open(file1)["wcpselection/T_eval"] as f_in_eval_over:
-        all_df_in_eval_over_1 = f_in_eval_over.arrays(eval_variables + eval_truth_variables, library="pd")
-
-    if su:
-        with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data_1 = f_in_time_data.arrays(time_variables + time_truth_variables + larpid_reco_variables + larpid_truth_variables, library="pd")
-        with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
-            all_df_in_pelee_data_1 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd")
-        with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
-            all_df_in_glee_data_1 = f_in_glee_data.arrays(glee_reco_variables, library="pd")
-        with uproot.open(file1)["lantern/EventTree"] as f_in_lantern_data:
-            all_df_in_lantern_data_1 = f_in_lantern_data.arrays(lantern_reco_variables, library="pd")
-
-        
-
-
-    with uproot.open(file2)["wcpselection/T_BDTvars"] as f_in_bdt_over:
-        all_df_in_bdt_over_2 = f_in_bdt_over.arrays(bdt_variables, library="pd")
-
-    with uproot.open(file2)["wcpselection/T_PFeval"] as f_in_pfeval_over:
-        all_df_in_pfeval_over_2 = f_in_pfeval_over.arrays(pfeval_variables + truth_variables, library="pd")
-
-    with uproot.open(file2)["wcpselection/T_KINEvars"] as f_in_kine_over:
-        all_df_in_kine_over_2 = f_in_kine_over.arrays(kine_variables, library="pd")
-
-    with uproot.open(file2)["wcpselection/T_eval"] as f_in_eval_over:
-        all_df_in_eval_over_2 = f_in_eval_over.arrays(eval_variables + eval_truth_variables, library="pd")
-
-    if su:
-        with uproot.open(file2)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data_2 = f_in_time_data.arrays(time_variables + time_truth_variables  + larpid_reco_variables + larpid_truth_variables, library="pd")
-        with uproot.open(file2)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
-            all_df_in_pelee_data_2 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd")
-        with uproot.open(file2)["singlephotonana/vertex_tree"] as f_in_glee_data:
-            all_df_in_glee_data_2 = f_in_glee_data.arrays(glee_reco_variables, library="pd")
-        with uproot.open(file2)["lantern/EventTree"] as f_in_lantern_data:
-            all_df_in_lantern_data_2 = f_in_lantern_data.arrays(lantern_reco_variables, library="pd")
+def LoadTreesTruth(files, su = False):
+    #files = 1D array of files sorted by run
+    i_run = 0
+    all_df_in_bdt_vec = []
+    all_df_in_pfeval_vec = []
+    all_df_in_kine_vec = []
+    all_df_in_eval_vec = []
+    all_df_in_time_vec = []
+    all_df_in_pelee_vec = []
+    all_df_in_lantern_vec = []
+    for file in files:
+        i_run += 1
+        print("Loading file" + str(i_run) + "/" + str(len(files)) + ": " + file)
+        all_df_in_bdt_temp, all_df_in_pfeval_temp, all_df_in_kine_temp, all_df_in_eval_temp, all_df_in_time_temp, all_df_in_pelee_temp, all_df_in_glee_temp, all_df_in_lantern_temp = LoadTreesTruth1(file, su=su)
+        all_df_in_bdt_vec.append(all_df_in_bdt_temp)
+        all_df_in_pfeval_vec.append(all_df_in_pfeval_temp)
+        all_df_in_kine_vec.append(all_df_in_kine_temp)
+        all_df_in_eval_vec.append(all_df_in_eval_temp)
+        all_df_in_time_vec.append(all_df_in_time_temp)
+        all_df_in_pelee_vec.append(all_df_in_pelee_temp)
+        all_df_in_lantern_vec.append(all_df_in_lantern_temp)
       
 
+    all_df_in_bdt_over = pd.concat(all_df_in_bdt_vec, ignore_index=True, sort=False)
 
-    with uproot.open(file3)["wcpselection/T_BDTvars"] as f_in_bdt_over:
-        all_df_in_bdt_over_3 = f_in_bdt_over.arrays(bdt_variables, library="pd")
+    for df in all_df_in_bdt_vec:
+        del df
 
-    with uproot.open(file3)["wcpselection/T_PFeval"] as f_in_pfeval_over:
-        all_df_in_pfeval_over_3 = f_in_pfeval_over.arrays(pfeval_variables + truth_variables, library="pd")
+    all_df_in_pfeval_over = pd.concat(all_df_in_pfeval_vec, ignore_index=True, sort=False)
 
-    with uproot.open(file3)["wcpselection/T_KINEvars"] as f_in_kine_over:
-        all_df_in_kine_over_3 = f_in_kine_over.arrays(kine_variables, library="pd")
+    for df in all_df_in_pfeval_vec:
+        del df
 
-    with uproot.open(file3)["wcpselection/T_eval"] as f_in_eval_over:
-        all_df_in_eval_over_3 = f_in_eval_over.arrays(eval_variables + eval_truth_variables, library="pd")
+    all_df_in_kine_over = pd.concat(all_df_in_kine_vec, ignore_index=True, sort=False)
 
-    if su:
-        with uproot.open(file3)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data_3 = f_in_time_data.arrays(time_variables + time_truth_variables  + larpid_reco_variables + larpid_truth_variables, library="pd")
-        with uproot.open(file3)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
-            all_df_in_pelee_data_3 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd")
-        with uproot.open(file3)["singlephotonana/vertex_tree"] as f_in_glee_data:
-            all_df_in_glee_data_3 = f_in_glee_data.arrays(glee_reco_variables, library="pd")
-        with uproot.open(file3)["lantern/EventTree"] as f_in_lantern_data:
-            all_df_in_lantern_data_3 = f_in_lantern_data.arrays(lantern_reco_variables, library="pd")
-      
+    for df in all_df_in_kine_vec:
+        del df
 
-    all_df_in_bdt_over = pd.concat([all_df_in_bdt_over_1, all_df_in_bdt_over_2, all_df_in_bdt_over_3], ignore_index=True, sort=False)
+    all_df_in_eval_over = pd.concat(all_df_in_eval_vec, ignore_index=True, sort=False)
 
-    del all_df_in_bdt_over_1
-    del all_df_in_bdt_over_2
-    del all_df_in_bdt_over_3
+    for df in all_df_in_eval_vec:
+        del df
 
-    all_df_in_pfeval_over = pd.concat([all_df_in_pfeval_over_1, all_df_in_pfeval_over_2, all_df_in_pfeval_over_3], ignore_index=True, sort=False)
+    all_df_in_time_data = pd.concat(all_df_in_time_vec, ignore_index=True, sort=False) if su else None
 
-    del all_df_in_pfeval_over_1
-    del all_df_in_pfeval_over_2
-    del all_df_in_pfeval_over_3
+    for df in all_df_in_time_vec:
+        del df
 
-    all_df_in_kine_over = pd.concat([all_df_in_kine_over_1, all_df_in_kine_over_2, all_df_in_kine_over_3], ignore_index=True, sort=False)
-
-    del all_df_in_kine_over_1
-    del all_df_in_kine_over_2
-    del all_df_in_kine_over_3
-
-    all_df_in_eval_over = pd.concat([all_df_in_eval_over_1, all_df_in_eval_over_2, all_df_in_eval_over_3], ignore_index=True, sort=False)
-
-    del all_df_in_eval_over_1
-    del all_df_in_eval_over_2
-    del all_df_in_eval_over_3
-
-    all_df_in_time_data = pd.concat([all_df_in_time_data_1, all_df_in_time_data_2, all_df_in_time_data_3], ignore_index=True, sort=False) if su else None
-
-    del all_df_in_time_data_1
-    del all_df_in_time_data_2
-    del all_df_in_time_data_3
-
-    all_df_in_pelee_data = pd.concat([all_df_in_pelee_data_1, all_df_in_pelee_data_2, all_df_in_pelee_data_3], ignore_index=True, sort=False) if su else None
+    all_df_in_pelee_data = pd.concat(all_df_in_pelee_vec, ignore_index=True, sort=False) if su else None
     all_df_in_pelee_data = all_df_in_pelee_data.add_prefix('pelee_')
 
-    del all_df_in_pelee_data_1
-    del all_df_in_pelee_data_2
-    del all_df_in_pelee_data_3
+    for df in all_df_in_pelee_vec:
+        del df
 
-    all_df_in_glee_data = pd.concat([all_df_in_glee_data_1, all_df_in_glee_data_2, all_df_in_glee_data_3], ignore_index=True, sort=False) if su else None
+    all_df_in_glee_data = pd.concat(all_df_in_glee_vec, ignore_index=True, sort=False) if su else None
     all_df_in_glee_data = all_df_in_glee_data.add_prefix('glee_')
 
-    del all_df_in_glee_data_1
-    del all_df_in_glee_data_2
-    del all_df_in_glee_data_3
+    for df in all_df_in_glee_vec:
+        del df
 
-    all_df_in_lantern_data = pd.concat([all_df_in_lantern_data_1, all_df_in_lantern_data_2, all_df_in_lantern_data_3], ignore_index=True, sort=False) if su else None
+    all_df_in_lantern_data = pd.concat(all_df_in_lantern_vec, ignore_index=True, sort=False) if su else None
     all_df_in_lantern_data = all_df_in_lantern_data.add_prefix('lantern_')
 
-    del all_df_in_lantern_data_1
-    del all_df_in_lantern_data_2
-    del all_df_in_lantern_data_3
+    for df in all_df_in_lantern_vec:
+        del df
 
     if su:
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, all_df_in_glee_data, all_df_in_lantern_data
@@ -447,128 +389,71 @@ def LoadTreesTruth1(file1, su = False):
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
 
 ###
-def LoadTreesData(file1, file2, file3, su = False):
-    with uproot.open(file1)["wcpselection/T_BDTvars"] as f_in_bdt_over:
-        all_df_in_bdt_over_1 = f_in_bdt_over.arrays(bdt_variables, library="pd")
+def LoadTreesData(files, su = False):
+    #files = 1D array of files sorted by run
+    i_run = 0
+    all_df_in_bdt_vec = []
+    all_df_in_pfeval_vec = []
+    all_df_in_kine_vec = []
+    all_df_in_eval_vec = []
+    all_df_in_time_vec = []
+    all_df_in_pelee_vec = []
+    all_df_in_lantern_vec = []
+    for file in files:
+        i_run += 1
+        print("Loading file" + str(i_run) + "/" + str(len(files)) + ": " + file)
+        all_df_in_bdt_temp, all_df_in_pfeval_temp, all_df_in_kine_temp, all_df_in_eval_temp, all_df_in_time_temp, all_df_in_pelee_temp, all_df_in_glee_temp, all_df_in_lantern_temp = LoadTreesData1(file, su=su)
+        all_df_in_bdt_vec.append(all_df_in_bdt_temp)
+        all_df_in_pfeval_vec.append(all_df_in_pfeval_temp)
+        all_df_in_kine_vec.append(all_df_in_kine_temp)
+        all_df_in_eval_vec.append(all_df_in_eval_temp)
+        all_df_in_time_vec.append(all_df_in_time_temp)
+        all_df_in_pelee_vec.append(all_df_in_pelee_temp)
+        all_df_in_lantern_vec.append(all_df_in_lantern_temp)
+      
 
-    with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_pfeval_over:
-        all_df_in_pfeval_over_1 = f_in_pfeval_over.arrays(pfeval_variables, library="pd")
+    all_df_in_bdt_over = pd.concat(all_df_in_bdt_vec, ignore_index=True, sort=False)
 
-    with uproot.open(file1)["wcpselection/T_KINEvars"] as f_in_kine_over:
-        all_df_in_kine_over_1 = f_in_kine_over.arrays(kine_variables, library="pd")
+    for df in all_df_in_bdt_vec:
+        del df
 
-    with uproot.open(file1)["wcpselection/T_eval"] as f_in_eval_over:
-        all_df_in_eval_over_1 = f_in_eval_over.arrays(eval_variables, library="pd")
+    all_df_in_pfeval_over = pd.concat(all_df_in_pfeval_vec, ignore_index=True, sort=False)
 
-    if su:
-        with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data_1 = f_in_time_data.arrays(time_variables  + larpid_reco_variables, library="pd")
-        with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
-            all_df_in_pelee_data_1 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd")
-        with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
-            all_df_in_glee_data_1 = f_in_glee_data.arrays(glee_reco_variables, library="pd")
-        with uproot.open(file1)["lantern/EventTree"] as f_in_lantern_data:
-            all_df_in_lantern_data_1 = f_in_lantern_data.arrays(lantern_reco_variables, library="pd")
-        
+    for df in all_df_in_pfeval_vec:
+        del df
 
+    all_df_in_kine_over = pd.concat(all_df_in_kine_vec, ignore_index=True, sort=False)
 
-    with uproot.open(file2)["wcpselection/T_BDTvars"] as f_in_bdt_over:
-        all_df_in_bdt_over_2 = f_in_bdt_over.arrays(bdt_variables, library="pd")
+    for df in all_df_in_kine_vec:
+        del df
 
-    with uproot.open(file2)["wcpselection/T_PFeval"] as f_in_pfeval_over:
-        all_df_in_pfeval_over_2 = f_in_pfeval_over.arrays(pfeval_variables, library="pd")
+    all_df_in_eval_over = pd.concat(all_df_in_eval_vec, ignore_index=True, sort=False)
 
-    with uproot.open(file2)["wcpselection/T_KINEvars"] as f_in_kine_over:
-        all_df_in_kine_over_2 = f_in_kine_over.arrays(kine_variables, library="pd")
+    for df in all_df_in_eval_vec:
+        del df
 
-    with uproot.open(file2)["wcpselection/T_eval"] as f_in_eval_over:
-        all_df_in_eval_over_2 = f_in_eval_over.arrays(eval_variables, library="pd")
+    all_df_in_time_data = pd.concat(all_df_in_time_vec, ignore_index=True, sort=False) if su else None
 
-    if su:
-        with uproot.open(file2)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data_2 = f_in_time_data.arrays(time_variables  + larpid_reco_variables, library="pd")
-        with uproot.open(file2)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
-            all_df_in_pelee_data_2 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd")
-        with uproot.open(file2)["singlephotonana/vertex_tree"] as f_in_glee_data:
-            all_df_in_glee_data_2 = f_in_glee_data.arrays(glee_reco_variables, library="pd")
-        with uproot.open(file2)["lantern/EventTree"] as f_in_lantern_data:
-            all_df_in_lantern_data_2 = f_in_lantern_data.arrays(lantern_reco_variables, library="pd")
+    for df in all_df_in_time_vec:
+        del df
 
-
-
-    with uproot.open(file3)["wcpselection/T_BDTvars"] as f_in_bdt_over:
-        all_df_in_bdt_over_3 = f_in_bdt_over.arrays(bdt_variables, library="pd")
-
-    with uproot.open(file3)["wcpselection/T_PFeval"] as f_in_pfeval_over:
-        all_df_in_pfeval_over_3 = f_in_pfeval_over.arrays(pfeval_variables, library="pd")
-
-    with uproot.open(file3)["wcpselection/T_KINEvars"] as f_in_kine_over:
-        all_df_in_kine_over_3 = f_in_kine_over.arrays(kine_variables, library="pd")
-
-    with uproot.open(file3)["wcpselection/T_eval"] as f_in_eval_over:
-        all_df_in_eval_over_3 = f_in_eval_over.arrays(eval_variables, library="pd")
-
-    if su:
-        with uproot.open(file3)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data_3 = f_in_time_data.arrays(time_variables +  larpid_reco_variables, library="pd")
-        with uproot.open(file3)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
-            all_df_in_pelee_data_3 = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd")
-        with uproot.open(file3)["singlephotonana/vertex_tree"] as f_in_glee_data:
-            all_df_in_glee_data_3 = f_in_glee_data.arrays(glee_reco_variables, library="pd")
-        with uproot.open(file3)["lantern/EventTree"] as f_in_lantern_data:
-            all_df_in_lantern_data_3 = f_in_lantern_data.arrays(lantern_reco_variables, library="pd")
-
-
-    all_df_in_bdt_over = pd.concat([all_df_in_bdt_over_1, all_df_in_bdt_over_2, all_df_in_bdt_over_3], ignore_index=True, sort=False)
-
-    del all_df_in_bdt_over_1
-    del all_df_in_bdt_over_2
-    del all_df_in_bdt_over_3
-
-    all_df_in_pfeval_over = pd.concat([all_df_in_pfeval_over_1, all_df_in_pfeval_over_2, all_df_in_pfeval_over_3], ignore_index=True, sort=False)
-
-    del all_df_in_pfeval_over_1
-    del all_df_in_pfeval_over_2
-    del all_df_in_pfeval_over_3
-
-    all_df_in_kine_over = pd.concat([all_df_in_kine_over_1, all_df_in_kine_over_2, all_df_in_kine_over_3], ignore_index=True, sort=False)
-
-    del all_df_in_kine_over_1
-    del all_df_in_kine_over_2
-    del all_df_in_kine_over_3
-
-    all_df_in_eval_over = pd.concat([all_df_in_eval_over_1, all_df_in_eval_over_2, all_df_in_eval_over_3], ignore_index=True, sort=False)
-
-    del all_df_in_eval_over_1
-    del all_df_in_eval_over_2
-    del all_df_in_eval_over_3
-
-    all_df_in_time_data = pd.concat([all_df_in_time_data_1, all_df_in_time_data_2, all_df_in_time_data_3], ignore_index=True, sort=False) if su else None
-
-    del all_df_in_time_data_1
-    del all_df_in_time_data_2
-    del all_df_in_time_data_3
-
-    all_df_in_pelee_data = pd.concat([all_df_in_pelee_data_1, all_df_in_pelee_data_2, all_df_in_pelee_data_3], ignore_index=True, sort=False) if su else None
+    all_df_in_pelee_data = pd.concat(all_df_in_pelee_vec, ignore_index=True, sort=False) if su else None
     all_df_in_pelee_data = all_df_in_pelee_data.add_prefix('pelee_')
 
-    del all_df_in_pelee_data_1
-    del all_df_in_pelee_data_2
-    del all_df_in_pelee_data_3
+    for df in all_df_in_pelee_vec:
+        del df
 
-    all_df_in_glee_data = pd.concat([all_df_in_glee_data_1, all_df_in_glee_data_2, all_df_in_glee_data_3], ignore_index=True, sort=False) if su else None
+    all_df_in_glee_data = pd.concat(all_df_in_glee_vec, ignore_index=True, sort=False) if su else None
     all_df_in_glee_data = all_df_in_glee_data.add_prefix('glee_')
 
-    del all_df_in_glee_data_1
-    del all_df_in_glee_data_2
-    del all_df_in_glee_data_3
+    for df in all_df_in_glee_vec:
+        del df
 
-    all_df_in_lantern_data = pd.concat([all_df_in_lantern_data_1, all_df_in_lantern_data_2, all_df_in_lantern_data_3], ignore_index=True, sort=False) if su else None
+    all_df_in_lantern_data = pd.concat(all_df_in_lantern_vec, ignore_index=True, sort=False) if su else None
     all_df_in_lantern_data = all_df_in_lantern_data.add_prefix('lantern_')
 
-    del all_df_in_lantern_data_1
-    del all_df_in_lantern_data_2
-    del all_df_in_lantern_data_3
+    for df in all_df_in_lantern_vec:
+        del df
 
     if su:
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, all_df_in_glee_data, all_df_in_lantern_data
