@@ -39,6 +39,7 @@ sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '../uboone_ngem')))
 from src.plot_helpers import make_histogram_plot # type: ignore
 from src.df_helpers import get_vals # type: ignore
 from src.systematics import * # type: ignore
+from src.pyroot_loading import get_rw_sys_weights_dic # type: ignore
 
 #from src.signal_categories import topological_category_labels, topological_category_colors, topological_category_labels_latex, topological_category_hatches, topological_categories_dic
 #from src.signal_categories import filetype_category_labels, filetype_category_colors, filetype_category_hatches
@@ -296,6 +297,7 @@ def LoadTreesTruth(files, su = False):
     all_df_in_eval_vec = []
     all_df_in_time_vec = []
     all_df_in_pelee_vec = []
+    all_df_in_glee_vec = []
     all_df_in_lantern_vec = []
     for file in files:
         i_run += 1
@@ -307,6 +309,7 @@ def LoadTreesTruth(files, su = False):
         all_df_in_eval_vec.append(all_df_in_eval_temp)
         all_df_in_time_vec.append(all_df_in_time_temp)
         all_df_in_pelee_vec.append(all_df_in_pelee_temp)
+        all_df_in_glee_vec.append(all_df_in_glee_temp)
         all_df_in_lantern_vec.append(all_df_in_lantern_temp)
       
 
@@ -372,6 +375,25 @@ def LoadTreesTruth1(file1, su = False):
     with uproot.open(file1)["wcpselection/T_eval"] as f_in_eval_over:
         all_df_in_eval_over = f_in_eval_over.arrays(eval_variables + eval_truth_variables, library="pd")
 
+    run_number = []
+    if "run1" in file1 or "Run1" in file1:
+        run_number = [1 for i in range(len(all_df_in_bdt_over))]
+    elif "run2" in file1 or "Run2" in file1:
+        run_number = [2 for i in range(len(all_df_in_bdt_over))]
+    elif "run3" in file1 or "Run3" in file1:
+        run_number = [3 for i in range(len(all_df_in_bdt_over))]
+    elif "run4a" in file1 or "Run4a" in file1:
+        run_number = [41 for i in range(len(all_df_in_bdt_over))]
+    elif "run4" in file1 or "Run4" in file1:
+        run_number = [4 for i in range(len(all_df_in_bdt_over))]
+    elif "run5" in file1 or "Run5" in file1:
+        run_number = [5 for i in range(len(all_df_in_bdt_over))]
+    else:  
+        print("Error: run number not found in file name")
+        run_number = [-999 for i in range(len(all_df_in_bdt_over))]
+
+    all_df_in_bdt_over["run_number"] = run_number
+
     if su:
         with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
             all_df_in_time_data = f_in_time_data.arrays(time_variables + time_truth_variables  + larpid_reco_variables + larpid_truth_variables, library="pd")
@@ -398,6 +420,7 @@ def LoadTreesData(files, su = False):
     all_df_in_eval_vec = []
     all_df_in_time_vec = []
     all_df_in_pelee_vec = []
+    all_df_in_glee_vec = []
     all_df_in_lantern_vec = []
     for file in files:
         i_run += 1
@@ -409,6 +432,7 @@ def LoadTreesData(files, su = False):
         all_df_in_eval_vec.append(all_df_in_eval_temp)
         all_df_in_time_vec.append(all_df_in_time_temp)
         all_df_in_pelee_vec.append(all_df_in_pelee_temp)
+        all_df_in_glee_vec.append(all_df_in_glee_temp)
         all_df_in_lantern_vec.append(all_df_in_lantern_temp)
       
 
@@ -474,6 +498,25 @@ def LoadTreesData1(file1, su = False):
     with uproot.open(file1)["wcpselection/T_eval"] as f_in_eval_over:
         all_df_in_eval_over = f_in_eval_over.arrays(eval_variables, library="pd")
 
+    run_number = []
+    if "run1" in file1 or "Run1" in file1:
+        run_number = [1 for i in range(len(all_df_in_bdt_over))]
+    elif "run2" in file1 or "Run2" in file1:
+        run_number = [2 for i in range(len(all_df_in_bdt_over))]
+    elif "run3" in file1 or "Run3" in file1:
+        run_number = [3 for i in range(len(all_df_in_bdt_over))]
+    elif "run4a" in file1 or "Run4a" in file1:
+        run_number = [41 for i in range(len(all_df_in_bdt_over))]
+    elif "run4" in file1 or "Run4" in file1:
+        run_number = [4 for i in range(len(all_df_in_bdt_over))]
+    elif "run5" in file1 or "Run5" in file1:
+        run_number = [5 for i in range(len(all_df_in_bdt_over))]
+    else:  
+        print("Error: run number not found in file name")
+        run_number = [-999 for i in range(len(all_df_in_bdt_over))]
+
+    all_df_in_bdt_over["run_number"] = run_number
+
     if su:
         with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
             all_df_in_time_data = f_in_time_data.arrays(time_variables  + larpid_reco_variables, library="pd")
@@ -495,6 +538,7 @@ def LoadTreesData1(file1, su = False):
 def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_over = [], all_df_in_pelee_over = [], all_df_in_glee_over = [], all_df_in_lantern_over = []):
     #bnb overlay
     true_event_types = []
+    filetypes = []
     shw_sp_energy = []
     single_photon_numu_score = []
     single_photon_other_score = []
@@ -552,6 +596,7 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
     for i in range(len(kine_reco_Enu_vec)):
         #if (e[i] != pnd_evt[i]):
         #    print("Event number mismatch between wc and pelee: ", i, e[i], pnd_evt[i])
+        filetypes.append("nu_overlay")
         is_sigoverlay_vec.append(0)
         time.append(-9999.0)
         event_time = -9999.0
@@ -742,6 +787,7 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
     
     all_df_in_bdt_over = all_df_in_bdt_over.add_prefix('wc_')
     all_df_in_bdt_over["true_event_type"] = true_event_types
+    all_df_in_bdt_over["filetype"] = filetypes
 
     if (len(all_df_in_pelee_over) > 0):
         all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_pelee_over, lsuffix='_pelee')
@@ -756,6 +802,7 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
 def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all_df_in_eval_dirt, all_df_in_time_dirt = [], all_df_in_pelee_dirt = [], all_df_in_glee_dirt = [], all_df_in_lantern_dirt = []):
     #dirt
     true_event_types = []
+    filetypes = []
     shw_sp_energy = []
     single_photon_numu_score = []
     single_photon_other_score = []
@@ -815,6 +862,7 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
     for i in range(len(kine_reco_Enu_vec)):
         #if (e[i] != pnd_evt[i]):
         #    print("Event number mismatch between wc and pelee: ", i, e[i], pnd_evt[i])
+        filetypes.append("dirt_overlay")
         is_sigoverlay_vec.append(0)
         time.append(-9999.0)
         event_time = -9999.0
@@ -973,6 +1021,7 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
 
     all_df_in_bdt_dirt = all_df_in_bdt_dirt.add_prefix('wc_')
     all_df_in_bdt_dirt["true_event_type"] = true_event_types
+    all_df_in_bdt_dirt["filetype"] = filetypes
 
     if (len(all_df_in_pelee_dirt) > 0):
         all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_pelee_dirt, lsuffix='_pelee')
@@ -987,6 +1036,7 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
 def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_df_in_eval_ext, all_df_in_time_ext = [], all_df_in_pelee_ext = [], all_df_in_glee_ext = [], all_df_in_lantern_ext = []):
     #extbnb
     true_event_types = []
+    filetypes = []
     shw_sp_energy = []
     single_photon_numu_score = []
     single_photon_other_score = []
@@ -1038,6 +1088,7 @@ def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_
         #    print("Event number mismatch between wc and pelee: ", i, e[i], pnd_evt[i])
         #num_bkg+=1
         true_event_types.append(12)
+        filetypes.append("ext")
         weight_cv.append(1.0)
         weight_spline.append(1.0)
         is_sigoverlay_vec.append(0)
@@ -1177,6 +1228,7 @@ def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_
 
     all_df_in_bdt_ext = all_df_in_bdt_ext.add_prefix('wc_')
     all_df_in_bdt_ext["true_event_type"] = true_event_types
+    all_df_in_bdt_ext["filetype"] = filetypes
 
     if (len(all_df_in_pelee_ext) > 0):
         all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_pelee_ext, lsuffix='_pelee')
@@ -1191,6 +1243,7 @@ def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_
 def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_df_in_eval_data, all_df_in_time_data = [], all_df_in_pelee_data = [], all_df_in_glee_data = [], all_df_in_lantern_data = []):
     #bnb data
     true_event_types = []
+    filetypes = []
     shw_sp_energy = []
     single_photon_numu_score = []
     single_photon_other_score = []
@@ -1240,6 +1293,7 @@ def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_
         #if (e[i] != pnd_evt[i]):
         #    print("Event number mismatch between wc and pelee: ", i, e[i], pnd_evt[i])
         true_event_types.append(13)
+        filetypes.append("data")
         weight_cv.append(1.0)
         weight_spline.append(1.0)
         is_sigoverlay_vec.append(0)
@@ -1390,6 +1444,7 @@ def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_
 
     all_df_in_bdt_data = all_df_in_bdt_data.add_prefix('wc_')
     all_df_in_bdt_data["true_event_type"] = true_event_types
+    all_df_in_bdt_data["filetype"] = filetypes
 
     if (len(all_df_in_pelee_data) > 0):
         all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_pelee_data, lsuffix='_pelee')
@@ -1404,6 +1459,7 @@ def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_
 def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_over = [], all_df_in_pelee_over = [], all_df_in_glee_over = [], all_df_in_lantern_over = []):
     #ncpi0 overlay overlay
     true_event_types = []
+    filetypes = []
     true_event_types_sub = []
     shw_sp_energy = []
     single_photon_numu_score = []
@@ -1463,6 +1519,7 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
         #if (e[i] != pnd_evt[i]):
         #    print("Event number mismatch between wc and pelee: ", i, e[i], pnd_evt[i])
         true_event_types.append(-3)
+        filetypes.append("nc_pi0_overlay")
         is_sigoverlay_vec.append(0)
         time.append(-9999.0)
         event_time = -9999.0
@@ -1655,6 +1712,7 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
     all_df_in_bdt_over = all_df_in_bdt_over.add_prefix('wc_')
     all_df_in_bdt_over["true_event_type"] = true_event_types
     all_df_in_bdt_over["true_event_type_sub"] = true_event_types_sub
+    all_df_in_bdt_over["filetype"] = filetypes
 
     if (len(all_df_in_pelee_over) > 0):
         all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_pelee_over, lsuffix='_pelee')
@@ -1946,9 +2004,12 @@ def GetPOT(file):
     return p
 
 ###
-def CalculateWeights(all_df, dataPOT, ExtBnbPOT, pot_vars, run4 = False, run5 = False, allruns = False):
+def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
     # for calculating the weight
     #returns w: array filled with weights
+    
+    if runs==0:
+        runs = [1,2,3,41,4,5]
 
     for var_name, file_name in pot_vars:
         globals()[var_name] = GetPOT(file_name)
@@ -1963,38 +2024,98 @@ def CalculateWeights(all_df, dataPOT, ExtBnbPOT, pot_vars, run4 = False, run5 = 
     is_sigoverlay = (all_df["wc_is_sigoverlay"].to_numpy() == 1)
     is_ncpi0overlay = (all_df["true_event_type"].to_numpy() == -3)
     has_muon = (all_df["wc_is_sigoverlay"].to_numpy() == 0)# (all_df["reco_muonMomentum"].to_numpy() > 0)
-    if allruns:
-        POT_factor = [(dataPOT) / (ExtBnbPOT) if is_ext[i] else
-                    (dataPOT) / (run1DirtPOT + run2DirtPOT + run3DirtPOT + run4DirtPOT + run5DirtPOT) if is_dirt[i] else # type: ignore
-                    (dataPOT) / (run1SPPOT + run2SPPOT + run3SPPOT + run4SPPOT + run5SPPOT) if is_sigoverlay[i] else # type: ignore
-                    1. if is_data[i] else
-                    1. if is_lee[i] else
-                    1. if is_ncpi0overlay[i] else
-                    (dataPOT) / (run1BnbPOT + run2BnbPOT + run3BnbPOT + run4BnbPOT + run5BnbPOT) for i in range(len(is_ext))] # type: ignore
-    elif run4:
-            POT_factor = [(dataPOT) / (ExtBnbPOT) if is_ext[i] else
-                    (dataPOT) / (run4DirtPOT) if is_dirt[i] else # type: ignore
-                    (dataPOT) / (run4SPPOT) if is_sigoverlay[i] else # type: ignore
-                    1. if is_data[i] else
-                    1. if is_lee[i] else
-                    1. if is_ncpi0overlay[i] else
-                    (dataPOT) / (run4BnbPOT) for i in range(len(is_ext))] # type: ignore
-    elif run5:
-        POT_factor = [(dataPOT) / (ExtBnbPOT) if is_ext[i] else
-                    (dataPOT) / (run5DirtPOT) if is_dirt[i] else # type: ignore
-                    (dataPOT) / (run5SPPOT) if is_sigoverlay[i] else # type: ignore
-                    1. if is_data[i] else
-                    1. if is_lee[i] else
-                    1. if is_ncpi0overlay[i] else
-                    (dataPOT) / (run5BnbPOT) for i in range(len(is_ext))] # type: ignore
-    else:
-        POT_factor = [(dataPOT) / (ExtBnbPOT) if is_ext[i] else
-                    (dataPOT) / (run1DirtPOT + run2DirtPOT + run3DirtPOT) if is_dirt[i] else # type: ignore
-                    (dataPOT) / (run1SPPOT + run2SPPOT + run3SPPOT) if is_sigoverlay[i] else # type: ignore
-                    1. if is_data[i] else
-                    1. if is_lee[i] else
-                    1. if is_ncpi0overlay[i] else
-                    (dataPOT) / (run1BnbPOT + run2BnbPOT + run3BnbPOT) for i in range(len(is_ext))] # type: ignore
+    run_number = all_df["run_number"].to_numpy()
+
+    POT_factor = []
+    for i in range(len(is_ext)):
+        dataPOT = dataPOTvec[run_number.index(run_number[i])]
+        ExtBnbPOT = ExtBnbPOTvec[run_number.index(run_number[i])]
+        num = 1.0
+        denom = 1.0
+        if is_ext[i]:
+            num = dataPOT
+            denom = ExtBnbPOT
+        elif is_dirt[i]:
+            num = dataPOT
+            if run_number[i] == 1:
+                denom = run1DirtPOT
+            elif run_number[i] == 2:
+                denom = run2DirtPOT
+            elif run_number[i] == 3:
+                denom = run3DirtPOT
+            elif run_number[i] == 41:
+                denom = run4aDirtPOT
+            elif run_number[i] == 4:
+                denom = run4DirtPOT
+            elif run_number[i] == 5:
+                denom = run5DirtPOT
+        elif is_sigoverlay[i]:
+            num = dataPOT
+            if run_number[i] == 1:
+                denom = run1SPPOT
+            elif run_number[i] == 2:
+                denom = run2SPPOT
+            elif run_number[i] == 3:
+                denom = run3SPPOT
+            elif run_number[i] == 41:
+                denom = run4aSPPOT
+            elif run_number[i] == 4:
+                denom = run4SPPOT
+            elif run_number[i] == 5:
+                denom = run5SPPOT
+        elif is_data[i] or is_lee[i] or is_ncpi0overlay[i]:
+            num = 1.0
+            denom = 1.0
+        else:
+            num = dataPOT
+            if run_number[i] == 1:
+                denom = run1BnbPOT
+            elif run_number[i] == 2:
+                denom = run2BnbPOT
+            elif run_number[i] == 3:
+                denom = run3BnbPOT
+            elif run_number[i] == 41:
+                denom = run4aBnbPOT
+            elif run_number[i] == 4:
+                denom = run4BnbPOT
+            elif run_number[i] == 5:
+                denom = run5BnbPOT
+
+        POT_factor.append(num/denom)
+
+   #if allruns:
+   #     POT_factor = [(dataPOT) / (ExtBnbPOT) if is_ext[i] else
+   #                 (dataPOT) / (run1DirtPOT + run2DirtPOT + run3DirtPOT + run4DirtPOT + run5DirtPOT) if is_dirt[i] else # type: ignore
+   #                 (dataPOT) / (run1SPPOT + run2SPPOT + run3SPPOT + run4SPPOT + run5SPPOT) if is_sigoverlay[i] else # type: ignore
+   #                 1. if is_data[i] else
+   #                 1. if is_lee[i] else
+   #                 1. if is_ncpi0overlay[i] else
+   #                 (dataPOT) / (run1BnbPOT + run2BnbPOT + run3BnbPOT + run4BnbPOT + run5BnbPOT) for i in range(len(is_ext))] # type: ignore
+   # elif run4:
+   #         POT_factor = [(dataPOT) / (ExtBnbPOT) if is_ext[i] else
+   #                 (dataPOT) / (run4DirtPOT) if is_dirt[i] else # type: ignore
+   #                 (dataPOT) / (run4SPPOT) if is_sigoverlay[i] else # type: ignore
+   #                 1. if is_data[i] else
+   #                 1. if is_lee[i] else
+   #                 1. if is_ncpi0overlay[i] else
+   #                 (dataPOT) / (run4BnbPOT) for i in range(len(is_ext))] # type: ignore
+   # elif run5:
+   #     POT_factor = [(dataPOT) / (ExtBnbPOT) if is_ext[i] else
+   #                 (dataPOT) / (run5DirtPOT) if is_dirt[i] else # type: ignore
+   #                 (dataPOT) / (run5SPPOT) if is_sigoverlay[i] else # type: ignore
+   #                 1. if is_data[i] else
+   #                 1. if is_lee[i] else
+   #                 1. if is_ncpi0overlay[i] else
+   #                 (dataPOT) / (run5BnbPOT) for i in range(len(is_ext))] # type: ignore
+   # else:
+   #     POT_factor = [(dataPOT) / (ExtBnbPOT) if is_ext[i] else
+   #                 (dataPOT) / (run1DirtPOT + run2DirtPOT + run3DirtPOT) if is_dirt[i] else # type: ignore
+   #                 (dataPOT) / (run1SPPOT + run2SPPOT + run3SPPOT) if is_sigoverlay[i] else # type: ignore
+   #                 1. if is_data[i] else
+   #                 1. if is_lee[i] else
+   #                 1. if is_ncpi0overlay[i] else
+   #                 (dataPOT) / (run1BnbPOT + run2BnbPOT + run3BnbPOT) for i in range(len(is_ext))] # type: ignore
+   
     #[1.0 for i in range(len(is_ext)) ]
     
     #POT_factor = [ 5e19 / (run1ExtBnbPOT + run3ExtBnbPOT) if is_ext[i] else
@@ -4851,10 +4972,14 @@ def CombinePhotonVars(all_df, var):
 
 
 ###
-def MakeCovMatrix(selected_mc_df, weight_dict, var, bin_width, start_edge, end_edge):
+def MakeCovMatrix(all_df, selname, var, bin_width, start_edge, end_edge):
     bins = np.arange(start_edge, end_edge + bin_width, bin_width)
-    rw_sys_frac_cov_dic = create_rw_frac_cov_matrices(selected_mc_df, var, bins, weights_df=None)
-
+    passed_sel = PassSelection(selname, all_df, -1)
+    all_df["passed_sel"] = passed_sel
+    pred_sel_df = pl.from_pandas(all_df.query("passed_sel == True and filetype != 'data'"))
+    rw_sys_frac_cov_dic = get_rw_sys_frac_cov_matrices(
+            pred_sel_df.filter(pl.col("filetype") != "ext"), selname, var, bins, dont_load_rw_from_systematic_cache=dont_load_rw_from_systematic_cache, weights_df=None
+        )
     combined_rw_sys_frac_cov = np.zeros((len(bins)-1, len(bins)-1))
     for rw_sys_frac_cov_name, rw_sys_frac_cov in rw_sys_frac_cov_dic.items():
         combined_rw_sys_frac_cov += rw_sys_frac_cov
@@ -4862,10 +4987,11 @@ def MakeCovMatrix(selected_mc_df, weight_dict, var, bin_width, start_edge, end_e
     data_stat_cov = get_data_stat_cov(data_counts, pred_counts)
     pred_stat_cov = get_pred_stat_cov(get_vals(pred_sel_df, var), pred_sel_df.get_column("wc_net_weight").to_numpy(), bins)
     nodetvar_sys_cov = combined_rw_sys_cov + data_stat_cov + pred_stat_cov
-    nodetvar_sys_frac_cov = nodetvar_sys_cov / np.outer(pred_counts, pred_counts)
+    denom = np.outer(pred_counts, pred_counts)
+    nodetvar_sys_frac_cov = np.divide(nodetvar_sys_cov, denom, out=np.zeros_like(nodetvar_sys_cov), where=(denom != 0))
     nodetvar_sys_frac_cov = np.nan_to_num(nodetvar_sys_frac_cov, nan=0, posinf=0, neginf=0)
     nodetvar_pred_sys_cov = combined_rw_sys_cov + pred_stat_cov
-    nodetvar_pred_sys_frac_cov = nodetvar_pred_sys_cov / np.outer(pred_counts, pred_counts)
+    nodetvar_pred_sys_frac_cov = np.divide(nodetvar_pred_sys_cov, denom, out=np.zeros_like(nodetvar_pred_sys_cov), where=(denom != 0))
     nodetvar_pred_sys_frac_cov = np.nan_to_num(nodetvar_pred_sys_frac_cov, nan=0, posinf=0, neginf=0)
     nodetvar_pred_sys_frac_errors = np.sqrt(np.diag(nodetvar_pred_sys_frac_cov))
 
