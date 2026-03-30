@@ -339,19 +339,19 @@ def LoadTreesTruth(files, su = False):
         del df
 
     all_df_in_pelee_data = pd.concat(all_df_in_pelee_vec, ignore_index=True, sort=False) if su else None
-    all_df_in_pelee_data = all_df_in_pelee_data.add_prefix('pelee_')
+    #all_df_in_pelee_data = all_df_in_pelee_data.add_prefix('pelee_')
 
     for df in all_df_in_pelee_vec:
         del df
 
     all_df_in_glee_data = pd.concat(all_df_in_glee_vec, ignore_index=True, sort=False) if su else None
-    all_df_in_glee_data = all_df_in_glee_data.add_prefix('glee_')
+    #all_df_in_glee_data = all_df_in_glee_data.add_prefix('glee_')
 
     for df in all_df_in_glee_vec:
         del df
 
     all_df_in_lantern_data = pd.concat(all_df_in_lantern_vec, ignore_index=True, sort=False) if su else None
-    all_df_in_lantern_data = all_df_in_lantern_data.add_prefix('lantern_')
+    #all_df_in_lantern_data = all_df_in_lantern_data.add_prefix('lantern_')
 
     for df in all_df_in_lantern_vec:
         del df
