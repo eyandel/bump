@@ -101,10 +101,11 @@ hatches = ['\\\\','\\\\','\\\\','\\\\',None,None,None,None,None,None,None,None,N
 # 4=nue, 5=nc bkd, 6=ncpi0 bkd, 7=numu bkd, 8=numupi0 bkd, 9=nfv, 10=cosmic, 11=dirt, 12=extbnb, 13=data
 # 222 = true 2 photon
 
-def AddTruthCat(all_df, catname, catnum, catcolor):
+def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
     newcat = []
     newcatname = []
     newcatcolor = []
+    newcatfill = []
     photon1_mom = []
     photon2_mom = []
     photon1_process = []
@@ -115,7 +116,11 @@ def AddTruthCat(all_df, catname, catnum, catcolor):
     photon2_mother = []
     true_event_types = all_df["true_event_type"].to_numpy()
     truth_isCC = all_df["wc_truth_isCC"].to_numpy()
+    if "true_event_type_fill" not in all_df.columns:
+        newcatfill = [1001 for i in range(len(true_event_types))]
+        all_df["true_event_type_fill"] = newcatfill
     if catname == "2 true photons":
+        newcatfill = all_df["true_event_type_fill"].to_numpy()
         truth_Ntrack = all_df["wc_truth_Ntrack"].to_numpy()
         truth_pdg = all_df["wc_truth_pdg"].to_numpy()
         truth_startMomentum = all_df["wc_truth_startMomentum"].to_numpy()
@@ -206,6 +211,7 @@ def AddTruthCat(all_df, catname, catnum, catcolor):
             print("Error: must add 2 photon truth category before adding gg categories")
             return all_df
         else:
+            newcatfill = all_df["true_event_type_fill"].to_numpy()
             true_event_type_name = all_df["true_event_type_name"].to_numpy()
             true_event_type_color = all_df["true_event_type_color"].to_numpy()
             for i in range(len(true_event_types)):
@@ -233,10 +239,27 @@ def AddTruthCat(all_df, catname, catnum, catcolor):
                         newcat.append(true_event_types[i])
                         newcatname.append(true_event_type_name[i])
                         newcatcolor.append(true_event_type_color[i])
+    elif "Mod" in catname:
+        filetypes = all_df["filetype"].to_numpy()
+        true_event_type_name = all_df["true_event_type_name"].to_numpy()
+        true_event_type_color = all_df["true_event_type_color"].to_numpy()
+        true_event_type_fill = all_df["true_event_type_fill"].to_numpy()
+        for i in range(len(true_event_types)):
+            if filetypes[i] == "modpi0_overlay":
+                newcat.append(catnum)
+                newcatname.append(catname)
+                newcatcolor.append(catcolor)
+                newcatfill.append(Fill)
+            else:
+                newcat.append(true_event_types[i])
+                newcatname.append(true_event_type_name[i])
+                newcatcolor.append(true_event_type_color[i])
+                newcatfill.append(true_event_type_fill[i])
 
     all_df["true_event_type"] = newcat
     all_df["true_event_type_name"] = newcatname
     all_df["true_event_type_color"] = newcatcolor
+    all_df["true_event_type_fill"] = newcatfill
     if catname == "2 true photons":
         all_df["truth_photon1_mom"] = photon1_mom
         all_df["truth_photon2_mom"] = photon2_mom
@@ -392,7 +415,7 @@ def LoadTreesTruth1(file1, su = False):
         print("Error: run number not found in file name")
         run_number = [-999 for i in range(len(all_df_in_bdt_over))]
 
-    all_df_in_bdt_over["run_number"] = run_number
+    all_df_in_bdt_over["run_period"] = run_number
 
     if su:
         with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
@@ -462,19 +485,19 @@ def LoadTreesData(files, su = False):
         del df
 
     all_df_in_pelee_data = pd.concat(all_df_in_pelee_vec, ignore_index=True, sort=False) if su else None
-    all_df_in_pelee_data = all_df_in_pelee_data.add_prefix('pelee_')
+    #all_df_in_pelee_data = all_df_in_pelee_data.add_prefix('pelee_')
 
     for df in all_df_in_pelee_vec:
         del df
 
     all_df_in_glee_data = pd.concat(all_df_in_glee_vec, ignore_index=True, sort=False) if su else None
-    all_df_in_glee_data = all_df_in_glee_data.add_prefix('glee_')
+    #all_df_in_glee_data = all_df_in_glee_data.add_prefix('glee_')
 
     for df in all_df_in_glee_vec:
         del df
 
     all_df_in_lantern_data = pd.concat(all_df_in_lantern_vec, ignore_index=True, sort=False) if su else None
-    all_df_in_lantern_data = all_df_in_lantern_data.add_prefix('lantern_')
+    #all_df_in_lantern_data = all_df_in_lantern_data.add_prefix('lantern_')
 
     for df in all_df_in_lantern_vec:
         del df
@@ -515,7 +538,7 @@ def LoadTreesData1(file1, su = False):
         print("Error: run number not found in file name")
         run_number = [-999 for i in range(len(all_df_in_bdt_over))]
 
-    all_df_in_bdt_over["run_number"] = run_number
+    all_df_in_bdt_over["run_period"] = run_number
 
     if su:
         with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
@@ -2023,13 +2046,14 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
     is_lee = (all_df["true_event_type"].to_numpy() == -100)
     is_sigoverlay = (all_df["wc_is_sigoverlay"].to_numpy() == 1)
     is_ncpi0overlay = (all_df["true_event_type"].to_numpy() == -3)
+    is_modpi0 = (all_df["filetype"].to_numpy() == "modpi0_overlay")
     has_muon = (all_df["wc_is_sigoverlay"].to_numpy() == 0)# (all_df["reco_muonMomentum"].to_numpy() > 0)
-    run_number = all_df["run_number"].to_numpy()
+    run_number = all_df["wc_run_period"].to_numpy()
 
     POT_factor = []
     for i in range(len(is_ext)):
-        dataPOT = dataPOTvec[run_number.index(run_number[i])]
-        ExtBnbPOT = ExtBnbPOTvec[run_number.index(run_number[i])]
+        dataPOT = dataPOTvec[np.argmax(runs == run_number[i])]
+        ExtBnbPOT = ExtBnbPOTvec[np.argmax(runs == run_number[i])]
         num = 1.0
         denom = 1.0
         if is_ext[i]:
@@ -2063,6 +2087,20 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
                 denom = run4SPPOT
             elif run_number[i] == 5:
                 denom = run5SPPOT
+        elif is_modpi0[i]:
+            num = dataPOT
+            if run_number[i] == 1:
+                denom = run1modpi0POT
+            elif run_number[i] == 2:
+                denom = run2modpi0POT
+            elif run_number[i] == 3:
+                denom = run3modpi0POT
+            elif run_number[i] == 41:
+                denom = run4amodpi0POT
+            elif run_number[i] == 4:
+                denom = run4modpi0POT
+            elif run_number[i] == 5:
+                denom = run5modpi0POT
         elif is_data[i] or is_lee[i] or is_ncpi0overlay[i]:
             num = 1.0
             denom = 1.0
@@ -3219,7 +3257,7 @@ def MakeDataPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y
 def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_label, 
                    selection, POT, plot_folder, array_sig = [0,1,2,3,111], ignore_cat = [], 
                    plotlog = False, changey = False, y_lim = 0, legx1 = 0.4, legy1 = 0.55, 
-                   legx2 = 0.87, legy2 = 0.85, systdir="", gausfit = False):
+                   legx2 = 0.87, legy2 = 0.85, systdir="", gausfit = False, cat5 = False):
     #function to make a mc plot for a variable, will use whatever cut value and part of chain comes before
         #the call to the function
     #inputs:
@@ -3287,6 +3325,7 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     h_NCother = ROOT.TH1F('h_NCother', title, bin_num, start_edge, end_edge)
     h_numuCC1g = ROOT.TH1F('h_numuCC1g', title, bin_num, start_edge, end_edge)
     h_out1g = ROOT.TH1F('h_out1g', title, bin_num, start_edge, end_edge)
+    h_1g = ROOT.TH1F('h_1g', title, bin_num, start_edge, end_edge)
     
     h_sig = ROOT.TH1F('h_sig', title, bin_num, start_edge, end_edge)
     h_bkg = ROOT.TH1F('h_bkg', title, bin_num, start_edge, end_edge)
@@ -3309,6 +3348,7 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
     selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArrays(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
     selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArrays(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    selected_true_event_type_fill_sig, selected_true_event_type_fill_bkg, selected_true_event_type_fill_data = GetVariableArrays(all_df, "true_event_type_fill", "true_event_type_fill", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
     
 
 
@@ -3340,6 +3380,7 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     selected_NCother_var = []
     selected_numuCC1g_var = []
     selected_out1g_var = []
+    selected_1g_var = []
     
     selected_ext_w = []
     selected_dirt_w = []
@@ -3355,10 +3396,12 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     selected_NCother_w = []
     selected_numuCC1g_w = []
     selected_out1g_w = []
+    selected_1g_w = []
 
     seen_new_type = []
     seen_new_cat = []
     seen_new_color = []
+    seen_new_fill = []
     h_new = []
     selected_new_var = []
     selected_new_w = []
@@ -3401,23 +3444,27 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
             selected_nueCC_var.append(selected_var_bkg[i])
             selected_nueCC_w.append(selected_w_bkg[i])
             h_nueCC.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==3: 
+        elif not cat5 and (selected_true_event_type_bkg[i]==3 or selected_true_event_type_bkg[i]==2 or selected_true_event_type_bkg[i]==1 or selected_true_event_type_bkg[i]==0 or selected_true_event_type_bkg[i]==111):
+            selected_1g_var.append(selected_var_bkg[i])
+            selected_1g_w.append(selected_w_bkg[i])
+            h_1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
+        elif cat5 and selected_true_event_type_bkg[i]==3: 
             selected_NCpi1g_var.append(selected_var_bkg[i])
             selected_NCpi1g_w.append(selected_w_bkg[i])
             h_NCpi1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==2: 
+        elif cat5 and selected_true_event_type_bkg[i]==2: 
             selected_NCdel_var.append(selected_var_bkg[i])
             selected_NCdel_w.append(selected_w_bkg[i])
             h_NCdel.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==1: 
+        elif cat5 and selected_true_event_type_bkg[i]==1: 
             selected_NCother_var.append(selected_var_bkg[i])
             selected_NCother_w.append(selected_w_bkg[i])
             h_NCother.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==0: 
+        elif cat5 and selected_true_event_type_bkg[i]==0: 
             selected_numuCC1g_var.append(selected_var_bkg[i])
             selected_numuCC1g_w.append(selected_w_bkg[i])
             h_numuCC1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==111: 
+        elif cat5 and selected_true_event_type_bkg[i]==111: 
             selected_out1g_var.append(selected_var_bkg[i])
             selected_out1g_w.append(selected_w_bkg[i])
             h_out1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
@@ -3430,6 +3477,7 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
                 seen_new_type.append(selected_true_event_type_bkg[i])
                 seen_new_cat.append(selected_true_event_type_name_bkg[i])
                 seen_new_color.append(int(selected_true_event_type_color_bkg[i]))
+                seen_new_fill.append(int(selected_true_event_type_fill_bkg[i]))
                 h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}")
                 if h_tmp != None:
                     h_tmp.Delete()
@@ -3480,23 +3528,27 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
             selected_nueCC_var.append(selected_var_sig[i])
             selected_nueCC_w.append(selected_w_sig[i])
             h_nueCC.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==3: 
+        elif not cat5 and (selected_true_event_type_sig[i]==3 or selected_true_event_type_sig[i]==2 or selected_true_event_type_sig[i]==1 or selected_true_event_type_sig[i]==0 or selected_true_event_type_sig[i]==111):
+            selected_1g_var.append(selected_var_sig[i])
+            selected_1g_w.append(selected_w_sig[i])
+            h_1g.Fill(selected_var_sig[i],selected_w_sig[i])
+        elif cat5 and selected_true_event_type_sig[i]==3: 
             selected_NCpi1g_var.append(selected_var_sig[i])
             selected_NCpi1g_w.append(selected_w_sig[i])
             h_NCpi1g.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==2: 
+        elif cat5 and selected_true_event_type_sig[i]==2: 
             selected_NCdel_var.append(selected_var_sig[i])
             selected_NCdel_w.append(selected_w_sig[i])
             h_NCdel.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==1: 
+        elif cat5 and selected_true_event_type_sig[i]==1: 
             selected_NCother_var.append(selected_var_sig[i])
             selected_NCother_w.append(selected_w_sig[i])
             h_NCother.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==0: 
+        elif cat5 and selected_true_event_type_sig[i]==0: 
             selected_numuCC1g_var.append(selected_var_sig[i])
             selected_numuCC1g_w.append(selected_w_sig[i])
             h_numuCC1g.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==111: 
+        elif cat5 and selected_true_event_type_sig[i]==111: 
             selected_out1g_var.append(selected_var_sig[i])
             selected_out1g_w.append(selected_w_sig[i])
             h_out1g.Fill(selected_var_sig[i],selected_w_sig[i])
@@ -3507,6 +3559,7 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
                 seen_new_type.append(selected_true_event_type_sig[i])
                 seen_new_cat.append(selected_true_event_type_name_sig[i])
                 seen_new_color.append(int(selected_true_event_type_color_sig[i]))
+                seen_new_fill.append(int(selected_true_event_type_fill_sig[i]))
                 h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}")
                 if h_tmp != None:
                     h_tmp.Delete()
@@ -3521,8 +3574,10 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
             h_new[index].Fill(selected_var_sig[i],selected_w_sig[i])
             
             
-    
     root_hists = [h_cos, h_ext, h_dirt, h_outFV, h_NCpi0, h_numuCCpi0, h_NC,h_numuCC, h_nueCC, 
+                  h_1g]
+    if cat5:
+        root_hists = [h_cos, h_ext, h_dirt, h_outFV, h_NCpi0, h_numuCCpi0, h_NC,h_numuCC, h_nueCC, 
                   h_NCpi1g, h_NCdel, h_NCother, h_numuCC1g, h_out1g] 
     for h in h_new:
         root_hists.append(h)
@@ -3552,13 +3607,32 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
 
     pred_var = [selected_cos_var, selected_ext_var, selected_dirt_var, selected_outFV_var, selected_NCpi0_var,
                 selected_numuCCpi0_var, selected_NC_var, selected_numuCC_var, selected_nueCC_var, 
+                selected_1g_var]
+    if cat5:
+        pred_var = [selected_cos_var, selected_ext_var, selected_dirt_var, selected_outFV_var, selected_NCpi0_var,
+                selected_numuCCpi0_var, selected_NC_var, selected_numuCC_var, selected_nueCC_var, 
                 selected_NCpi1g_var, selected_NCdel_var, selected_NCother_var, selected_numuCC1g_var, selected_out1g_var]
     
     mc_weights = [selected_cos_w, selected_ext_w, selected_dirt_w, selected_outFV_w, selected_NCpi0_w,
                 selected_numuCCpi0_w, selected_NC_w, selected_numuCC_w, selected_nueCC_w, 
+                selected_1g_w]
+    if cat5:
+        mc_weights = [selected_cos_w, selected_ext_w, selected_dirt_w, selected_outFV_w, selected_NCpi0_w,
+                selected_numuCCpi0_w, selected_NC_w, selected_numuCC_w, selected_nueCC_w, 
                 selected_NCpi1g_w, selected_NCdel_w, selected_NCother_w, selected_numuCC1g_w, selected_out1g_w]
     
     mc_labels = ["MC cosmic bkg("+str((round(sum(selected_cos_w),2)))+")",
+                 "beam-off bkg("+str((round(sum(selected_ext_w),2)))+")",
+                "dirt bkg("+str((round(sum(selected_dirt_w),2)))+")",
+                "out of FV bkg("+str((round(sum(selected_outFV_w),2)))+")",
+                "NC #pi^{0} bkg("+str((round(sum(selected_NCpi0_w),2)))+")",
+                "#nu_{#mu}CC #pi^{0} bkg("+str((round(sum(selected_numuCCpi0_w),2)))+")",
+                "NC bkg({})".format((round(sum(selected_NC_w),2))),
+                "#nu_{#mu}CC bkg("+str((round(sum(selected_numuCC_w),2)))+")",
+                "#nu_{e}CC bkg("+str((round(sum(selected_nueCC_w),2)))+")",
+                "1#gamma("+str((round(sum(selected_1g_w),2)))+")"]
+    if cat5:
+        mc_labels = ["MC cosmic bkg("+str((round(sum(selected_cos_w),2)))+")",
                  "beam-off bkg("+str((round(sum(selected_ext_w),2)))+")",
                 "dirt bkg("+str((round(sum(selected_dirt_w),2)))+")",
                 "out of FV bkg("+str((round(sum(selected_outFV_w),2)))+")",
@@ -3686,41 +3760,48 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     h_nueCC.SetFillStyle(1001)
     h_nueCC.SetLineWidth(1)
     h_stack.Add(h_nueCC)
-        
-    h_NCpi1g.SetLineColor(kPink+5)
-    h_NCpi1g.SetFillColorAlpha(kPink+5, 1.0)
-    h_NCpi1g.SetFillStyle(1001)
-    h_NCpi1g.SetLineWidth(1)
-    h_stack.Add(h_NCpi1g)
-        
-    h_NCdel.SetLineColor(kPink-6)
-    h_NCdel.SetFillColorAlpha(kPink-6, 1.0)
-    h_NCdel.SetFillStyle(1001)
-    h_NCdel.SetLineWidth(1)
-    h_stack.Add(h_NCdel)
 
-    h_NCother.SetLineColor(kPink-8)
-    h_NCother.SetFillColorAlpha(kPink-8, 1.0)
-    h_NCother.SetFillStyle(1001)
-    h_NCother.SetLineWidth(1)
-    h_stack.Add(h_NCother)
+    if cat5: 
+        h_NCpi1g.SetLineColor(kPink+5)
+        h_NCpi1g.SetFillColorAlpha(kPink+5, 1.0)
+        h_NCpi1g.SetFillStyle(1001)
+        h_NCpi1g.SetLineWidth(1)
+        h_stack.Add(h_NCpi1g)
+            
+        h_NCdel.SetLineColor(kPink-6)
+        h_NCdel.SetFillColorAlpha(kPink-6, 1.0)
+        h_NCdel.SetFillStyle(1001)
+        h_NCdel.SetLineWidth(1)
+        h_stack.Add(h_NCdel)
 
-    h_numuCC1g.SetLineColor(kPink-7)
-    h_numuCC1g.SetFillColorAlpha(kPink-7, 1.0)
-    h_numuCC1g.SetFillStyle(1001)
-    h_numuCC1g.SetLineWidth(1)
-    h_stack.Add(h_numuCC1g)
+        h_NCother.SetLineColor(kPink-8)
+        h_NCother.SetFillColorAlpha(kPink-8, 1.0)
+        h_NCother.SetFillStyle(1001)
+        h_NCother.SetLineWidth(1)
+        h_stack.Add(h_NCother)
 
-    h_out1g.SetLineColor(kPink)
-    h_out1g.SetFillColorAlpha(kPink, 1.0)
-    h_out1g.SetFillStyle(1001)
-    h_out1g.SetLineWidth(1)
-    h_stack.Add(h_out1g)
+        h_numuCC1g.SetLineColor(kPink-7)
+        h_numuCC1g.SetFillColorAlpha(kPink-7, 1.0)
+        h_numuCC1g.SetFillStyle(1001)
+        h_numuCC1g.SetLineWidth(1)
+        h_stack.Add(h_numuCC1g)
+
+        h_out1g.SetLineColor(kPink)
+        h_out1g.SetFillColorAlpha(kPink, 1.0)
+        h_out1g.SetFillStyle(1001)
+        h_out1g.SetLineWidth(1)
+        h_stack.Add(h_out1g)
+    else:
+        h_1g.SetLineColor(kPink+5)
+        h_1g.SetFillColorAlpha(kPink+5, 1.0)
+        h_1g.SetFillStyle(1001)
+        h_1g.SetLineWidth(1)
+        h_stack.Add(h_1g)
 
     for i in range(len(h_new)):
         h_new[i].SetLineColor(seen_new_color[i])
         h_new[i].SetFillColorAlpha(seen_new_color[i], 1.0)
-        h_new[i].SetFillStyle(1001)
+        h_new[i].SetFillStyle(seen_new_fill[i])
         h_new[i].SetLineWidth(1)
         h_stack.Add(h_new[i])
 
