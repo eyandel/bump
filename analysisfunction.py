@@ -3,6 +3,7 @@
 from ast import For
 import matplotlib.pyplot as plt
 import uproot as uproot # type: ignore
+import polars as pl # type: ignore
 import pandas as pd
 import numpy as np
 #from sklearn.model_selection import train_test_split
@@ -28,10 +29,24 @@ import warnings
 warnings.filterwarnings('ignore')
 import itertools
 
+def join_index(left, right, suffix=None, lsuffix=None, rsuffix=None, how='left'):
+    idx_col = '__join_index_temp__'
+    left = left.with_row_count(idx_col)
+    right = right.with_row_count(idx_col)
+    # Handle pandas-style lsuffix/rsuffix -> polars suffix
+    if lsuffix or rsuffix:
+        # In pandas, lsuffix is applied to left cols, rsuffix to right cols
+        # In polars, suffix is applied to right cols
+        # For compatibility, use rsuffix if provided, else lsuffix (though semantics differ)
+        suffix = rsuffix if rsuffix else lsuffix
+    if suffix:
+        return left.join(right, on=idx_col, how=how, suffix=suffix).drop(idx_col)
+    return left.join(right, on=idx_col, how=how).drop(idx_col)
+
+
 import matplotlib as mpl
 import matplotlib.lines as mlines
 
-import polars as pl # type: ignore
 import sys
 #import os
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '../uboone_ngem')))
@@ -85,13 +100,19 @@ kViolet = 880
 kPink   = 900
 
 #set default color and hatching
-colors = [ROOT.gROOT.GetColor(kRed+2).AsHexString(), ROOT.gROOT.GetColor(kOrange+3).AsHexString(),
+colors_5cat = [ROOT.gROOT.GetColor(kRed+2).AsHexString(), ROOT.gROOT.GetColor(kOrange+3).AsHexString(),
           ROOT.gROOT.GetColor(kGray).AsHexString(), ROOT.gROOT.GetColor(kOrange+1).AsHexString(),
           ROOT.gROOT.GetColor(38).AsHexString(), ROOT.gROOT.GetColor(30).AsHexString(),
           ROOT.gROOT.GetColor(kOrange+1).AsHexString(), ROOT.gROOT.GetColor(kAzure+6).AsHexString(),
           ROOT.gROOT.GetColor(kGreen+1).AsHexString(), ROOT.gROOT.GetColor(kPink+5).AsHexString(),
           ROOT.gROOT.GetColor(kPink-6).AsHexString(), ROOT.gROOT.GetColor(kPink-8).AsHexString(),
           ROOT.gROOT.GetColor(kPink-7).AsHexString(), ROOT.gROOT.GetColor(kPink).AsHexString()]
+
+colors = [ROOT.gROOT.GetColor(kRed+2).AsHexString(), ROOT.gROOT.GetColor(kOrange+3).AsHexString(),
+          ROOT.gROOT.GetColor(kGray).AsHexString(), ROOT.gROOT.GetColor(kOrange+1).AsHexString(),
+          ROOT.gROOT.GetColor(38).AsHexString(), ROOT.gROOT.GetColor(30).AsHexString(),
+          ROOT.gROOT.GetColor(kOrange+1).AsHexString(), ROOT.gROOT.GetColor(kAzure+6).AsHexString(),
+          ROOT.gROOT.GetColor(kGreen+1).AsHexString(), ROOT.gROOT.GetColor(kPink+5).AsHexString()]
 
 hatches = ['\\\\','\\\\','\\\\','\\\\',None,None,None,None,None,None,None,None,None,]
 
@@ -114,19 +135,19 @@ def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
     photon2_XYZT = []
     photon1_mother = []
     photon2_mother = []
-    true_event_types = all_df["true_event_type"].to_numpy()
-    truth_isCC = all_df["wc_truth_isCC"].to_numpy()
+    true_event_types = all_df["true_event_type"].to_numpy(zero_copy_only=False)
+    truth_isCC = all_df["wc_truth_isCC"].to_numpy(zero_copy_only=False)
     if "true_event_type_fill" not in all_df.columns:
         newcatfill = [1001 for i in range(len(true_event_types))]
-        all_df["true_event_type_fill"] = newcatfill
+        all_df = all_df.with_columns(pl.Series("true_event_type_fill", newcatfill))
     if catname == "2 true photons":
-        newcatfill = all_df["true_event_type_fill"].to_numpy()
-        truth_Ntrack = all_df["wc_truth_Ntrack"].to_numpy()
-        truth_pdg = all_df["wc_truth_pdg"].to_numpy()
-        truth_startMomentum = all_df["wc_truth_startMomentum"].to_numpy()
-        truth_process = all_df["wc_truth_process"].to_numpy()
-        truth_mother = all_df["wc_truth_mother"].to_numpy()
-        truth_endXYZT = all_df["wc_truth_endXYZT"].to_numpy()
+        newcatfill = all_df["true_event_type_fill"].to_numpy(zero_copy_only=False)
+        truth_Ntrack = all_df["wc_truth_Ntrack"].to_numpy(zero_copy_only=False)
+        truth_pdg = all_df["wc_truth_pdg"].to_numpy(zero_copy_only=False)
+        truth_startMomentum = all_df["wc_truth_startMomentum"].to_numpy(zero_copy_only=False)
+        truth_process = all_df["wc_truth_process"].to_numpy(zero_copy_only=False)
+        truth_mother = all_df["wc_truth_mother"].to_numpy(zero_copy_only=False)
+        truth_endXYZT = all_df["wc_truth_endXYZT"].to_numpy(zero_copy_only=False)
         for i in range(len(true_event_types)):
             if true_event_types[i] == 12:
                 newcat.append(12)
@@ -207,13 +228,13 @@ def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
         if "true_event_type_name" not in all_df.columns:
             print("Error: must add 2 photon truth category before adding gg categories")
             return all_df
-        elif 222 not in all_df["true_event_type"].values:
+        elif 222 not in all_df["true_event_type"].to_numpy():
             print("Error: must add 2 photon truth category before adding gg categories")
             return all_df
         else:
-            newcatfill = all_df["true_event_type_fill"].to_numpy()
-            true_event_type_name = all_df["true_event_type_name"].to_numpy()
-            true_event_type_color = all_df["true_event_type_color"].to_numpy()
+            newcatfill = all_df["true_event_type_fill"].to_numpy(zero_copy_only=False)
+            true_event_type_name = all_df["true_event_type_name"].to_numpy(zero_copy_only=False)
+            true_event_type_color = all_df["true_event_type_color"].to_numpy(zero_copy_only=False)
             for i in range(len(true_event_types)):
                 if true_event_types[i] == 222:
                     isCC = truth_isCC[i]
@@ -240,10 +261,10 @@ def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
                         newcatname.append(true_event_type_name[i])
                         newcatcolor.append(true_event_type_color[i])
     elif "Mod" in catname:
-        filetypes = all_df["filetype"].to_numpy()
-        true_event_type_name = all_df["true_event_type_name"].to_numpy()
-        true_event_type_color = all_df["true_event_type_color"].to_numpy()
-        true_event_type_fill = all_df["true_event_type_fill"].to_numpy()
+        filetypes = all_df["filetype"].to_numpy(zero_copy_only=False)
+        true_event_type_name = all_df["true_event_type_name"].to_numpy(zero_copy_only=False)
+        true_event_type_color = all_df["true_event_type_color"].to_numpy(zero_copy_only=False)
+        true_event_type_fill = all_df["true_event_type_fill"].to_numpy(zero_copy_only=False)
         for i in range(len(true_event_types)):
             if filetypes[i] == "modpi0_overlay":
                 newcat.append(catnum)
@@ -256,19 +277,23 @@ def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
                 newcatcolor.append(true_event_type_color[i])
                 newcatfill.append(true_event_type_fill[i])
 
-    all_df["true_event_type"] = newcat
-    all_df["true_event_type_name"] = newcatname
-    all_df["true_event_type_color"] = newcatcolor
-    all_df["true_event_type_fill"] = newcatfill
+    all_df = all_df.with_columns(
+        pl.Series("true_event_type", newcat),
+        pl.Series("true_event_type_name", newcatname),
+        pl.Series("true_event_type_color", newcatcolor),
+        pl.Series("true_event_type_fill", newcatfill)
+    )
     if catname == "2 true photons":
-        all_df["truth_photon1_mom"] = photon1_mom
-        all_df["truth_photon2_mom"] = photon2_mom
-        all_df["truth_photon1_process"] = photon1_process
-        all_df["truth_photon2_process"] = photon2_process
-        all_df["truth_photon1_XYZT"] = photon1_XYZT
-        all_df["truth_photon2_XYZT"] = photon2_XYZT
-        all_df["truth_photon1_mother"] = photon1_mother
-        all_df["truth_photon2_mother"] = photon2_mother
+        all_df = all_df.with_columns(
+            pl.Series("truth_photon1_mom", photon1_mom),
+            pl.Series("truth_photon2_mom", photon2_mom),
+            pl.Series("truth_photon1_process", photon1_process),
+            pl.Series("truth_photon2_process", photon2_process),
+            pl.Series("truth_photon1_XYZT", photon1_XYZT),
+            pl.Series("truth_photon2_XYZT", photon2_XYZT),
+            pl.Series("truth_photon1_mother", photon1_mother),
+            pl.Series("truth_photon2_mother", photon2_mother)
+        )
 
     return all_df
 
@@ -277,18 +302,18 @@ def AddRecoVars(all_df):
     wc_lantern_dist = []
     lantern_pandora_dist = []
 
-    wc_x      = all_df["wc_reco_nuvtxX"].to_numpy()
-    wc_y      = all_df["wc_reco_nuvtxY"].to_numpy()
-    wc_z      = all_df["wc_reco_nuvtxZ"].to_numpy()
-    pelee_x   = all_df["pelee_reco_nu_vtx_sce_x"].to_numpy()
-    pelee_y   = all_df["pelee_reco_nu_vtx_sce_y"].to_numpy()
-    pelee_z   = all_df["pelee_reco_nu_vtx_sce_z"].to_numpy()
-    lantern_x = all_df["lantern_vtxX"].to_numpy()
-    lantern_y = all_df["lantern_vtxY"].to_numpy()
-    lantern_z = all_df["lantern_vtxZ"].to_numpy()
-    lantern_foundvtx = all_df["lantern_foundVertex"].to_numpy()
+    wc_x      = all_df["wc_reco_nuvtxX"].to_numpy(zero_copy_only=False)
+    wc_y      = all_df["wc_reco_nuvtxY"].to_numpy(zero_copy_only=False)
+    wc_z      = all_df["wc_reco_nuvtxZ"].to_numpy(zero_copy_only=False)
+    pelee_x   = all_df["pelee_reco_nu_vtx_sce_x"].to_numpy(zero_copy_only=False)
+    pelee_y   = all_df["pelee_reco_nu_vtx_sce_y"].to_numpy(zero_copy_only=False)
+    pelee_z   = all_df["pelee_reco_nu_vtx_sce_z"].to_numpy(zero_copy_only=False)
+    lantern_x = all_df["lantern_vtxX"].to_numpy(zero_copy_only=False)
+    lantern_y = all_df["lantern_vtxY"].to_numpy(zero_copy_only=False)
+    lantern_z = all_df["lantern_vtxZ"].to_numpy(zero_copy_only=False)
+    lantern_foundvtx = all_df["lantern_foundVertex"].to_numpy(zero_copy_only=False)
 
-    num_evts = all_df.shape[0]
+    num_evts = all_df.height
     for i in range(num_evts):
         wcpdist = np.sqrt(np.pow(wc_x[i] - pelee_x[i], 2) + np.pow(wc_y[i] - pelee_y[i], 2) + np.pow(wc_z[i] - pelee_z[i], 2))
         wcldist = np.sqrt(np.pow(wc_x[i] - lantern_x[i], 2) + np.pow(wc_y[i] - lantern_y[i], 2) + np.pow(wc_z[i] - lantern_z[i], 2))
@@ -306,9 +331,11 @@ def AddRecoVars(all_df):
         wc_lantern_dist.append(wcldist)
         lantern_pandora_dist.append(lpdist)
 
-    all_df["wc_pandora_dist"] = wc_pandora_dist
-    all_df["wc_lantern_dist"] = wc_lantern_dist
-    all_df["lantern_pandora_dist"] = lantern_pandora_dist
+    all_df = all_df.with_columns(
+        pl.Series("wc_pandora_dist", wc_pandora_dist),
+        pl.Series("wc_lantern_dist", wc_lantern_dist),
+        pl.Series("lantern_pandora_dist", lantern_pandora_dist)
+    )
     return all_df
 
 def LoadTreesTruth(files, su = False):
@@ -336,45 +363,45 @@ def LoadTreesTruth(files, su = False):
         all_df_in_lantern_vec.append(all_df_in_lantern_temp)
       
 
-    all_df_in_bdt_over = pd.concat(all_df_in_bdt_vec, ignore_index=True, sort=False)
+    all_df_in_bdt_over = pl.concat(all_df_in_bdt_vec, how="vertical")
 
     for df in all_df_in_bdt_vec:
         del df
 
-    all_df_in_pfeval_over = pd.concat(all_df_in_pfeval_vec, ignore_index=True, sort=False)
+    all_df_in_pfeval_over = pl.concat(all_df_in_pfeval_vec, how="vertical")
 
     for df in all_df_in_pfeval_vec:
         del df
 
-    all_df_in_kine_over = pd.concat(all_df_in_kine_vec, ignore_index=True, sort=False)
+    all_df_in_kine_over = pl.concat(all_df_in_kine_vec, how="vertical")
 
     for df in all_df_in_kine_vec:
         del df
 
-    all_df_in_eval_over = pd.concat(all_df_in_eval_vec, ignore_index=True, sort=False)
+    all_df_in_eval_over = pl.concat(all_df_in_eval_vec, how="vertical")
 
     for df in all_df_in_eval_vec:
         del df
 
-    all_df_in_time_data = pd.concat(all_df_in_time_vec, ignore_index=True, sort=False) if su else None
+    all_df_in_time_data = pl.concat(all_df_in_time_vec, how="vertical") if su else None
 
     for df in all_df_in_time_vec:
         del df
 
-    all_df_in_pelee_data = pd.concat(all_df_in_pelee_vec, ignore_index=True, sort=False) if su else None
-    #all_df_in_pelee_data = all_df_in_pelee_data.add_prefix('pelee_')
+    all_df_in_pelee_data = pl.concat(all_df_in_pelee_vec, how="vertical") if su else None
+    #all_df_in_pelee_data = all_df_in_pelee_data.rename(lambda col: f'pelee_{col}')
 
     for df in all_df_in_pelee_vec:
         del df
 
-    all_df_in_glee_data = pd.concat(all_df_in_glee_vec, ignore_index=True, sort=False) if su else None
-    #all_df_in_glee_data = all_df_in_glee_data.add_prefix('glee_')
+    all_df_in_glee_data = pl.concat(all_df_in_glee_vec, how="vertical") if su else None
+    #all_df_in_glee_data = all_df_in_glee_data.rename(lambda col: f'glee_{col}')
 
     for df in all_df_in_glee_vec:
         del df
 
-    all_df_in_lantern_data = pd.concat(all_df_in_lantern_vec, ignore_index=True, sort=False) if su else None
-    #all_df_in_lantern_data = all_df_in_lantern_data.add_prefix('lantern_')
+    all_df_in_lantern_data = pl.concat(all_df_in_lantern_vec, how="vertical") if su else None
+    #all_df_in_lantern_data = all_df_in_lantern_data.rename(lambda col: f'lantern_{col}')
 
     for df in all_df_in_lantern_vec:
         del df
@@ -387,16 +414,16 @@ def LoadTreesTruth(files, su = False):
 ###
 def LoadTreesTruth1(file1, su = False):
     with uproot.open(file1)["wcpselection/T_BDTvars"] as f_in_bdt_over:
-        all_df_in_bdt_over = f_in_bdt_over.arrays(bdt_variables, library="pd")
+        all_df_in_bdt_over = pl.from_pandas(f_in_bdt_over.arrays(bdt_variables, library="pd"))
 
     with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_pfeval_over:
-        all_df_in_pfeval_over = f_in_pfeval_over.arrays(pfeval_variables + truth_variables, library="pd")
+        all_df_in_pfeval_over = pl.from_pandas(f_in_pfeval_over.arrays(pfeval_variables + truth_variables, library="pd"))
 
     with uproot.open(file1)["wcpselection/T_KINEvars"] as f_in_kine_over:
-        all_df_in_kine_over = f_in_kine_over.arrays(kine_variables, library="pd")
+        all_df_in_kine_over = pl.from_pandas(f_in_kine_over.arrays(kine_variables, library="pd"))
 
     with uproot.open(file1)["wcpselection/T_eval"] as f_in_eval_over:
-        all_df_in_eval_over = f_in_eval_over.arrays(eval_variables + eval_truth_variables, library="pd")
+        all_df_in_eval_over = pl.from_pandas(f_in_eval_over.arrays(eval_variables + eval_truth_variables, library="pd"))
 
     run_number = []
     if "run1" in file1 or "Run1" in file1:
@@ -415,20 +442,20 @@ def LoadTreesTruth1(file1, su = False):
         print("Error: run number not found in file name")
         run_number = [-999 for i in range(len(all_df_in_bdt_over))]
 
-    all_df_in_bdt_over["run_period"] = run_number
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns(pl.Series("run_period", run_number))
 
     if su:
         with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data = f_in_time_data.arrays(time_variables + time_truth_variables  + larpid_reco_variables + larpid_truth_variables, library="pd")
+            all_df_in_time_data = pl.from_pandas(f_in_time_data.arrays(time_variables + time_truth_variables  + larpid_reco_variables + larpid_truth_variables, library="pd"))
         with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
-            all_df_in_pelee_data = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd")
-            all_df_in_pelee_data = all_df_in_pelee_data.add_prefix('pelee_')
+            all_df_in_pelee_data = pl.from_pandas(f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd"))
+            all_df_in_pelee_data = all_df_in_pelee_data.rename(lambda col: f'pelee_{col}')
         with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
-            all_df_in_glee_data = f_in_glee_data.arrays(glee_reco_variables, library="pd")
-            all_df_in_glee_data = all_df_in_glee_data.add_prefix('glee_')
+            all_df_in_glee_data = pl.from_pandas(f_in_glee_data.arrays(glee_reco_variables, library="pd"))
+            all_df_in_glee_data = all_df_in_glee_data.rename(lambda col: f'glee_{col}')
         with uproot.open(file1)["lantern/EventTree"] as f_in_lantern_data:
-            all_df_in_lantern_data = f_in_lantern_data.arrays(lantern_reco_variables, library="pd")
-            all_df_in_lantern_data = all_df_in_lantern_data.add_prefix('lantern_')
+            all_df_in_lantern_data = pl.from_pandas(f_in_lantern_data.arrays(lantern_reco_variables, library="pd"))
+            all_df_in_lantern_data = all_df_in_lantern_data.rename(lambda col: f'lantern_{col}')
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, all_df_in_glee_data, all_df_in_lantern_data
     else:
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
@@ -459,45 +486,45 @@ def LoadTreesData(files, su = False):
         all_df_in_lantern_vec.append(all_df_in_lantern_temp)
       
 
-    all_df_in_bdt_over = pd.concat(all_df_in_bdt_vec, ignore_index=True, sort=False)
+    all_df_in_bdt_over = pl.concat(all_df_in_bdt_vec, how="vertical")
 
     for df in all_df_in_bdt_vec:
         del df
 
-    all_df_in_pfeval_over = pd.concat(all_df_in_pfeval_vec, ignore_index=True, sort=False)
+    all_df_in_pfeval_over = pl.concat(all_df_in_pfeval_vec, how="vertical")
 
     for df in all_df_in_pfeval_vec:
         del df
 
-    all_df_in_kine_over = pd.concat(all_df_in_kine_vec, ignore_index=True, sort=False)
+    all_df_in_kine_over = pl.concat(all_df_in_kine_vec, how="vertical")
 
     for df in all_df_in_kine_vec:
         del df
 
-    all_df_in_eval_over = pd.concat(all_df_in_eval_vec, ignore_index=True, sort=False)
+    all_df_in_eval_over = pl.concat(all_df_in_eval_vec, how="vertical")
 
     for df in all_df_in_eval_vec:
         del df
 
-    all_df_in_time_data = pd.concat(all_df_in_time_vec, ignore_index=True, sort=False) if su else None
+    all_df_in_time_data = pl.concat(all_df_in_time_vec, how="vertical") if su else None
 
     for df in all_df_in_time_vec:
         del df
 
-    all_df_in_pelee_data = pd.concat(all_df_in_pelee_vec, ignore_index=True, sort=False) if su else None
-    #all_df_in_pelee_data = all_df_in_pelee_data.add_prefix('pelee_')
+    all_df_in_pelee_data = pl.concat(all_df_in_pelee_vec, how="vertical") if su else None
+    #all_df_in_pelee_data = all_df_in_pelee_data.rename(lambda col: f'pelee_{col}')
 
     for df in all_df_in_pelee_vec:
         del df
 
-    all_df_in_glee_data = pd.concat(all_df_in_glee_vec, ignore_index=True, sort=False) if su else None
-    #all_df_in_glee_data = all_df_in_glee_data.add_prefix('glee_')
+    all_df_in_glee_data = pl.concat(all_df_in_glee_vec, how="vertical") if su else None
+    #all_df_in_glee_data = all_df_in_glee_data.rename(lambda col: f'glee_{col}')
 
     for df in all_df_in_glee_vec:
         del df
 
-    all_df_in_lantern_data = pd.concat(all_df_in_lantern_vec, ignore_index=True, sort=False) if su else None
-    #all_df_in_lantern_data = all_df_in_lantern_data.add_prefix('lantern_')
+    all_df_in_lantern_data = pl.concat(all_df_in_lantern_vec, how="vertical") if su else None
+    #all_df_in_lantern_data = all_df_in_lantern_data.rename(lambda col: f'lantern_{col}')
 
     for df in all_df_in_lantern_vec:
         del df
@@ -510,16 +537,16 @@ def LoadTreesData(files, su = False):
 ###
 def LoadTreesData1(file1, su = False):
     with uproot.open(file1)["wcpselection/T_BDTvars"] as f_in_bdt_over:
-        all_df_in_bdt_over = f_in_bdt_over.arrays(bdt_variables, library="pd")
+        all_df_in_bdt_over = pl.from_pandas(f_in_bdt_over.arrays(bdt_variables, library="pd"))
 
     with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_pfeval_over:
-        all_df_in_pfeval_over = f_in_pfeval_over.arrays(pfeval_variables, library="pd")
+        all_df_in_pfeval_over = pl.from_pandas(f_in_pfeval_over.arrays(pfeval_variables, library="pd"))
 
     with uproot.open(file1)["wcpselection/T_KINEvars"] as f_in_kine_over:
-        all_df_in_kine_over = f_in_kine_over.arrays(kine_variables, library="pd")
+        all_df_in_kine_over = pl.from_pandas(f_in_kine_over.arrays(kine_variables, library="pd"))
 
     with uproot.open(file1)["wcpselection/T_eval"] as f_in_eval_over:
-        all_df_in_eval_over = f_in_eval_over.arrays(eval_variables, library="pd")
+        all_df_in_eval_over = pl.from_pandas(f_in_eval_over.arrays(eval_variables, library="pd"))
 
     run_number = []
     if "run1" in file1 or "Run1" in file1:
@@ -538,20 +565,20 @@ def LoadTreesData1(file1, su = False):
         print("Error: run number not found in file name")
         run_number = [-999 for i in range(len(all_df_in_bdt_over))]
 
-    all_df_in_bdt_over["run_period"] = run_number
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns(pl.Series("run_period", run_number))
 
     if su:
         with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data = f_in_time_data.arrays(time_variables  + larpid_reco_variables, library="pd")
+            all_df_in_time_data = pl.from_pandas(f_in_time_data.arrays(time_variables  + larpid_reco_variables, library="pd"))
         with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
-            all_df_in_pelee_data = f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd")
-            all_df_in_pelee_data = all_df_in_pelee_data.add_prefix('pelee_')
+            all_df_in_pelee_data = pl.from_pandas(f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd"))
+            all_df_in_pelee_data = all_df_in_pelee_data.rename(lambda col: f'pelee_{col}')
         with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
-            all_df_in_glee_data = f_in_glee_data.arrays(glee_reco_variables, library="pd")
-            all_df_in_glee_data = all_df_in_glee_data.add_prefix('glee_')
+            all_df_in_glee_data = pl.from_pandas(f_in_glee_data.arrays(glee_reco_variables, library="pd"))
+            all_df_in_glee_data = all_df_in_glee_data.rename(lambda col: f'glee_{col}')
         with uproot.open(file1)["lantern/EventTree"] as f_in_lantern_data:
-            all_df_in_lantern_data = f_in_lantern_data.arrays(lantern_reco_variables, library="pd")
-            all_df_in_lantern_data = all_df_in_lantern_data.add_prefix('lantern_')
+            all_df_in_lantern_data = pl.from_pandas(f_in_lantern_data.arrays(lantern_reco_variables, library="pd"))
+            all_df_in_lantern_data = all_df_in_lantern_data.rename(lambda col: f'lantern_{col}')
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, all_df_in_glee_data, all_df_in_lantern_data
     else:
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
@@ -567,54 +594,70 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
     single_photon_other_score = []
     single_photon_ncpi0_score = []
     single_photon_nue_score = []
-    weight_cv = all_df_in_eval_over["weight_cv"].to_numpy()
-    weight_spline = all_df_in_eval_over["weight_spline"].to_numpy()
+    weight_cv = all_df_in_eval_over["weight_cv"].to_numpy(zero_copy_only=False)
+    weight_spline = all_df_in_eval_over["weight_spline"].to_numpy(zero_copy_only=False)
     is_sigoverlay_vec = []
 
-    kine_reco_Enu_vec = all_df_in_kine_over["kine_reco_Enu"].to_numpy()
-    shw_sp_n_20mev_showers_vec = all_df_in_bdt_over["shw_sp_n_20mev_showers"].to_numpy()
-    reco_nuvtxX_vec = all_df_in_pfeval_over["reco_nuvtxX"].to_numpy()
-    truth_muonMomentum = all_df_in_pfeval_over["truth_muonMomentum"].to_numpy()
+    kine_reco_Enu_vec = all_df_in_kine_over["kine_reco_Enu"].to_numpy(zero_copy_only=False)
+    shw_sp_n_20mev_showers_vec = all_df_in_bdt_over["shw_sp_n_20mev_showers"].to_numpy(zero_copy_only=False)
+    reco_nuvtxX_vec = all_df_in_pfeval_over["reco_nuvtxX"].to_numpy(zero_copy_only=False)
+    truth_muonMomentum = all_df_in_pfeval_over["truth_muonMomentum"].to_numpy(zero_copy_only=False)
 
-    reco_nuvtxY_vec = all_df_in_pfeval_over["reco_nuvtxY"].to_numpy()
-    reco_nuvtxZ_vec = all_df_in_pfeval_over["reco_nuvtxZ"].to_numpy()
-    reco_showervtxX_vec = all_df_in_pfeval_over["reco_showervtxX"].to_numpy()
-    reco_showervtxY_vec = all_df_in_pfeval_over["reco_showervtxY"].to_numpy()
-    reco_showervtxZ_vec = all_df_in_pfeval_over["reco_showervtxZ"].to_numpy()
-    reco_showerMomentum_vec = all_df_in_pfeval_over["reco_showerMomentum"].to_numpy()
+    reco_nuvtxY_vec = all_df_in_pfeval_over["reco_nuvtxY"].to_numpy(zero_copy_only=False)
+    reco_nuvtxZ_vec = all_df_in_pfeval_over["reco_nuvtxZ"].to_numpy(zero_copy_only=False)
+    reco_showervtxX_vec = all_df_in_pfeval_over["reco_showervtxX"].to_numpy(zero_copy_only=False)
+    reco_showervtxY_vec = all_df_in_pfeval_over["reco_showervtxY"].to_numpy(zero_copy_only=False)
+    reco_showervtxZ_vec = all_df_in_pfeval_over["reco_showervtxZ"].to_numpy(zero_copy_only=False)
+    reco_showerMomentum_vec = all_df_in_pfeval_over["reco_showerMomentum"].to_numpy(zero_copy_only=False)
     reco_showerMomentum0_vec = [] 
     reco_showerMomentum1_vec = [] 
     reco_showerMomentum2_vec = [] 
     reco_showerMomentum3_vec = [] 
-    truth_showerMomentum_vec = all_df_in_pfeval_over["truth_showerMomentum"].to_numpy()
+    truth_showerMomentum_vec = all_df_in_pfeval_over["truth_showerMomentum"].to_numpy(zero_copy_only=False)
     truth_showerMomentum0_vec = [] 
     truth_showerMomentum1_vec = [] 
     truth_showerMomentum2_vec = [] 
     truth_showerMomentum3_vec = []
-    #reco_muonMomentum3_vec = all_df_in_pfeval_over["reco_muonMomentum[3]"].to_numpy()
-    reco_muonMomentum_vec = all_df_in_pfeval_over["reco_muonMomentum"].to_numpy()
-    match_energy_vec = all_df_in_eval_over["match_energy"].to_numpy()
-    truth_nuEnergy_vec = all_df_in_eval_over["truth_nuEnergy"].to_numpy()
-    truth_energyInside_vec = all_df_in_eval_over["truth_energyInside"].to_numpy()
-    truth_showerKE_vec = all_df_in_pfeval_over["truth_showerKE"].to_numpy()
+    #reco_muonMomentum3_vec = all_df_in_pfeval_over["reco_muonMomentum[3]"].to_numpy(zero_copy_only=False)
+    reco_muonMomentum_vec = all_df_in_pfeval_over["reco_muonMomentum"].to_numpy(zero_copy_only=False)
+    match_energy_vec = all_df_in_eval_over["match_energy"].to_numpy(zero_copy_only=False)
+    truth_nuEnergy_vec = all_df_in_eval_over["truth_nuEnergy"].to_numpy(zero_copy_only=False)
+    truth_energyInside_vec = all_df_in_eval_over["truth_energyInside"].to_numpy(zero_copy_only=False)
+    truth_showerKE_vec = all_df_in_pfeval_over["truth_showerKE"].to_numpy(zero_copy_only=False)
+
+    match_completeness_energys = (all_df_in_eval_over["match_completeness_energy"].to_numpy(zero_copy_only=False))
+    truth_energyInsides = (all_df_in_eval_over["truth_energyInside"].to_numpy(zero_copy_only=False))
+    truthSinglePhotons = (all_df_in_pfeval_over["truth_single_photon"].to_numpy(zero_copy_only=False))
+    truthisCCs = (all_df_in_pfeval_over["truth_isCC"].to_numpy(zero_copy_only=False))
+    truth_NCDeltas = (all_df_in_pfeval_over["truth_NCDelta"].to_numpy(zero_copy_only=False))
+    truth_showerMothers = (all_df_in_pfeval_over["truth_showerMother"].to_numpy(zero_copy_only=False))
+    truth_nuPdgs = (all_df_in_eval_over["truth_nuPdg"].to_numpy(zero_copy_only=False))
+    truth_vtxInsides = (all_df_in_eval_over["truth_vtxInside"].to_numpy(zero_copy_only=False))
+    truth_Npi0s = (all_df_in_pfeval_over["truth_Npi0"].to_numpy(zero_copy_only=False))
+
+    shw_sp_energies = all_df_in_bdt_over["shw_sp_energy"].to_numpy(zero_copy_only=False)
+    single_photon_numu_scores = all_df_in_bdt_over["single_photon_numu_score"].to_numpy(zero_copy_only=False)
+    single_photon_other_scores = all_df_in_bdt_over["single_photon_other_score"].to_numpy(zero_copy_only=False)
+    single_photon_ncpi0_scores = all_df_in_bdt_over["single_photon_ncpi0_score"].to_numpy(zero_copy_only=False)
+    single_photon_nue_scores = all_df_in_bdt_over["single_photon_nue_score"].to_numpy(zero_copy_only=False)
     
     N_protons = []
     true_N_protons = []
-    kine_energy_particle_vec = all_df_in_kine_over["kine_energy_particle"].to_numpy()
-    kine_particle_type_vec = all_df_in_kine_over["kine_particle_type"].to_numpy()
-    truth_Ntrack =        all_df_in_pfeval_over["truth_Ntrack"].to_numpy()
-    truth_pdg =           all_df_in_pfeval_over["truth_pdg"].to_numpy()
-    truth_startMomentum = all_df_in_pfeval_over["truth_startMomentum"].to_numpy()
-    truth_process =       all_df_in_pfeval_over["truth_process"].to_numpy()
-    truth_mother =        all_df_in_pfeval_over["truth_mother"].to_numpy()
-    truth_endXYZT =       all_df_in_pfeval_over["truth_endXYZT"].to_numpy()
+    kine_energy_particle_vec = all_df_in_kine_over["kine_energy_particle"].to_numpy(zero_copy_only=False)
+    kine_particle_type_vec = all_df_in_kine_over["kine_particle_type"].to_numpy(zero_copy_only=False)
+    truth_Ntrack =        all_df_in_pfeval_over["truth_Ntrack"].to_numpy(zero_copy_only=False)
+    truth_pdg =           all_df_in_pfeval_over["truth_pdg"].to_numpy(zero_copy_only=False)
+    truth_startMomentum = all_df_in_pfeval_over["truth_startMomentum"].to_numpy(zero_copy_only=False)
+    truth_process =       all_df_in_pfeval_over["truth_process"].to_numpy(zero_copy_only=False)
+    truth_mother =        all_df_in_pfeval_over["truth_mother"].to_numpy(zero_copy_only=False)
+    truth_endXYZT =       all_df_in_pfeval_over["truth_endXYZT"].to_numpy(zero_copy_only=False)
 
-    r = all_df_in_pfeval_over["run"].to_numpy()
-    s = all_df_in_pfeval_over["subrun"].to_numpy()
-    e = all_df_in_pfeval_over["event"].to_numpy()
+    r = all_df_in_pfeval_over["run"].to_numpy(zero_copy_only=False)
+    s = all_df_in_pfeval_over["subrun"].to_numpy(zero_copy_only=False)
+    e = all_df_in_pfeval_over["event"].to_numpy(zero_copy_only=False)
 
     time = []
-    #evtTimeNS_vec = all_df_in_time_over["evtTimeNS_cor"].to_numpy()
+    #evtTimeNS_vec = all_df_in_time_over["evtTimeNS_cor"].to_numpy(zero_copy_only=False)
 
     for i in range(len(kine_reco_Enu_vec)):
         #if (e[i] != pnd_evt[i]):
@@ -627,15 +670,15 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
         isNC1g = False
         isCC1g = False
         truth_muonEnergy = truth_muonMomentum[i][3] - 0.105658
-        match_completeness_energy = (all_df_in_eval_over["match_completeness_energy"].to_numpy())[i]
-        truth_energyInside = (all_df_in_eval_over["truth_energyInside"].to_numpy())[i]
-        truthSinglePhoton = (all_df_in_pfeval_over["truth_single_photon"].to_numpy())[i]
-        truthisCC = (all_df_in_pfeval_over["truth_isCC"].to_numpy())[i]
-        truth_NCDelta = (all_df_in_pfeval_over["truth_NCDelta"].to_numpy())[i]
-        truth_showerMother = (all_df_in_pfeval_over["truth_showerMother"].to_numpy())[i]
-        truth_nuPdg = (all_df_in_eval_over["truth_nuPdg"].to_numpy())[i]
-        truth_vtxInside = (all_df_in_eval_over["truth_vtxInside"].to_numpy())[i]
-        truth_Npi0 = (all_df_in_pfeval_over["truth_Npi0"].to_numpy())[i]
+        match_completeness_energy = match_completeness_energys[i]
+        truth_energyInside        = truth_energyInsides[i]
+        truthSinglePhoton         = truthSinglePhotons[i]
+        truthisCC                 = truthisCCs[i]
+        truth_NCDelta             = truth_NCDeltas[i]
+        truth_showerMother        = truth_showerMothers[i]
+        truth_nuPdg               = truth_nuPdgs[i]
+        truth_vtxInside           = truth_vtxInsides[i]
+        truth_Npi0                = truth_Npi0s[i]
         truth_showerMomentum0_vec.append(truth_showerMomentum_vec[i][0])
         truth_showerMomentum1_vec.append(truth_showerMomentum_vec[i][1])
         truth_showerMomentum2_vec.append(truth_showerMomentum_vec[i][2])
@@ -727,7 +770,7 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
         #event_time_pnd = TT_merged_pnd
         #pnd_time.append(event_time_pnd)
 
-        shw_sp_energy.append((all_df_in_bdt_over["shw_sp_energy"].to_numpy())[i])
+        shw_sp_energy.append(shw_sp_energies[i])
 
         num_protons = 0
         kine_energy_particle = np.array(kine_energy_particle_vec[i]) 
@@ -737,22 +780,22 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
         N_protons.append(num_protons)
         
         if (kine_reco_Enu_vec[i] >= 0 and shw_sp_n_20mev_showers_vec[i]>0 and reco_nuvtxX_vec[i]>5.0 and reco_nuvtxX_vec[i]<250.0): 
-            if (math.isnan(all_df_in_bdt_over["single_photon_numu_score"].to_numpy()[i])):
+            if (math.isnan(single_photon_numu_scores[i])):
                 single_photon_numu_score.append(-99999.0)
             else:
-                single_photon_numu_score.append((all_df_in_bdt_over["single_photon_numu_score"].to_numpy())[i])
-            if (math.isnan(all_df_in_bdt_over["single_photon_other_score"].to_numpy()[i])):
+                single_photon_numu_score.append(single_photon_numu_scores[i])
+            if (math.isnan(single_photon_other_scores[i])):
                 single_photon_other_score.append(-99999.0)
             else:
-                single_photon_other_score.append((all_df_in_bdt_over["single_photon_other_score"].to_numpy())[i])
-            if (math.isnan(all_df_in_bdt_over["single_photon_ncpi0_score"].to_numpy()[i])):
+                single_photon_other_score.append(single_photon_other_scores[i])
+            if (math.isnan(single_photon_ncpi0_scores[i])):
                 single_photon_ncpi0_score.append(-99999.0)
             else:
-                single_photon_ncpi0_score.append((all_df_in_bdt_over["single_photon_ncpi0_score"].to_numpy())[i])
-            if (math.isnan(all_df_in_bdt_over["single_photon_nue_score"].to_numpy()[i])):
+                single_photon_ncpi0_score.append(single_photon_ncpi0_scores[i])
+            if (math.isnan(single_photon_nue_scores[i])):
                 single_photon_nue_score.append(-99999.0)
             else:
-                single_photon_nue_score.append((all_df_in_bdt_over["single_photon_nue_score"].to_numpy())[i])
+                single_photon_nue_score.append(single_photon_nue_scores[i])
         else:
             #shw_sp_energy.append(-99999.0)
             single_photon_numu_score.append(-99999.0)
@@ -763,61 +806,64 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
 
         
         
-    all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_pfeval_over)
-    all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_kine_over)
-    all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_eval_over)
+    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_pfeval_over)
+    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_kine_over)
+    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_eval_over)
 
     #all_df_in_bdt_over["true_event_type"] = true_event_types
-    all_df_in_bdt_over["shw_sp_energy"] = shw_sp_energy
-    #all_df_in_bdt_over["kine_reco_Enu"] = kine_reco_Enu_vec
-    all_df_in_bdt_over["single_photon_numu_score"] = single_photon_numu_score
-    all_df_in_bdt_over["single_photon_other_score"] = single_photon_other_score
-    all_df_in_bdt_over["single_photon_ncpi0_score"] = single_photon_ncpi0_score
-    all_df_in_bdt_over["single_photon_nue_score"] = single_photon_nue_score
-    all_df_in_bdt_over["weight_cv"] = weight_cv
-    all_df_in_bdt_over["weight_spline"] = weight_spline
-    all_df_in_bdt_over["reco_nuvtxX"] = reco_nuvtxX_vec
-    all_df_in_bdt_over["reco_nuvtxY"] = reco_nuvtxY_vec
-    all_df_in_bdt_over["reco_nuvtxZ"] = reco_nuvtxZ_vec
-    all_df_in_bdt_over["reco_showervtxX"] = reco_showervtxX_vec
-    all_df_in_bdt_over["reco_showervtxY"] = reco_showervtxY_vec
-    all_df_in_bdt_over["reco_showervtxZ"] = reco_showervtxZ_vec
-    all_df_in_bdt_over["reco_showerMomentum0"] = reco_showerMomentum0_vec
-    all_df_in_bdt_over["reco_showerMomentum1"] = reco_showerMomentum1_vec
-    all_df_in_bdt_over["reco_showerMomentum2"] = reco_showerMomentum2_vec
-    all_df_in_bdt_over["reco_showerMomentum3"] = reco_showerMomentum3_vec
-    all_df_in_bdt_over["truth_showerMomentum0"] = truth_showerMomentum0_vec
-    all_df_in_bdt_over["truth_showerMomentum1"] = truth_showerMomentum1_vec
-    all_df_in_bdt_over["truth_showerMomentum2"] = truth_showerMomentum2_vec
-    all_df_in_bdt_over["truth_showerMomentum3"] = truth_showerMomentum3_vec
-    #all_df_in_bdt_over["reco_muonMomentum"] = reco_muonMomentum_vec
-    all_df_in_bdt_over["is_sigoverlay"] = is_sigoverlay_vec
-    all_df_in_bdt_over["match_energy"] = match_energy_vec
-    all_df_in_bdt_over["truth_nuEnergy"] = truth_nuEnergy_vec
-    all_df_in_bdt_over["truth_energyInside"] = truth_energyInside_vec
-    all_df_in_bdt_over["truth_showerKE"] = truth_showerKE_vec
-    all_df_in_bdt_over["N_protons"] = N_protons
-    all_df_in_bdt_over["true_N_protons"] = true_N_protons
-    all_df_in_bdt_over["run"] = r
-    all_df_in_bdt_over["subrun"] = s
-    all_df_in_bdt_over["event"] = e
-    all_df_in_bdt_over["time"] = time
-    #all_df_in_bdt_over["pnd_time"] = pnd_time
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns(
+        pl.Series("shw_sp_energy", shw_sp_energy),
+        pl.Series("single_photon_numu_score", single_photon_numu_score),
+        pl.Series("single_photon_other_score", single_photon_other_score),
+        pl.Series("single_photon_ncpi0_score", single_photon_ncpi0_score),
+        pl.Series("single_photon_nue_score", single_photon_nue_score),
+        pl.Series("weight_cv", weight_cv),
+        pl.Series("weight_spline", weight_spline),
+        pl.Series("reco_nuvtxX", reco_nuvtxX_vec),
+        pl.Series("reco_nuvtxY", reco_nuvtxY_vec),
+        pl.Series("reco_nuvtxZ", reco_nuvtxZ_vec)
+    )
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns(
+        pl.Series("reco_showervtxX", reco_showervtxX_vec),
+        pl.Series("reco_showervtxY", reco_showervtxY_vec),
+        pl.Series("reco_showervtxZ", reco_showervtxZ_vec),
+        pl.Series("reco_showerMomentum0", reco_showerMomentum0_vec),
+        pl.Series("reco_showerMomentum1", reco_showerMomentum1_vec),
+        pl.Series("reco_showerMomentum2", reco_showerMomentum2_vec),
+        pl.Series("reco_showerMomentum3", reco_showerMomentum3_vec),
+        pl.Series("truth_showerMomentum0", truth_showerMomentum0_vec),
+        pl.Series("truth_showerMomentum1", truth_showerMomentum1_vec),
+        pl.Series("truth_showerMomentum2", truth_showerMomentum2_vec),
+        pl.Series("truth_showerMomentum3", truth_showerMomentum3_vec),
+        pl.Series("is_sigoverlay", is_sigoverlay_vec),
+        pl.Series("match_energy", match_energy_vec),
+        pl.Series("truth_nuEnergy", truth_nuEnergy_vec),
+        pl.Series("truth_energyInside", truth_energyInside_vec),
+        pl.Series("truth_showerKE", truth_showerKE_vec),
+        pl.Series("N_protons", N_protons),
+        pl.Series("true_N_protons", true_N_protons),
+        pl.Series("run", r),
+        pl.Series("subrun", s),
+        pl.Series("event", e),
+        pl.Series("time", time)
+    )
 
     #all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_kine_over)
     if (len(all_df_in_time_over) > 0):
-        all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_time_over)
+        all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_time_over)
     
-    all_df_in_bdt_over = all_df_in_bdt_over.add_prefix('wc_')
-    all_df_in_bdt_over["true_event_type"] = true_event_types
-    all_df_in_bdt_over["filetype"] = filetypes
+    all_df_in_bdt_over = all_df_in_bdt_over.rename(lambda col: f'wc_{col}')
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns(
+        pl.Series("true_event_type", true_event_types),
+        pl.Series("filetype", filetypes)
+    )
 
     if (len(all_df_in_pelee_over) > 0):
-        all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_pelee_over, lsuffix='_pelee')
+        all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_pelee_over, lsuffix='_pelee')
     if (len(all_df_in_glee_over) > 0):
-        all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_glee_over, lsuffix='_glee')
+        all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_glee_over, lsuffix='_glee')
     if (len(all_df_in_lantern_over) > 0):
-        all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_lantern_over, lsuffix='_lantern')
+        all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_lantern_over, lsuffix='_lantern')
 
     return all_df_in_bdt_over
 
@@ -831,56 +877,69 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
     single_photon_other_score = []
     single_photon_ncpi0_score = []
     single_photon_nue_score = []
-    weight_cv = all_df_in_eval_dirt["weight_cv"].to_numpy()
-    weight_spline = all_df_in_eval_dirt["weight_spline"].to_numpy()
+    weight_cv = all_df_in_eval_dirt["weight_cv"].to_numpy(zero_copy_only=False)
+    weight_spline = all_df_in_eval_dirt["weight_spline"].to_numpy(zero_copy_only=False)
     is_sigoverlay_vec = []
 
-    kine_reco_Enu_vec = all_df_in_kine_dirt["kine_reco_Enu"].to_numpy()
-    shw_sp_n_20mev_showers_vec = all_df_in_bdt_dirt["shw_sp_n_20mev_showers"].to_numpy()
-    reco_nuvtxX_vec = all_df_in_pfeval_dirt["reco_nuvtxX"].to_numpy()
+    kine_reco_Enu_vec = all_df_in_kine_dirt["kine_reco_Enu"].to_numpy(zero_copy_only=False)
+    shw_sp_n_20mev_showers_vec = all_df_in_bdt_dirt["shw_sp_n_20mev_showers"].to_numpy(zero_copy_only=False)
+    reco_nuvtxX_vec = all_df_in_pfeval_dirt["reco_nuvtxX"].to_numpy(zero_copy_only=False)
 
-    reco_nuvtxY_vec = all_df_in_pfeval_dirt["reco_nuvtxY"].to_numpy()
-    reco_nuvtxZ_vec = all_df_in_pfeval_dirt["reco_nuvtxZ"].to_numpy()
-    reco_showervtxX_vec = all_df_in_pfeval_dirt["reco_showervtxX"].to_numpy()
-    reco_showervtxY_vec = all_df_in_pfeval_dirt["reco_showervtxY"].to_numpy()
-    reco_showervtxZ_vec = all_df_in_pfeval_dirt["reco_showervtxZ"].to_numpy()
-    reco_showerMomentum_vec = all_df_in_pfeval_dirt["reco_showerMomentum"].to_numpy()
+    reco_nuvtxY_vec = all_df_in_pfeval_dirt["reco_nuvtxY"].to_numpy(zero_copy_only=False)
+    reco_nuvtxZ_vec = all_df_in_pfeval_dirt["reco_nuvtxZ"].to_numpy(zero_copy_only=False)
+    reco_showervtxX_vec = all_df_in_pfeval_dirt["reco_showervtxX"].to_numpy(zero_copy_only=False)
+    reco_showervtxY_vec = all_df_in_pfeval_dirt["reco_showervtxY"].to_numpy(zero_copy_only=False)
+    reco_showervtxZ_vec = all_df_in_pfeval_dirt["reco_showervtxZ"].to_numpy(zero_copy_only=False)
+    reco_showerMomentum_vec = all_df_in_pfeval_dirt["reco_showerMomentum"].to_numpy(zero_copy_only=False)
     reco_showerMomentum0_vec = [] 
     reco_showerMomentum1_vec = [] 
     reco_showerMomentum2_vec = [] 
     reco_showerMomentum3_vec = [] 
-    truth_showerMomentum_vec = all_df_in_pfeval_dirt["truth_showerMomentum"].to_numpy()
+    truth_showerMomentum_vec = all_df_in_pfeval_dirt["truth_showerMomentum"].to_numpy(zero_copy_only=False)
     truth_showerMomentum0_vec = [] 
     truth_showerMomentum1_vec = [] 
     truth_showerMomentum2_vec = [] 
     truth_showerMomentum3_vec = []
-    reco_muonMomentum_vec = all_df_in_pfeval_dirt["reco_muonMomentum"].to_numpy()
-    truth_muonMomentum = all_df_in_pfeval_dirt["truth_muonMomentum"].to_numpy()
-    match_energy_vec = all_df_in_eval_dirt["match_energy"].to_numpy()
-    truth_nuEnergy_vec = all_df_in_eval_dirt["truth_nuEnergy"].to_numpy()
-    truth_energyInside_vec = all_df_in_eval_dirt["truth_energyInside"].to_numpy()
-    truth_showerKE_vec = all_df_in_pfeval_dirt["truth_showerKE"].to_numpy()
-    truth_nuPdg = (all_df_in_eval_dirt["truth_nuPdg"].to_numpy())
+    reco_muonMomentum_vec = all_df_in_pfeval_dirt["reco_muonMomentum"].to_numpy(zero_copy_only=False)
+    truth_muonMomentum = all_df_in_pfeval_dirt["truth_muonMomentum"].to_numpy(zero_copy_only=False)
+    match_energy_vec = all_df_in_eval_dirt["match_energy"].to_numpy(zero_copy_only=False)
+    truth_nuEnergy_vec = all_df_in_eval_dirt["truth_nuEnergy"].to_numpy(zero_copy_only=False)
+    truth_energyInside_vec = all_df_in_eval_dirt["truth_energyInside"].to_numpy(zero_copy_only=False)
+    truth_showerKE_vec = all_df_in_pfeval_dirt["truth_showerKE"].to_numpy(zero_copy_only=False)
+    truth_nuPdg = (all_df_in_eval_dirt["truth_nuPdg"].to_numpy(zero_copy_only=False))
     N_protons = []
     true_N_protons = []
-    kine_energy_particle_vec = all_df_in_kine_dirt["kine_energy_particle"].to_numpy()
-    kine_particle_type_vec = all_df_in_kine_dirt["kine_particle_type"].to_numpy()
-    truth_Ntrack =        all_df_in_pfeval_dirt["truth_Ntrack"].to_numpy()
-    truth_pdg =           all_df_in_pfeval_dirt["truth_pdg"].to_numpy()
-    truth_startMomentum = all_df_in_pfeval_dirt["truth_startMomentum"].to_numpy()
-    truth_process =       all_df_in_pfeval_dirt["truth_process"].to_numpy()
-    truth_mother =        all_df_in_pfeval_dirt["truth_mother"].to_numpy()
-    truth_endXYZT =       all_df_in_pfeval_dirt["truth_endXYZT"].to_numpy()
-    r = all_df_in_pfeval_dirt["run"].to_numpy()
-    s = all_df_in_pfeval_dirt["subrun"].to_numpy()
-    e = all_df_in_pfeval_dirt["event"].to_numpy()
+    kine_energy_particle_vec = all_df_in_kine_dirt["kine_energy_particle"].to_numpy(zero_copy_only=False)
+    kine_particle_type_vec = all_df_in_kine_dirt["kine_particle_type"].to_numpy(zero_copy_only=False)
+    truth_Ntrack =        all_df_in_pfeval_dirt["truth_Ntrack"].to_numpy(zero_copy_only=False)
+    truth_pdg =           all_df_in_pfeval_dirt["truth_pdg"].to_numpy(zero_copy_only=False)
+    truth_startMomentum = all_df_in_pfeval_dirt["truth_startMomentum"].to_numpy(zero_copy_only=False)
+    truth_process =       all_df_in_pfeval_dirt["truth_process"].to_numpy(zero_copy_only=False)
+    truth_mother =        all_df_in_pfeval_dirt["truth_mother"].to_numpy(zero_copy_only=False)
+    truth_endXYZT =       all_df_in_pfeval_dirt["truth_endXYZT"].to_numpy(zero_copy_only=False)
+    r = all_df_in_pfeval_dirt["run"].to_numpy(zero_copy_only=False)
+    s = all_df_in_pfeval_dirt["subrun"].to_numpy(zero_copy_only=False)
+    e = all_df_in_pfeval_dirt["event"].to_numpy(zero_copy_only=False)
+
+    match_completeness_energies = (all_df_in_eval_dirt["match_completeness_energy"].to_numpy(zero_copy_only=False))
+    truth_energyInsides = (all_df_in_eval_dirt["truth_energyInside"].to_numpy(zero_copy_only=False))
+    truthSinglePhotons = (all_df_in_pfeval_dirt["truth_single_photon"].to_numpy(zero_copy_only=False))
+    truthisCCs = (all_df_in_pfeval_dirt["truth_isCC"].to_numpy(zero_copy_only=False))
+    truth_vtxInsides = (all_df_in_eval_dirt["truth_vtxInside"].to_numpy(zero_copy_only=False))
+
+    shw_sp_energies = all_df_in_bdt_dirt["shw_sp_energy"].to_numpy(zero_copy_only=False)
+
+    single_photon_numu_scores = all_df_in_bdt_dirt["single_photon_numu_score"].to_numpy(zero_copy_only=False)
+    single_photon_other_scores = all_df_in_bdt_dirt["single_photon_other_score"].to_numpy(zero_copy_only=False)
+    single_photon_ncpi0_scores = all_df_in_bdt_dirt["single_photon_ncpi0_score"].to_numpy(zero_copy_only=False)
+    single_photon_nue_scores = all_df_in_bdt_dirt["single_photon_nue_score"].to_numpy(zero_copy_only=False)
 
     time = []
-    #evtTimeNS_vec = all_df_in_time_dirt["evtTimeNS_cor"].to_numpy()
+    #evtTimeNS_vec = all_df_in_time_dirt["evtTimeNS_cor"].to_numpy(zero_copy_only=False)
     #pnd_time = []
-    #pnd_time_vec = all_df_in_pelee_dirt["interaction_time_abs"].to_numpy()
+    #pnd_time_vec = all_df_in_pelee_dirt["interaction_time_abs"].to_numpy(zero_copy_only=False)
 
-    #pnd_evt = all_df_in_pelee_dirt["evt"].to_numpy()
+    #pnd_evt = all_df_in_pelee_dirt["evt"].to_numpy(zero_copy_only=False)
 
     for i in range(len(kine_reco_Enu_vec)):
         #if (e[i] != pnd_evt[i]):
@@ -893,11 +952,11 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
         isNC1g = False
         isCC1g = False
         truth_muonEnergy = (truth_muonMomentum[i][3]) - 0.105658
-        match_completeness_energy = (all_df_in_eval_dirt["match_completeness_energy"].to_numpy())[i]
-        truth_energyInside = (all_df_in_eval_dirt["truth_energyInside"].to_numpy())[i]
-        truthSinglePhoton = (all_df_in_pfeval_dirt["truth_single_photon"].to_numpy())[i]
-        truthisCC = (all_df_in_pfeval_dirt["truth_isCC"].to_numpy())[i]
-        truth_vtxInside = (all_df_in_eval_dirt["truth_vtxInside"].to_numpy())[i]
+        match_completeness_energy = match_completeness_energies[i]
+        truth_energyInside = truth_energyInsides[i]
+        truthSinglePhoton = truthSinglePhotons[i]
+        truthisCC = truthisCCs[i]
+        truth_vtxInside = truth_vtxInsides[i]
         truth_showerMomentum0_vec.append(truth_showerMomentum_vec[i][0])
         truth_showerMomentum1_vec.append(truth_showerMomentum_vec[i][1])
         truth_showerMomentum2_vec.append(truth_showerMomentum_vec[i][2])
@@ -952,7 +1011,7 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
         #event_time_pnd = TT_merged_pnd
         #pnd_time.append(event_time_pnd)
 
-        shw_sp_energy.append((all_df_in_bdt_dirt["shw_sp_energy"].to_numpy())[i])
+        shw_sp_energy.append(shw_sp_energies[i])
 
         num_protons = 0
         kine_energy_particle = np.array(kine_energy_particle_vec[i]) 
@@ -971,22 +1030,22 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
         true_N_protons.append(num_true_protons)
         
         if (kine_reco_Enu_vec[i] >= 0 and shw_sp_n_20mev_showers_vec[i]>0 and reco_nuvtxX_vec[i]>5.0 and reco_nuvtxX_vec[i]<250.0):
-            if (math.isnan(all_df_in_bdt_dirt["single_photon_numu_score"].to_numpy()[i])):
+            if (math.isnan(single_photon_numu_scores[i])):
                 single_photon_numu_score.append(-99999.0)
             else:
-                single_photon_numu_score.append((all_df_in_bdt_dirt["single_photon_numu_score"].to_numpy())[i])
-            if (math.isnan(all_df_in_bdt_dirt["single_photon_other_score"].to_numpy()[i])):
+                single_photon_numu_score.append(single_photon_numu_scores[i])
+            if (math.isnan(single_photon_other_scores[i])):
                 single_photon_other_score.append(-99999.0)
             else:
-                single_photon_other_score.append((all_df_in_bdt_dirt["single_photon_other_score"].to_numpy())[i])
-            if (math.isnan(all_df_in_bdt_dirt["single_photon_ncpi0_score"].to_numpy()[i])):
+                single_photon_other_score.append(single_photon_other_scores[i])
+            if (math.isnan(single_photon_ncpi0_scores[i])):
                 single_photon_ncpi0_score.append(-99999.0)
             else:
-                single_photon_ncpi0_score.append((all_df_in_bdt_dirt["single_photon_ncpi0_score"].to_numpy())[i])
-            if (math.isnan(all_df_in_bdt_dirt["single_photon_nue_score"].to_numpy()[i])):
+                single_photon_ncpi0_score.append(single_photon_ncpi0_scores[i])
+            if (math.isnan(single_photon_nue_scores[i])):
                 single_photon_nue_score.append(-99999.0)
             else:
-                single_photon_nue_score.append((all_df_in_bdt_dirt["single_photon_nue_score"].to_numpy())[i])
+                single_photon_nue_score.append(single_photon_nue_scores[i])
         else:
             #shw_sp_energy.append(-99999.0)
             single_photon_numu_score.append(-99999.0)
@@ -996,62 +1055,63 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
             #N_protons.append(-1)
 
     
-    all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_pfeval_dirt)
-    all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_kine_dirt)
-    all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_eval_dirt)
+    all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_pfeval_dirt)
+    all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_kine_dirt)
+    all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_eval_dirt)
 
     #all_df_in_bdt_dirt["true_event_type"] = true_event_types
-    all_df_in_bdt_dirt["shw_sp_energy"] = shw_sp_energy
-    #all_df_in_bdt_dirt["kine_reco_Enu"] = kine_reco_Enu_vec
-    all_df_in_bdt_dirt["single_photon_numu_score"] = single_photon_numu_score
-    all_df_in_bdt_dirt["single_photon_other_score"] = single_photon_other_score
-    all_df_in_bdt_dirt["single_photon_ncpi0_score"] = single_photon_ncpi0_score
-    all_df_in_bdt_dirt["single_photon_nue_score"] = single_photon_nue_score
-    all_df_in_bdt_dirt["weight_cv"] = weight_cv
-    all_df_in_bdt_dirt["weight_spline"] = weight_spline
-    all_df_in_bdt_dirt["reco_nuvtxX"] = reco_nuvtxX_vec
-    all_df_in_bdt_dirt["reco_nuvtxY"] = reco_nuvtxY_vec
-    all_df_in_bdt_dirt["reco_nuvtxZ"] = reco_nuvtxZ_vec
-    all_df_in_bdt_dirt["reco_showervtxX"] = reco_showervtxX_vec
-    all_df_in_bdt_dirt["reco_showervtxY"] = reco_showervtxY_vec
-    all_df_in_bdt_dirt["reco_showervtxZ"] = reco_showervtxZ_vec
-    all_df_in_bdt_dirt["reco_showerMomentum0"] = reco_showerMomentum0_vec
-    all_df_in_bdt_dirt["reco_showerMomentum1"] = reco_showerMomentum1_vec
-    all_df_in_bdt_dirt["reco_showerMomentum2"] = reco_showerMomentum2_vec
-    all_df_in_bdt_dirt["reco_showerMomentum3"] = reco_showerMomentum3_vec
-    #all_df_in_bdt_dirt["reco_muonMomentum"] = reco_muonMomentum_vec
-    all_df_in_bdt_dirt["is_sigoverlay"] = is_sigoverlay_vec
-    all_df_in_bdt_dirt["match_energy"] = match_energy_vec
-    all_df_in_bdt_dirt["truth_nuEnergy"] = truth_nuEnergy_vec
-    all_df_in_bdt_dirt["truth_energyInside"] = truth_energyInside_vec
-    all_df_in_bdt_dirt["truth_showerKE"] = truth_showerKE_vec
-    all_df_in_bdt_dirt["truth_showerMomentum0"] = truth_showerMomentum0_vec
-    all_df_in_bdt_dirt["truth_showerMomentum1"] = truth_showerMomentum1_vec
-    all_df_in_bdt_dirt["truth_showerMomentum2"] = truth_showerMomentum2_vec
-    all_df_in_bdt_dirt["truth_showerMomentum3"] = truth_showerMomentum3_vec
-    all_df_in_bdt_dirt["N_protons"] = N_protons
-    all_df_in_bdt_dirt["true_N_protons"] = true_N_protons
-    all_df_in_bdt_dirt["run"] = r
-    all_df_in_bdt_dirt["subrun"] = s
-    all_df_in_bdt_dirt["event"] = e
-    all_df_in_bdt_dirt["time"] = time
-    #all_df_in_bdt_dirt["pnd_time"] = pnd_time
+    all_df_in_bdt_dirt = all_df_in_bdt_dirt.with_columns(
+        pl.Series("shw_sp_energy", shw_sp_energy),
+        pl.Series("single_photon_numu_score", single_photon_numu_score),
+        pl.Series("single_photon_other_score", single_photon_other_score),
+        pl.Series("single_photon_ncpi0_score", single_photon_ncpi0_score),
+        pl.Series("single_photon_nue_score", single_photon_nue_score),
+        pl.Series("weight_cv", weight_cv),
+        pl.Series("weight_spline", weight_spline),
+        pl.Series("reco_nuvtxX", reco_nuvtxX_vec),
+        pl.Series("reco_nuvtxY", reco_nuvtxY_vec),
+        pl.Series("reco_nuvtxZ", reco_nuvtxZ_vec),
+        pl.Series("reco_showervtxX", reco_showervtxX_vec),
+        pl.Series("reco_showervtxY", reco_showervtxY_vec),
+        pl.Series("reco_showervtxZ", reco_showervtxZ_vec),
+        pl.Series("reco_showerMomentum0", reco_showerMomentum0_vec),
+        pl.Series("reco_showerMomentum1", reco_showerMomentum1_vec),
+        pl.Series("reco_showerMomentum2", reco_showerMomentum2_vec),
+        pl.Series("reco_showerMomentum3", reco_showerMomentum3_vec),
+        pl.Series("is_sigoverlay", is_sigoverlay_vec),
+        pl.Series("match_energy", match_energy_vec),
+        pl.Series("truth_nuEnergy", truth_nuEnergy_vec),
+        pl.Series("truth_energyInside", truth_energyInside_vec),
+        pl.Series("truth_showerKE", truth_showerKE_vec),
+        pl.Series("truth_showerMomentum0", truth_showerMomentum0_vec),
+        pl.Series("truth_showerMomentum1", truth_showerMomentum1_vec),
+        pl.Series("truth_showerMomentum2", truth_showerMomentum2_vec),
+        pl.Series("truth_showerMomentum3", truth_showerMomentum3_vec),
+        pl.Series("N_protons", N_protons),
+        pl.Series("true_N_protons", true_N_protons),
+        pl.Series("run", r),
+        pl.Series("subrun", s),
+        pl.Series("event", e),
+        pl.Series("time", time)
+    )
 
     #all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_kine_dirt)
     #all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_time_dirt)
     if (len(all_df_in_time_dirt) > 0):
-        all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_time_dirt)
+        all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_time_dirt)
 
-    all_df_in_bdt_dirt = all_df_in_bdt_dirt.add_prefix('wc_')
-    all_df_in_bdt_dirt["true_event_type"] = true_event_types
-    all_df_in_bdt_dirt["filetype"] = filetypes
+    all_df_in_bdt_dirt = all_df_in_bdt_dirt.rename(lambda col: f'wc_{col}')
+    all_df_in_bdt_dirt = all_df_in_bdt_dirt.with_columns(
+        pl.Series("true_event_type", true_event_types),
+        pl.Series("filetype", filetypes)
+    )
 
     if (len(all_df_in_pelee_dirt) > 0):
-        all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_pelee_dirt, lsuffix='_pelee')
+        all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_pelee_dirt, lsuffix='_pelee')
     if (len(all_df_in_glee_dirt) > 0):
-        all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_glee_dirt, lsuffix='_glee')
+        all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_glee_dirt, lsuffix='_glee')
     if (len(all_df_in_lantern_dirt) > 0):
-        all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_lantern_dirt, lsuffix='_lantern')
+        all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_lantern_dirt, lsuffix='_lantern')
 
     return all_df_in_bdt_dirt
 
@@ -1075,36 +1135,42 @@ def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_
     truth_showerMomentum1_vec = []
     truth_showerMomentum2_vec = []
     truth_showerMomentum3_vec = []
-    kine_reco_Enu_vec = all_df_in_kine_ext["kine_reco_Enu"].to_numpy()
-    shw_sp_n_20mev_showers_vec = all_df_in_bdt_ext["shw_sp_n_20mev_showers"].to_numpy()
-    reco_nuvtxX_vec = all_df_in_pfeval_ext["reco_nuvtxX"].to_numpy()
+    kine_reco_Enu_vec = all_df_in_kine_ext["kine_reco_Enu"].to_numpy(zero_copy_only=False)
+    shw_sp_n_20mev_showers_vec = all_df_in_bdt_ext["shw_sp_n_20mev_showers"].to_numpy(zero_copy_only=False)
+    reco_nuvtxX_vec = all_df_in_pfeval_ext["reco_nuvtxX"].to_numpy(zero_copy_only=False)
 
-    reco_nuvtxY_vec = all_df_in_pfeval_ext["reco_nuvtxY"].to_numpy()
-    reco_nuvtxZ_vec = all_df_in_pfeval_ext["reco_nuvtxZ"].to_numpy()
-    reco_showervtxX_vec = all_df_in_pfeval_ext["reco_showervtxX"].to_numpy()
-    reco_showervtxY_vec = all_df_in_pfeval_ext["reco_showervtxY"].to_numpy()
-    reco_showervtxZ_vec = all_df_in_pfeval_ext["reco_showervtxZ"].to_numpy()
-    reco_showerMomentum_vec = all_df_in_pfeval_ext["reco_showerMomentum"].to_numpy()
+    reco_nuvtxY_vec = all_df_in_pfeval_ext["reco_nuvtxY"].to_numpy(zero_copy_only=False)
+    reco_nuvtxZ_vec = all_df_in_pfeval_ext["reco_nuvtxZ"].to_numpy(zero_copy_only=False)
+    reco_showervtxX_vec = all_df_in_pfeval_ext["reco_showervtxX"].to_numpy(zero_copy_only=False)
+    reco_showervtxY_vec = all_df_in_pfeval_ext["reco_showervtxY"].to_numpy(zero_copy_only=False)
+    reco_showervtxZ_vec = all_df_in_pfeval_ext["reco_showervtxZ"].to_numpy(zero_copy_only=False)
+    reco_showerMomentum_vec = all_df_in_pfeval_ext["reco_showerMomentum"].to_numpy(zero_copy_only=False)
     reco_showerMomentum0_vec = [] 
     reco_showerMomentum1_vec = [] 
     reco_showerMomentum2_vec = [] 
     reco_showerMomentum3_vec = [] 
-    reco_muonMomentum_vec = all_df_in_pfeval_ext["reco_muonMomentum"].to_numpy()
-    match_energy_vec = all_df_in_eval_ext["match_energy"].to_numpy()
+    reco_muonMomentum_vec = all_df_in_pfeval_ext["reco_muonMomentum"].to_numpy(zero_copy_only=False)
+    match_energy_vec = all_df_in_eval_ext["match_energy"].to_numpy(zero_copy_only=False)
     N_protons = []
-    kine_energy_particle_vec = all_df_in_kine_ext["kine_energy_particle"].to_numpy()
-    kine_particle_type_vec = all_df_in_kine_ext["kine_particle_type"].to_numpy()
+    kine_energy_particle_vec = all_df_in_kine_ext["kine_energy_particle"].to_numpy(zero_copy_only=False)
+    kine_particle_type_vec = all_df_in_kine_ext["kine_particle_type"].to_numpy(zero_copy_only=False)
 
-    r = all_df_in_pfeval_ext["run"].to_numpy()
-    s = all_df_in_pfeval_ext["subrun"].to_numpy()
-    e = all_df_in_pfeval_ext["event"].to_numpy()
+    shw_sp_energies = all_df_in_bdt_ext["shw_sp_energy"].to_numpy(zero_copy_only=False)
+    single_photon_numu_scores = all_df_in_bdt_ext["single_photon_numu_score"].to_numpy(zero_copy_only=False)
+    single_photon_other_scores = all_df_in_bdt_ext["single_photon_other_score"].to_numpy(zero_copy_only=False)
+    single_photon_ncpi0_scores = all_df_in_bdt_ext["single_photon_ncpi0_score"].to_numpy(zero_copy_only=False)
+    single_photon_nue_scores = all_df_in_bdt_ext["single_photon_nue_score"].to_numpy(zero_copy_only=False)
+
+    r = all_df_in_pfeval_ext["run"].to_numpy(zero_copy_only=False)
+    s = all_df_in_pfeval_ext["subrun"].to_numpy(zero_copy_only=False)
+    e = all_df_in_pfeval_ext["event"].to_numpy(zero_copy_only=False)
 
     time = []
-    #evtTimeNS_vec = all_df_in_time_ext["evtTimeNS"].to_numpy()
+    #evtTimeNS_vec = all_df_in_time_ext["evtTimeNS"].to_numpy(zero_copy_only=False)
     #pnd_time = []
-    #pnd_time_vec = all_df_in_pelee_ext["interaction_time_abs"].to_numpy()
+    #pnd_time_vec = all_df_in_pelee_ext["interaction_time_abs"].to_numpy(zero_copy_only=False)
 
-    #pnd_evt = all_df_in_pelee_ext["evt"].to_numpy()
+    #pnd_evt = all_df_in_pelee_ext["evt"].to_numpy(zero_copy_only=False)
 
     for i in range(len(kine_reco_Enu_vec)):
         #if (e[i] != pnd_evt[i]):
@@ -1112,16 +1178,16 @@ def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_
         #num_bkg+=1
         true_event_types.append(12)
         filetypes.append("ext")
-        weight_cv.append(1.0)
-        weight_spline.append(1.0)
+        weight_cv.append(np.float32(1.0))
+        weight_spline.append(np.float32(1.0))
         is_sigoverlay_vec.append(0)
         truth_nuEnergy_vec.append(-1.0)
         truth_energyInside_vec.append(-1.0)
-        truth_showerKE_vec.append(-1.0)
-        truth_showerMomentum0_vec.append(-1.0)
-        truth_showerMomentum1_vec.append(-1.0)
-        truth_showerMomentum2_vec.append(-1.0)
-        truth_showerMomentum3_vec.append(-1.0)
+        #truth_showerKE_vec.append(-1.0)
+        truth_showerMomentum0_vec.append(np.float32(-1.0))
+        truth_showerMomentum1_vec.append(np.float32(-1.0))
+        truth_showerMomentum2_vec.append(np.float32(-1.0))
+        truth_showerMomentum3_vec.append(np.float32(-1.0))
         reco_showerMomentum0_vec.append(reco_showerMomentum_vec[i][0])
         reco_showerMomentum1_vec.append(reco_showerMomentum_vec[i][1])
         reco_showerMomentum2_vec.append(reco_showerMomentum_vec[i][2])
@@ -1156,7 +1222,7 @@ def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_
     # event_time_pnd = TT_merged_pnd
     # pnd_time.append(event_time_pnd)
 
-        shw_sp_energy.append(0.95*(all_df_in_bdt_ext["shw_sp_energy"].to_numpy())[i])
+        shw_sp_energy.append(0.95*(shw_sp_energies[i]))
 
         num_protons = 0
         kine_energy_particle = np.array(kine_energy_particle_vec[i]) 
@@ -1166,22 +1232,22 @@ def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_
         N_protons.append(num_protons)
         
         if (kine_reco_Enu_vec[i] >= 0 and shw_sp_n_20mev_showers_vec[i]>0 and reco_nuvtxX_vec[i]>5.0 and reco_nuvtxX_vec[i]<250.0):
-            if (math.isnan(all_df_in_bdt_ext["single_photon_numu_score"].to_numpy()[i])):
+            if (math.isnan(single_photon_numu_scores[i])):
                 single_photon_numu_score.append(-99999.0)
             else:
-                single_photon_numu_score.append((all_df_in_bdt_ext["single_photon_numu_score"].to_numpy())[i])
-            if (math.isnan(all_df_in_bdt_ext["single_photon_other_score"].to_numpy()[i])):
+                single_photon_numu_score.append(single_photon_numu_scores[i])
+            if (math.isnan(single_photon_other_scores[i])):
                 single_photon_other_score.append(-99999.0)
             else:
-                single_photon_other_score.append((all_df_in_bdt_ext["single_photon_other_score"].to_numpy())[i])
-            if (math.isnan(all_df_in_bdt_ext["single_photon_ncpi0_score"].to_numpy()[i])):
+                single_photon_other_score.append(single_photon_other_scores[i])
+            if (math.isnan(single_photon_ncpi0_scores[i])):
                 single_photon_ncpi0_score.append(-99999.0)
             else:
-                single_photon_ncpi0_score.append((all_df_in_bdt_ext["single_photon_ncpi0_score"].to_numpy())[i])
-            if (math.isnan(all_df_in_bdt_ext["single_photon_nue_score"].to_numpy()[i])):
+                single_photon_ncpi0_score.append(single_photon_ncpi0_scores[i])
+            if (math.isnan(single_photon_nue_scores[i])):
                 single_photon_nue_score.append(-99999.0)
             else:
-                single_photon_nue_score.append((all_df_in_bdt_ext["single_photon_nue_score"].to_numpy())[i])
+                single_photon_nue_score.append(single_photon_nue_scores[i])
         else:
             #shw_sp_energy.append(-99999.0)
             single_photon_numu_score.append(-99999.0)
@@ -1191,74 +1257,85 @@ def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_
             #N_protons.append(-1)
 
         
+    cols_to_add = []
     for t in truth_variables:
         if t=="truth_id" or t=="truth_pdg" or t=="truth_process" or t=="truth_mother":
-            all_df_in_pfeval_ext[t] = [[-9999]] * len(true_event_types)
-        if t=="truth_startXYZT" or t=="truth_endXYZT" or t=="truth_startMomentum" or t=="truth_endMomentum" or t=="truth_daughters":
-            all_df_in_pfeval_ext[t] = [[np.array([-9999.0, -9999.0, -9999.0, -9999.0])] ] * len(true_event_types)
-        #if t == "truth_muonMomentum" or t == "truth_showerMomentum":
-        #    all_df_in_pfeval_ext[t] = np.full((len(true_event_types), 4), -9999.0)
+            cols_to_add.append(pl.Series(t, [[-9999]] * len(true_event_types)))
+        elif t=="truth_startXYZT" or t=="truth_endXYZT" or t=="truth_startMomentum" or t=="truth_endMomentum" or t=="truth_daughters":
+            cols_to_add.append(pl.Series(t, [[np.array([-9999.0, -9999.0, -9999.0, -9999.0])] ] * len(true_event_types)))
+        #elif t == "truth_muonMomentum" or t == "truth_showerMomentum":
+        #    cols_to_add.append(pl.Series(t, np.full((len(true_event_types), 4), -9999.0)))
+        elif t=="truth_single_photon" or t=="truth_showerMother" or t=="truth_Npi0" or t=="truth_NCDelta":
+            cols_to_add.append(pl.Series(t, [-9999] * len(true_event_types), dtype=pl.Int32))
+        elif t=="truth_showerKE" or t=="truth_energyInside" or t=="truth_nuEnergy":
+            cols_to_add.append(pl.Series(t, [-9999.0] * len(true_event_types), dtype=pl.Float32))
+        elif t=="truth_isCC":
+            cols_to_add.append(pl.Series(t, [False] * len(true_event_types)))
         else:
-            all_df_in_pfeval_ext[t] = [-9999.0] * len(true_event_types)
+            cols_to_add.append(pl.Series(t, [-9999.0] * len(true_event_types)))
+    if cols_to_add:
+        all_df_in_pfeval_ext = all_df_in_pfeval_ext.with_columns(*cols_to_add)
     
     #for t in eval_truth_variables:
     #    all_df_in_eval_ext[t] = [-9999] * len(true_event_types)
     
-    all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_pfeval_ext)
-    all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_kine_ext)
-    all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_eval_ext)
+    all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_pfeval_ext)
+    all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_kine_ext)
+    all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_eval_ext)
 
     #all_df_in_bdt_ext["true_event_type"] = true_event_types
-    all_df_in_bdt_ext["shw_sp_energy"] = shw_sp_energy
-    #all_df_in_bdt_ext["kine_reco_Enu"] = kine_reco_Enu_vec
-    all_df_in_bdt_ext["single_photon_numu_score"] = single_photon_numu_score
-    all_df_in_bdt_ext["single_photon_other_score"] = single_photon_other_score
-    all_df_in_bdt_ext["single_photon_ncpi0_score"] = single_photon_ncpi0_score
-    all_df_in_bdt_ext["single_photon_nue_score"] = single_photon_nue_score
-    all_df_in_bdt_ext["weight_cv"] = weight_cv
-    all_df_in_bdt_ext["weight_spline"] = weight_spline
-    all_df_in_bdt_ext["reco_nuvtxX"] = reco_nuvtxX_vec
-    all_df_in_bdt_ext["reco_nuvtxY"] = reco_nuvtxY_vec
-    all_df_in_bdt_ext["reco_nuvtxZ"] = reco_nuvtxZ_vec
-    all_df_in_bdt_ext["reco_showervtxX"] = reco_showervtxX_vec
-    all_df_in_bdt_ext["reco_showervtxY"] = reco_showervtxY_vec
-    all_df_in_bdt_ext["reco_showervtxZ"] = reco_showervtxZ_vec
-    all_df_in_bdt_ext["reco_showerMomentum0"] = reco_showerMomentum0_vec
-    all_df_in_bdt_ext["reco_showerMomentum1"] = reco_showerMomentum1_vec
-    all_df_in_bdt_ext["reco_showerMomentum2"] = reco_showerMomentum2_vec
-    all_df_in_bdt_ext["reco_showerMomentum3"] = reco_showerMomentum3_vec
-    #all_df_in_bdt_ext["reco_muonMomentum"] = reco_muonMomentum_vec
-    all_df_in_bdt_ext["is_sigoverlay"] = is_sigoverlay_vec
-    all_df_in_bdt_ext["match_energy"] = match_energy_vec
-    all_df_in_bdt_ext["truth_nuEnergy"] = truth_nuEnergy_vec
-    all_df_in_bdt_ext["truth_energyInside"] = truth_energyInside_vec
-    all_df_in_bdt_ext["truth_showerKE"] = truth_showerKE_vec
-    all_df_in_bdt_ext["truth_showerMomentum0"] = truth_showerMomentum0_vec
-    all_df_in_bdt_ext["truth_showerMomentum1"] = truth_showerMomentum1_vec
-    all_df_in_bdt_ext["truth_showerMomentum2"] = truth_showerMomentum2_vec
-    all_df_in_bdt_ext["truth_showerMomentum3"] = truth_showerMomentum3_vec
-    all_df_in_bdt_ext["N_protons"] = N_protons
-    all_df_in_bdt_ext["run"] = r
-    all_df_in_bdt_ext["subrun"] = s
-    all_df_in_bdt_ext["event"] = e
-    all_df_in_bdt_ext["time"] = time
+    all_df_in_bdt_ext = all_df_in_bdt_ext.with_columns(
+        pl.Series("shw_sp_energy", shw_sp_energy),
+        pl.Series("single_photon_numu_score", single_photon_numu_score),
+        pl.Series("single_photon_other_score", single_photon_other_score),
+        pl.Series("single_photon_ncpi0_score", single_photon_ncpi0_score),
+        pl.Series("single_photon_nue_score", single_photon_nue_score),
+        pl.Series("weight_cv", weight_cv),
+        pl.Series("weight_spline", weight_spline),
+        pl.Series("reco_nuvtxX", reco_nuvtxX_vec),
+        pl.Series("reco_nuvtxY", reco_nuvtxY_vec),
+        pl.Series("reco_nuvtxZ", reco_nuvtxZ_vec),
+        pl.Series("reco_showervtxX", reco_showervtxX_vec),
+        pl.Series("reco_showervtxY", reco_showervtxY_vec),
+        pl.Series("reco_showervtxZ", reco_showervtxZ_vec),
+        pl.Series("reco_showerMomentum0", reco_showerMomentum0_vec),
+        pl.Series("reco_showerMomentum1", reco_showerMomentum1_vec),
+        pl.Series("reco_showerMomentum2", reco_showerMomentum2_vec),
+        pl.Series("reco_showerMomentum3", reco_showerMomentum3_vec),
+        pl.Series("is_sigoverlay", is_sigoverlay_vec),
+        pl.Series("match_energy", match_energy_vec),
+        #pl.Series("truth_nuEnergy", truth_nuEnergy_vec),
+        #pl.Series("truth_energyInside", truth_energyInside_vec),
+        #pl.Series("truth_showerKE", truth_showerKE_vec),
+        pl.Series("truth_showerMomentum0", truth_showerMomentum0_vec),
+        pl.Series("truth_showerMomentum1", truth_showerMomentum1_vec),
+        pl.Series("truth_showerMomentum2", truth_showerMomentum2_vec),
+        pl.Series("truth_showerMomentum3", truth_showerMomentum3_vec),
+        pl.Series("N_protons", N_protons),
+        pl.Series("run", r),
+        pl.Series("subrun", s),
+        pl.Series("event", e),
+        pl.Series("time", time)
+    )
     #all_df_in_bdt_ext["pnd_time"] = pnd_time
 
     #all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_kine_ext)
     #all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_time_ext)
     if (len(all_df_in_time_ext) > 0):
-        all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_time_ext)
+        all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_time_ext)
 
-    all_df_in_bdt_ext = all_df_in_bdt_ext.add_prefix('wc_')
-    all_df_in_bdt_ext["true_event_type"] = true_event_types
-    all_df_in_bdt_ext["filetype"] = filetypes
+    all_df_in_bdt_ext = all_df_in_bdt_ext.rename(lambda col: f'wc_{col}')
+    all_df_in_bdt_ext = all_df_in_bdt_ext.with_columns(
+        pl.Series("true_event_type", true_event_types),
+        pl.Series("filetype", filetypes)
+    )
 
     if (len(all_df_in_pelee_ext) > 0):
-        all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_pelee_ext, lsuffix='_pelee')
+        all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_pelee_ext, lsuffix='_pelee')
     if (len(all_df_in_glee_ext) > 0):
-        all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_glee_ext, lsuffix='_glee')
+        all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_glee_ext, lsuffix='_glee')
     if (len(all_df_in_lantern_ext) > 0):
-        all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_lantern_ext, lsuffix='_lantern')
+        all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_lantern_ext, lsuffix='_lantern')
 
     return all_df_in_bdt_ext
 
@@ -1283,50 +1360,56 @@ def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_
     truth_showerMomentum2_vec = []
     truth_showerMomentum3_vec = []
 
-    kine_reco_Enu_vec = all_df_in_kine_data["kine_reco_Enu"].to_numpy()
-    shw_sp_n_20mev_showers_vec = all_df_in_bdt_data["shw_sp_n_20mev_showers"].to_numpy()
-    reco_nuvtxX_vec = all_df_in_pfeval_data["reco_nuvtxX"].to_numpy()
+    kine_reco_Enu_vec = all_df_in_kine_data["kine_reco_Enu"].to_numpy(zero_copy_only=False)
+    shw_sp_n_20mev_showers_vec = all_df_in_bdt_data["shw_sp_n_20mev_showers"].to_numpy(zero_copy_only=False)
+    reco_nuvtxX_vec = all_df_in_pfeval_data["reco_nuvtxX"].to_numpy(zero_copy_only=False)
 
-    reco_nuvtxY_vec = all_df_in_pfeval_data["reco_nuvtxY"].to_numpy()
-    reco_nuvtxZ_vec = all_df_in_pfeval_data["reco_nuvtxZ"].to_numpy()
-    reco_showervtxX_vec = all_df_in_pfeval_data["reco_showervtxX"].to_numpy()
-    reco_showervtxY_vec = all_df_in_pfeval_data["reco_showervtxY"].to_numpy()
-    reco_showervtxZ_vec = all_df_in_pfeval_data["reco_showervtxZ"].to_numpy()
-    reco_showerMomentum_vec = all_df_in_pfeval_data["reco_showerMomentum"].to_numpy()
+    reco_nuvtxY_vec = all_df_in_pfeval_data["reco_nuvtxY"].to_numpy(zero_copy_only=False)
+    reco_nuvtxZ_vec = all_df_in_pfeval_data["reco_nuvtxZ"].to_numpy(zero_copy_only=False)
+    reco_showervtxX_vec = all_df_in_pfeval_data["reco_showervtxX"].to_numpy(zero_copy_only=False)
+    reco_showervtxY_vec = all_df_in_pfeval_data["reco_showervtxY"].to_numpy(zero_copy_only=False)
+    reco_showervtxZ_vec = all_df_in_pfeval_data["reco_showervtxZ"].to_numpy(zero_copy_only=False)
+    reco_showerMomentum_vec = all_df_in_pfeval_data["reco_showerMomentum"].to_numpy(zero_copy_only=False)
     reco_showerMomentum0_vec = [] 
     reco_showerMomentum1_vec = [] 
     reco_showerMomentum2_vec = [] 
     reco_showerMomentum3_vec = [] 
-    reco_muonMomentum_vec = all_df_in_pfeval_data["reco_muonMomentum"].to_numpy()
-    match_energy_vec = all_df_in_eval_data["match_energy"].to_numpy()
+    reco_muonMomentum_vec = all_df_in_pfeval_data["reco_muonMomentum"].to_numpy(zero_copy_only=False)
+    match_energy_vec = all_df_in_eval_data["match_energy"].to_numpy(zero_copy_only=False)
     N_protons = []
-    kine_energy_particle_vec = all_df_in_kine_data["kine_energy_particle"].to_numpy()
-    kine_particle_type_vec = all_df_in_kine_data["kine_particle_type"].to_numpy()
+    kine_energy_particle_vec = all_df_in_kine_data["kine_energy_particle"].to_numpy(zero_copy_only=False)
+    kine_particle_type_vec = all_df_in_kine_data["kine_particle_type"].to_numpy(zero_copy_only=False)
 
-    r_data = all_df_in_pfeval_data["run"].to_numpy()
-    s_data = all_df_in_pfeval_data["subrun"].to_numpy()
-    e_data = all_df_in_pfeval_data["event"].to_numpy()
+    shw_sp_energies = all_df_in_bdt_data["shw_sp_energy"].to_numpy(zero_copy_only=False)
+    single_photon_numu_scores = all_df_in_bdt_data["single_photon_numu_score"].to_numpy(zero_copy_only=False)
+    single_photon_other_scores = all_df_in_bdt_data["single_photon_other_score"].to_numpy(zero_copy_only=False)
+    single_photon_ncpi0_scores = all_df_in_bdt_data["single_photon_ncpi0_score"].to_numpy(zero_copy_only=False)
+    single_photon_nue_scores = all_df_in_bdt_data["single_photon_nue_score"].to_numpy(zero_copy_only=False)
 
-    evtTimeNS_vec = [] #all_df_in_time_data["evtTimeNS"].to_numpy()
+    r_data = all_df_in_pfeval_data["run"].to_numpy(zero_copy_only=False)
+    s_data = all_df_in_pfeval_data["subrun"].to_numpy(zero_copy_only=False)
+    e_data = all_df_in_pfeval_data["event"].to_numpy(zero_copy_only=False)
+
+    evtTimeNS_vec = [] #all_df_in_time_data["evtTimeNS"].to_numpy(zero_copy_only=False)
     time = []
     #pnd_time = []
-    #pnd_time_vec = all_df_in_pelee_data["interaction_time_abs"].to_numpy()
+    #pnd_time_vec = all_df_in_pelee_data["interaction_time_abs"].to_numpy(zero_copy_only=False)
 
     for i in range(len(kine_reco_Enu_vec)):
         #if (e[i] != pnd_evt[i]):
         #    print("Event number mismatch between wc and pelee: ", i, e[i], pnd_evt[i])
         true_event_types.append(13)
         filetypes.append("data")
-        weight_cv.append(1.0)
-        weight_spline.append(1.0)
+        weight_cv.append(np.float32(1.0))
+        weight_spline.append(np.float32(1.0))
         is_sigoverlay_vec.append(0)
         truth_nuEnergy_vec.append(-1.0)
         truth_energyInside_vec.append(-1.0)
-        truth_showerKE_vec.append(-1.0)
-        truth_showerMomentum0_vec.append(-1.0)
-        truth_showerMomentum1_vec.append(-1.0)
-        truth_showerMomentum2_vec.append(-1.0)
-        truth_showerMomentum3_vec.append(-1.0)
+        #truth_showerKE_vec.append(-1.0)
+        truth_showerMomentum0_vec.append(np.float32(-1.0))
+        truth_showerMomentum1_vec.append(np.float32(-1.0))
+        truth_showerMomentum2_vec.append(np.float32(-1.0))
+        truth_showerMomentum3_vec.append(np.float32(-1.0))
         reco_showerMomentum0_vec.append(reco_showerMomentum_vec[i][0])
         reco_showerMomentum1_vec.append(reco_showerMomentum_vec[i][1])
         reco_showerMomentum2_vec.append(reco_showerMomentum_vec[i][2])
@@ -1362,7 +1445,7 @@ def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_
         
         #time.append(event_time)
 
-        time.append(-1)
+        time.append(-1.0)
 
         #event_time_pnd = -9999.0
         #TT_help_pnd = pnd_time_vec[i]-Shift+gap*0.5
@@ -1373,7 +1456,7 @@ def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_
         #event_time_pnd = TT_merged_pnd
         #pnd_time.append(event_time_pnd)
 
-        shw_sp_energy.append(0.95*(all_df_in_bdt_data["shw_sp_energy"].to_numpy())[i])
+        shw_sp_energy.append(0.95*(shw_sp_energies[i]))
 
         num_protons = 0
         kine_energy_particle = np.array(kine_energy_particle_vec[i]) 
@@ -1383,22 +1466,22 @@ def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_
         N_protons.append(num_protons)
             
         if (kine_reco_Enu_vec[i] >= 0 and shw_sp_n_20mev_showers_vec[i]>0 and reco_nuvtxX_vec[i]>5.0 and reco_nuvtxX_vec[i]<250.0):# and event_time > -6.6 and event_time < 3.4):
-            if (math.isnan(all_df_in_bdt_data["single_photon_numu_score"].to_numpy()[i])):
+            if (math.isnan(single_photon_numu_scores[i])):
                 single_photon_numu_score.append(-99999.0)
             else:
-                single_photon_numu_score.append((all_df_in_bdt_data["single_photon_numu_score"].to_numpy())[i])
-            if (math.isnan(all_df_in_bdt_data["single_photon_other_score"].to_numpy()[i])):
+                single_photon_numu_score.append(single_photon_numu_scores[i])
+            if (math.isnan(single_photon_other_scores[i])):
                 single_photon_other_score.append(-99999.0)
             else:
-                single_photon_other_score.append((all_df_in_bdt_data["single_photon_other_score"].to_numpy())[i])
-            if (math.isnan(all_df_in_bdt_data["single_photon_ncpi0_score"].to_numpy()[i])):
+                single_photon_other_score.append(single_photon_other_scores[i])
+            if (math.isnan(single_photon_ncpi0_scores[i])):
                 single_photon_ncpi0_score.append(-99999.0)
             else:
-                single_photon_ncpi0_score.append((all_df_in_bdt_data["single_photon_ncpi0_score"].to_numpy())[i])
-            if (math.isnan(all_df_in_bdt_data["single_photon_nue_score"].to_numpy()[i])):
+                single_photon_ncpi0_score.append(single_photon_ncpi0_scores[i])
+            if (math.isnan(single_photon_nue_scores[i])):
                 single_photon_nue_score.append(-99999.0)
             else:
-                single_photon_nue_score.append((all_df_in_bdt_data["single_photon_nue_score"].to_numpy())[i])
+                single_photon_nue_score.append(single_photon_nue_scores[i])
         else:
             #shw_sp_energy.append(-99999.0)
             single_photon_numu_score.append(-99999.0)
@@ -1407,74 +1490,85 @@ def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_
             single_photon_nue_score.append(-99999.0)
             #N_protons.append(-1)
 
+    cols_to_add = []
     for t in truth_variables:
         if t=="truth_id" or t=="truth_pdg" or t=="truth_process" or t=="truth_mother":
-            all_df_in_pfeval_data[t] = [[-9999]] * len(true_event_types)
-        if t=="truth_startXYZT" or t=="truth_endXYZT" or t=="truth_startMomentum" or t=="truth_endMomentum" or t=="truth_daughters":
-            all_df_in_pfeval_data[t] = [[np.array([-9999.0, -9999.0, -9999.0, -9999.0])] ] * len(true_event_types)
-        #if t == "truth_muonMomentum" or t == "truth_showerMomentum":
-        #    all_df_in_pfeval_data[t] = np.full((len(true_event_types), 4), -9999.0)
+            cols_to_add.append(pl.Series(t, [[-9999]] * len(true_event_types)))
+        elif t=="truth_startXYZT" or t=="truth_endXYZT" or t=="truth_startMomentum" or t=="truth_endMomentum" or t=="truth_daughters":
+            cols_to_add.append(pl.Series(t, [[np.array([-9999.0, -9999.0, -9999.0, -9999.0])] ] * len(true_event_types)))
+        #elif t == "truth_muonMomentum" or t == "truth_showerMomentum":
+        #    cols_to_add.append(pl.Series(t, np.full((len(true_event_types), 4), -9999.0)))
+        elif t=="truth_single_photon" or t=="truth_showerMother" or t=="truth_Npi0" or t=="truth_NCDelta":
+            cols_to_add.append(pl.Series(t, [-9999] * len(true_event_types), dtype=pl.Int32))
+        elif t=="truth_showerKE" or t=="truth_energyInside" or t=="truth_nuEnergy":
+            cols_to_add.append(pl.Series(t, [-9999.0] * len(true_event_types), dtype=pl.Float32))
+        elif t=="truth_isCC":
+            cols_to_add.append(pl.Series(t, [False] * len(true_event_types)))
         else:
-            all_df_in_pfeval_data[t] = [-9999.0] * len(true_event_types)
+            cols_to_add.append(pl.Series(t, [-9999.0] * len(true_event_types)))
+    if cols_to_add:
+        all_df_in_pfeval_data = all_df_in_pfeval_data.with_columns(*cols_to_add)
 
     #for t in eval_truth_variables:
     #    all_df_in_eval_data[t] = [-9999] * len(true_event_types)
 
-    all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_pfeval_data)
-    all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_kine_data)
-    all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_eval_data)
+    all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_pfeval_data)
+    all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_kine_data)
+    all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_eval_data)
 
     #all_df_in_bdt_data["true_event_type"] = true_event_types
-    all_df_in_bdt_data["shw_sp_energy"] = shw_sp_energy
-    #all_df_in_bdt_data["kine_reco_Enu"] = kine_reco_Enu_vec
-    all_df_in_bdt_data["single_photon_numu_score"] = single_photon_numu_score
-    all_df_in_bdt_data["single_photon_other_score"] = single_photon_other_score
-    all_df_in_bdt_data["single_photon_ncpi0_score"] = single_photon_ncpi0_score
-    all_df_in_bdt_data["single_photon_nue_score"] = single_photon_nue_score
-    all_df_in_bdt_data["weight_cv"] = weight_cv
-    all_df_in_bdt_data["weight_spline"] = weight_spline
-    all_df_in_bdt_data["reco_nuvtxX"] = reco_nuvtxX_vec
-    all_df_in_bdt_data["reco_nuvtxY"] = reco_nuvtxY_vec
-    all_df_in_bdt_data["reco_nuvtxZ"] = reco_nuvtxZ_vec
-    all_df_in_bdt_data["reco_showervtxX"] = reco_showervtxX_vec
-    all_df_in_bdt_data["reco_showervtxY"] = reco_showervtxY_vec
-    all_df_in_bdt_data["reco_showervtxZ"] = reco_showervtxZ_vec
-    all_df_in_bdt_data["reco_showerMomentum0"] = reco_showerMomentum0_vec
-    all_df_in_bdt_data["reco_showerMomentum1"] = reco_showerMomentum1_vec
-    all_df_in_bdt_data["reco_showerMomentum2"] = reco_showerMomentum2_vec
-    all_df_in_bdt_data["reco_showerMomentum3"] = reco_showerMomentum3_vec
-    #all_df_in_bdt_data["reco_muonMomentum"] = reco_muonMomentum_vec
-    all_df_in_bdt_data["is_sigoverlay"] = is_sigoverlay_vec
-    all_df_in_bdt_data["match_energy"] = match_energy_vec
-    all_df_in_bdt_data["truth_nuEnergy"] = truth_nuEnergy_vec
-    all_df_in_bdt_data["truth_energyInside"] = truth_energyInside_vec
-    all_df_in_bdt_data["truth_showerKE"] = truth_showerKE_vec
-    all_df_in_bdt_data["truth_showerMomentum0"] = truth_showerMomentum0_vec
-    all_df_in_bdt_data["truth_showerMomentum1"] = truth_showerMomentum1_vec
-    all_df_in_bdt_data["truth_showerMomentum2"] = truth_showerMomentum2_vec
-    all_df_in_bdt_data["truth_showerMomentum3"] = truth_showerMomentum3_vec
-    all_df_in_bdt_data["N_protons"] = N_protons
-    all_df_in_bdt_data["run"] = r_data
-    all_df_in_bdt_data["subrun"] = s_data
-    all_df_in_bdt_data["event"] = e_data
-    all_df_in_bdt_data["time"] = time
+    all_df_in_bdt_data = all_df_in_bdt_data.with_columns(
+        pl.Series("shw_sp_energy", shw_sp_energy),
+        pl.Series("single_photon_numu_score", single_photon_numu_score),
+        pl.Series("single_photon_other_score", single_photon_other_score),
+        pl.Series("single_photon_ncpi0_score", single_photon_ncpi0_score),
+        pl.Series("single_photon_nue_score", single_photon_nue_score),
+        pl.Series("weight_cv", weight_cv),
+        pl.Series("weight_spline", weight_spline),
+        pl.Series("reco_nuvtxX", reco_nuvtxX_vec),
+        pl.Series("reco_nuvtxY", reco_nuvtxY_vec),
+        pl.Series("reco_nuvtxZ", reco_nuvtxZ_vec),
+        pl.Series("reco_showervtxX", reco_showervtxX_vec),
+        pl.Series("reco_showervtxY", reco_showervtxY_vec),
+        pl.Series("reco_showervtxZ", reco_showervtxZ_vec),
+        pl.Series("reco_showerMomentum0", reco_showerMomentum0_vec),
+        pl.Series("reco_showerMomentum1", reco_showerMomentum1_vec),
+        pl.Series("reco_showerMomentum2", reco_showerMomentum2_vec),
+        pl.Series("reco_showerMomentum3", reco_showerMomentum3_vec),
+        pl.Series("is_sigoverlay", is_sigoverlay_vec),
+        pl.Series("match_energy", match_energy_vec),
+        #pl.Series("truth_nuEnergy", truth_nuEnergy_vec),
+        #pl.Series("truth_energyInside", truth_energyInside_vec),
+        #pl.Series("truth_showerKE", truth_showerKE_vec),
+        pl.Series("truth_showerMomentum0", truth_showerMomentum0_vec),
+        pl.Series("truth_showerMomentum1", truth_showerMomentum1_vec),
+        pl.Series("truth_showerMomentum2", truth_showerMomentum2_vec),
+        pl.Series("truth_showerMomentum3", truth_showerMomentum3_vec),
+        pl.Series("N_protons", N_protons),
+        pl.Series("run", r_data),
+        pl.Series("subrun", s_data),
+        pl.Series("event", e_data),
+        pl.Series("time", time)
+    )
     #all_df_in_bdt_data["pnd_time"] = pnd_time
 
     #all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_kine_data)
     #all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_time_data)
     if (len(all_df_in_time_data) > 0):
-        all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_time_data)
+        all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_time_data)
 
-    all_df_in_bdt_data = all_df_in_bdt_data.add_prefix('wc_')
-    all_df_in_bdt_data["true_event_type"] = true_event_types
-    all_df_in_bdt_data["filetype"] = filetypes
+    all_df_in_bdt_data = all_df_in_bdt_data.rename(lambda col: f'wc_{col}')
+    all_df_in_bdt_data = all_df_in_bdt_data.with_columns(
+        pl.Series("true_event_type", true_event_types),
+        pl.Series("filetype", filetypes)
+    )
 
     if (len(all_df_in_pelee_data) > 0):
-        all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_pelee_data, lsuffix='_pelee')
+        all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_pelee_data, lsuffix='_pelee')
     if (len(all_df_in_glee_data) > 0):
-        all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_glee_data, lsuffix='_glee')
+        all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_glee_data, lsuffix='_glee')
     if (len(all_df_in_lantern_data) > 0):
-        all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_lantern_data, lsuffix='_lantern')
+        all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_lantern_data, lsuffix='_lantern')
 
     return all_df_in_bdt_data
 
@@ -1489,54 +1583,70 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
     single_photon_other_score = []
     single_photon_ncpi0_score = []
     single_photon_nue_score = []
-    weight_cv = all_df_in_eval_over["weight_cv"].to_numpy()
-    weight_spline = all_df_in_eval_over["weight_spline"].to_numpy()
+    weight_cv = all_df_in_eval_over["weight_cv"].to_numpy(zero_copy_only=False)
+    weight_spline = all_df_in_eval_over["weight_spline"].to_numpy(zero_copy_only=False)
     is_sigoverlay_vec = []
 
-    kine_reco_Enu_vec = all_df_in_kine_over["kine_reco_Enu"].to_numpy()
-    shw_sp_n_20mev_showers_vec = all_df_in_bdt_over["shw_sp_n_20mev_showers"].to_numpy()
-    reco_nuvtxX_vec = all_df_in_pfeval_over["reco_nuvtxX"].to_numpy()
-    truth_muonMomentum = all_df_in_pfeval_over["truth_muonMomentum"].to_numpy()
+    kine_reco_Enu_vec = all_df_in_kine_over["kine_reco_Enu"].to_numpy(zero_copy_only=False)
+    shw_sp_n_20mev_showers_vec = all_df_in_bdt_over["shw_sp_n_20mev_showers"].to_numpy(zero_copy_only=False)
+    reco_nuvtxX_vec = all_df_in_pfeval_over["reco_nuvtxX"].to_numpy(zero_copy_only=False)
+    truth_muonMomentum = all_df_in_pfeval_over["truth_muonMomentum"].to_numpy(zero_copy_only=False)
 
-    reco_nuvtxY_vec = all_df_in_pfeval_over["reco_nuvtxY"].to_numpy()
-    reco_nuvtxZ_vec = all_df_in_pfeval_over["reco_nuvtxZ"].to_numpy()
-    reco_showervtxX_vec = all_df_in_pfeval_over["reco_showervtxX"].to_numpy()
-    reco_showervtxY_vec = all_df_in_pfeval_over["reco_showervtxY"].to_numpy()
-    reco_showervtxZ_vec = all_df_in_pfeval_over["reco_showervtxZ"].to_numpy()
-    reco_showerMomentum_vec = all_df_in_pfeval_over["reco_showerMomentum"].to_numpy()
+    reco_nuvtxY_vec = all_df_in_pfeval_over["reco_nuvtxY"].to_numpy(zero_copy_only=False)
+    reco_nuvtxZ_vec = all_df_in_pfeval_over["reco_nuvtxZ"].to_numpy(zero_copy_only=False)
+    reco_showervtxX_vec = all_df_in_pfeval_over["reco_showervtxX"].to_numpy(zero_copy_only=False)
+    reco_showervtxY_vec = all_df_in_pfeval_over["reco_showervtxY"].to_numpy(zero_copy_only=False)
+    reco_showervtxZ_vec = all_df_in_pfeval_over["reco_showervtxZ"].to_numpy(zero_copy_only=False)
+    reco_showerMomentum_vec = all_df_in_pfeval_over["reco_showerMomentum"].to_numpy(zero_copy_only=False)
     reco_showerMomentum0_vec = [] 
     reco_showerMomentum1_vec = [] 
     reco_showerMomentum2_vec = [] 
     reco_showerMomentum3_vec = [] 
-    truth_showerMomentum_vec = all_df_in_pfeval_over["truth_showerMomentum"].to_numpy()
+    truth_showerMomentum_vec = all_df_in_pfeval_over["truth_showerMomentum"].to_numpy(zero_copy_only=False)
     truth_showerMomentum0_vec = [] 
     truth_showerMomentum1_vec = [] 
     truth_showerMomentum2_vec = [] 
     truth_showerMomentum3_vec = []
-    #reco_muonMomentum3_vec = all_df_in_pfeval_over["reco_muonMomentum[3]"].to_numpy()
-    reco_muonMomentum_vec = all_df_in_pfeval_over["reco_muonMomentum"].to_numpy()
-    match_energy_vec = all_df_in_eval_over["match_energy"].to_numpy()
-    truth_nuEnergy_vec = all_df_in_eval_over["truth_nuEnergy"].to_numpy()
-    truth_energyInside_vec = all_df_in_eval_over["truth_energyInside"].to_numpy()
-    truth_showerKE_vec = all_df_in_pfeval_over["truth_showerKE"].to_numpy()
+    #reco_muonMomentum3_vec = all_df_in_pfeval_over["reco_muonMomentum[3]"].to_numpy(zero_copy_only=False)
+    reco_muonMomentum_vec = all_df_in_pfeval_over["reco_muonMomentum"].to_numpy(zero_copy_only=False)
+    match_energy_vec = all_df_in_eval_over["match_energy"].to_numpy(zero_copy_only=False)
+    truth_nuEnergy_vec = all_df_in_eval_over["truth_nuEnergy"].to_numpy(zero_copy_only=False)
+    truth_energyInside_vec = all_df_in_eval_over["truth_energyInside"].to_numpy(zero_copy_only=False)
+    truth_showerKE_vec = all_df_in_pfeval_over["truth_showerKE"].to_numpy(zero_copy_only=False)
+
+    match_completeness_energies = all_df_in_eval_over["match_completeness_energy"].to_numpy(zero_copy_only=False)
+    truth_energyInsides = all_df_in_eval_over["truth_energyInside"].to_numpy(zero_copy_only=False)
+    truthSinglePhotons = all_df_in_pfeval_over["truth_single_photon"].to_numpy(zero_copy_only=False)
+    truthisCCs = all_df_in_pfeval_over["truth_isCC"].to_numpy(zero_copy_only=False)
+    truth_NCDeltas = all_df_in_pfeval_over["truth_NCDelta"].to_numpy(zero_copy_only=False)
+    truth_showerMothers = all_df_in_pfeval_over["truth_showerMother"].to_numpy(zero_copy_only=False)
+    truth_nuPdgs = all_df_in_eval_over["truth_nuPdg"].to_numpy(zero_copy_only=False)
+    truth_vtxInsides = all_df_in_eval_over["truth_vtxInside"].to_numpy(zero_copy_only=False)
+    truth_Npi0s = all_df_in_pfeval_over["truth_Npi0"].to_numpy(zero_copy_only=False)
+
+    shw_sp_energies = all_df_in_bdt_over["shw_sp_energy"].to_numpy(zero_copy_only=False)
+    single_photon_numu_scores = all_df_in_bdt_over["single_photon_numu_score"].to_numpy(zero_copy_only=False)
+    single_photon_other_scores = all_df_in_bdt_over["single_photon_other_score"].to_numpy(zero_copy_only=False)
+    single_photon_ncpi0_scores = all_df_in_bdt_over["single_photon_ncpi0_score"].to_numpy(zero_copy_only=False)
+    single_photon_nue_scores = all_df_in_bdt_over["single_photon_nue_score"].to_numpy(zero_copy_only=False)
     
     N_protons = []
     true_N_protons = []
-    kine_energy_particle_vec = all_df_in_kine_over["kine_energy_particle"].to_numpy()
-    kine_particle_type_vec = all_df_in_kine_over["kine_particle_type"].to_numpy()
-    truth_Ntrack = all_df_in_pfeval_over["truth_Ntrack"].to_numpy()
-    truth_pdg = all_df_in_pfeval_over["truth_pdg"].to_numpy()
-    truth_startMomentum = all_df_in_pfeval_over["truth_startMomentum"].to_numpy()
-    truth_process = all_df_in_pfeval_over["truth_process"].to_numpy()
-    truth_mother = all_df_in_pfeval_over["truth_mother"].to_numpy()
-    truth_endXYZT = all_df_in_pfeval_over["truth_endXYZT"].to_numpy()
+    kine_energy_particle_vec = all_df_in_kine_over["kine_energy_particle"].to_numpy(zero_copy_only=False)
+    kine_particle_type_vec = all_df_in_kine_over["kine_particle_type"].to_numpy(zero_copy_only=False)
+    truth_Ntrack = all_df_in_pfeval_over["truth_Ntrack"].to_numpy(zero_copy_only=False)
+    truth_pdg = all_df_in_pfeval_over["truth_pdg"].to_numpy(zero_copy_only=False)
+    truth_startMomentum = all_df_in_pfeval_over["truth_startMomentum"].to_numpy(zero_copy_only=False)
+    truth_process = all_df_in_pfeval_over["truth_process"].to_numpy(zero_copy_only=False)
+    truth_mother = all_df_in_pfeval_over["truth_mother"].to_numpy(zero_copy_only=False)
+    truth_endXYZT = all_df_in_pfeval_over["truth_endXYZT"].to_numpy(zero_copy_only=False)
 
-    r = all_df_in_pfeval_over["run"].to_numpy()
-    s = all_df_in_pfeval_over["subrun"].to_numpy()
-    e = all_df_in_pfeval_over["event"].to_numpy()
+    r = all_df_in_pfeval_over["run"].to_numpy(zero_copy_only=False)
+    s = all_df_in_pfeval_over["subrun"].to_numpy(zero_copy_only=False)
+    e = all_df_in_pfeval_over["event"].to_numpy(zero_copy_only=False)
 
     time = []
-    #evtTimeNS_vec = all_df_in_time_over["evtTimeNS_cor"].to_numpy()
+    #evtTimeNS_vec = all_df_in_time_over["evtTimeNS_cor"].to_numpy(zero_copy_only=False)
 
     for i in range(len(kine_reco_Enu_vec)):
         #if (e[i] != pnd_evt[i]):
@@ -1550,15 +1660,15 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
         isNC1g = False
         isCC1g = False
         truth_muonEnergy = truth_muonMomentum[i][3] - 0.105658
-        match_completeness_energy = (all_df_in_eval_over["match_completeness_energy"].to_numpy())[i]
-        truth_energyInside = (all_df_in_eval_over["truth_energyInside"].to_numpy())[i]
-        truthSinglePhoton = (all_df_in_pfeval_over["truth_single_photon"].to_numpy())[i]
-        truthisCC = (all_df_in_pfeval_over["truth_isCC"].to_numpy())[i]
-        truth_NCDelta = (all_df_in_pfeval_over["truth_NCDelta"].to_numpy())[i]
-        truth_showerMother = (all_df_in_pfeval_over["truth_showerMother"].to_numpy())[i]
-        truth_nuPdg = (all_df_in_eval_over["truth_nuPdg"].to_numpy())[i]
-        truth_vtxInside = (all_df_in_eval_over["truth_vtxInside"].to_numpy())[i]
-        truth_Npi0 = (all_df_in_pfeval_over["truth_Npi0"].to_numpy())[i]
+        match_completeness_energy = match_completeness_energies[i]
+        truth_energyInside = truth_energyInsides[i]
+        truthSinglePhoton = truthSinglePhotons[i]
+        truthisCC = truthisCCs[i]
+        truth_NCDelta = truth_NCDeltas[i]
+        truth_showerMother = truth_showerMothers[i]
+        truth_nuPdg = truth_nuPdgs[i]
+        truth_vtxInside = truth_vtxInsides[i]
+        truth_Npi0 = truth_Npi0s[i]
         truth_showerMomentum0_vec.append(truth_showerMomentum_vec[i][0])
         truth_showerMomentum1_vec.append(truth_showerMomentum_vec[i][1])
         truth_showerMomentum2_vec.append(truth_showerMomentum_vec[i][2])
@@ -1650,7 +1760,7 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
         #event_time_pnd = TT_merged_pnd
         #pnd_time.append(event_time_pnd)
 
-        shw_sp_energy.append((all_df_in_bdt_over["shw_sp_energy"].to_numpy())[i])
+        shw_sp_energy.append(shw_sp_energies[i])
 
         num_protons = 0
         kine_energy_particle = np.array(kine_energy_particle_vec[i]) 
@@ -1660,22 +1770,22 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
         N_protons.append(num_protons)
         
         if (kine_reco_Enu_vec[i] >= 0 and shw_sp_n_20mev_showers_vec[i]>0 and reco_nuvtxX_vec[i]>5.0 and reco_nuvtxX_vec[i]<250.0): 
-            if (math.isnan(all_df_in_bdt_over["single_photon_numu_score"].to_numpy()[i])):
+            if (math.isnan(single_photon_numu_scores[i])):
                 single_photon_numu_score.append(-99999.0)
             else:
-                single_photon_numu_score.append((all_df_in_bdt_over["single_photon_numu_score"].to_numpy())[i])
-            if (math.isnan(all_df_in_bdt_over["single_photon_other_score"].to_numpy()[i])):
+                single_photon_numu_score.append(single_photon_numu_scores[i])
+            if (math.isnan(single_photon_other_scores[i])):
                 single_photon_other_score.append(-99999.0)
             else:
-                single_photon_other_score.append((all_df_in_bdt_over["single_photon_other_score"].to_numpy())[i])
-            if (math.isnan(all_df_in_bdt_over["single_photon_ncpi0_score"].to_numpy()[i])):
+                single_photon_other_score.append(single_photon_other_scores[i])
+            if (math.isnan(single_photon_ncpi0_scores[i])):
                 single_photon_ncpi0_score.append(-99999.0)
             else:
-                single_photon_ncpi0_score.append((all_df_in_bdt_over["single_photon_ncpi0_score"].to_numpy())[i])
-            if (math.isnan(all_df_in_bdt_over["single_photon_nue_score"].to_numpy()[i])):
+                single_photon_ncpi0_score.append(single_photon_ncpi0_scores[i])
+            if (math.isnan(single_photon_nue_scores[i])):
                 single_photon_nue_score.append(-99999.0)
             else:
-                single_photon_nue_score.append((all_df_in_bdt_over["single_photon_nue_score"].to_numpy())[i])
+                single_photon_nue_score.append(single_photon_nue_scores[i])
         else:
             #shw_sp_energy.append(-99999.0)
             single_photon_numu_score.append(-99999.0)
@@ -1685,64 +1795,66 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
             #N_protons.append(-1)
 
         
-    all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_pfeval_over)
-    all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_kine_over)
-    all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_eval_over)
+    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_pfeval_over)
+    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_kine_over)
+    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_eval_over)
     
     #all_df_in_bdt_over["true_event_type"] = true_event_types
     #all_df_in_bdt_over["true_event_type_sub"] = true_event_types_sub
-    all_df_in_bdt_over["shw_sp_energy"] = shw_sp_energy
-    #all_df_in_bdt_over["kine_reco_Enu"] = kine_reco_Enu_vec
-    all_df_in_bdt_over["single_photon_numu_score"] = single_photon_numu_score
-    all_df_in_bdt_over["single_photon_other_score"] = single_photon_other_score
-    all_df_in_bdt_over["single_photon_ncpi0_score"] = single_photon_ncpi0_score
-    all_df_in_bdt_over["single_photon_nue_score"] = single_photon_nue_score
-    all_df_in_bdt_over["weight_cv"] = weight_cv
-    all_df_in_bdt_over["weight_spline"] = weight_spline
-    all_df_in_bdt_over["reco_nuvtxX"] = reco_nuvtxX_vec
-    all_df_in_bdt_over["reco_nuvtxY"] = reco_nuvtxY_vec
-    all_df_in_bdt_over["reco_nuvtxZ"] = reco_nuvtxZ_vec
-    all_df_in_bdt_over["reco_showervtxX"] = reco_showervtxX_vec
-    all_df_in_bdt_over["reco_showervtxY"] = reco_showervtxY_vec
-    all_df_in_bdt_over["reco_showervtxZ"] = reco_showervtxZ_vec
-    all_df_in_bdt_over["reco_showerMomentum0"] = reco_showerMomentum0_vec
-    all_df_in_bdt_over["reco_showerMomentum1"] = reco_showerMomentum1_vec
-    all_df_in_bdt_over["reco_showerMomentum2"] = reco_showerMomentum2_vec
-    all_df_in_bdt_over["reco_showerMomentum3"] = reco_showerMomentum3_vec
-    all_df_in_bdt_over["truth_showerMomentum0"] = truth_showerMomentum0_vec
-    all_df_in_bdt_over["truth_showerMomentum1"] = truth_showerMomentum1_vec
-    all_df_in_bdt_over["truth_showerMomentum2"] = truth_showerMomentum2_vec
-    all_df_in_bdt_over["truth_showerMomentum3"] = truth_showerMomentum3_vec
-    #all_df_in_bdt_over["reco_muonMomentum"] = reco_muonMomentum_vec
-    all_df_in_bdt_over["is_sigoverlay"] = is_sigoverlay_vec
-    all_df_in_bdt_over["match_energy"] = match_energy_vec
-    all_df_in_bdt_over["truth_nuEnergy"] = truth_nuEnergy_vec
-    all_df_in_bdt_over["truth_energyInside"] = truth_energyInside_vec
-    all_df_in_bdt_over["truth_showerKE"] = truth_showerKE_vec
-    all_df_in_bdt_over["N_protons"] = N_protons
-    all_df_in_bdt_over["true_N_protons"] = true_N_protons
-    all_df_in_bdt_over["run"] = r
-    all_df_in_bdt_over["subrun"] = s
-    all_df_in_bdt_over["event"] = e
-    all_df_in_bdt_over["time"] = time
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns(
+        pl.Series("shw_sp_energy", shw_sp_energy),
+        pl.Series("single_photon_numu_score", single_photon_numu_score),
+        pl.Series("single_photon_other_score", single_photon_other_score),
+        pl.Series("single_photon_ncpi0_score", single_photon_ncpi0_score),
+        pl.Series("single_photon_nue_score", single_photon_nue_score),
+        pl.Series("weight_cv", weight_cv),
+        pl.Series("weight_spline", weight_spline),
+        pl.Series("reco_nuvtxX", reco_nuvtxX_vec),
+        pl.Series("reco_nuvtxY", reco_nuvtxY_vec),
+        pl.Series("reco_nuvtxZ", reco_nuvtxZ_vec),
+        pl.Series("reco_showervtxX", reco_showervtxX_vec),
+        pl.Series("reco_showervtxY", reco_showervtxY_vec),
+        pl.Series("reco_showervtxZ", reco_showervtxZ_vec),
+        pl.Series("reco_showerMomentum0", reco_showerMomentum0_vec),
+        pl.Series("reco_showerMomentum1", reco_showerMomentum1_vec),
+        pl.Series("reco_showerMomentum2", reco_showerMomentum2_vec),
+        pl.Series("reco_showerMomentum3", reco_showerMomentum3_vec),
+        pl.Series("truth_showerMomentum0", truth_showerMomentum0_vec),
+        pl.Series("truth_showerMomentum1", truth_showerMomentum1_vec),
+        pl.Series("truth_showerMomentum2", truth_showerMomentum2_vec),
+        pl.Series("truth_showerMomentum3", truth_showerMomentum3_vec),
+        pl.Series("is_sigoverlay", is_sigoverlay_vec),
+        pl.Series("match_energy", match_energy_vec),
+        pl.Series("truth_nuEnergy", truth_nuEnergy_vec),
+        pl.Series("truth_energyInside", truth_energyInside_vec),
+        pl.Series("truth_showerKE", truth_showerKE_vec),
+        pl.Series("N_protons", N_protons),
+        pl.Series("true_N_protons", true_N_protons),
+        pl.Series("run", r),
+        pl.Series("subrun", s),
+        pl.Series("event", e),
+        pl.Series("time", time)
+    )
     #all_df_in_bdt_over["pnd_time"] = pnd_time
 
     #all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_kine_over)
     #all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_time_over)
     if (len(all_df_in_time_over) > 0):
-        all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_time_over)
+        all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_time_over)
 
-    all_df_in_bdt_over = all_df_in_bdt_over.add_prefix('wc_')
-    all_df_in_bdt_over["true_event_type"] = true_event_types
-    all_df_in_bdt_over["true_event_type_sub"] = true_event_types_sub
-    all_df_in_bdt_over["filetype"] = filetypes
+    all_df_in_bdt_over = all_df_in_bdt_over.rename(lambda col: f'wc_{col}')
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns(
+        pl.Series("true_event_type", true_event_types),
+        pl.Series("true_event_type_sub", true_event_types_sub),
+        pl.Series("filetype", filetypes)
+    )
 
     if (len(all_df_in_pelee_over) > 0):
-        all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_pelee_over, lsuffix='_pelee')
+        all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_pelee_over, lsuffix='_pelee')
     if (len(all_df_in_glee_over) > 0):
-        all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_glee_over, lsuffix='_glee')
+        all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_glee_over, lsuffix='_glee')
     if (len(all_df_in_lantern_over) > 0):
-        all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_lantern_over, lsuffix='_lantern')
+        all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_lantern_over, lsuffix='_lantern')
 
     return all_df_in_bdt_over
 
@@ -1753,23 +1865,23 @@ def GetVariableArrays(all_df, var, array_name, array_sig = [0,1,2,3,111], select
     #var: string of variable name in root file
     #array_name: name of variable array
 
-    single_photon_numu_score = all_df["wc_single_photon_numu_score"].to_numpy()
-    single_photon_other_score = all_df["wc_single_photon_other_score"].to_numpy()
-    single_photon_ncpi0_score = all_df["wc_single_photon_ncpi0_score"].to_numpy()
-    single_photon_nue_score = all_df["wc_single_photon_nue_score"].to_numpy()
-    num_shw = all_df["wc_shw_sp_n_20mev_showers"].to_numpy()
-    num_pro = all_df["wc_N_protons"].to_numpy()
-    r = all_df["wc_run"].to_numpy()
-    s = all_df["wc_subrun"].to_numpy()
-    e = all_df["wc_event"].to_numpy()
+    single_photon_numu_score = all_df["wc_single_photon_numu_score"].to_numpy(zero_copy_only=False)
+    single_photon_other_score = all_df["wc_single_photon_other_score"].to_numpy(zero_copy_only=False)
+    single_photon_ncpi0_score = all_df["wc_single_photon_ncpi0_score"].to_numpy(zero_copy_only=False)
+    single_photon_nue_score = all_df["wc_single_photon_nue_score"].to_numpy(zero_copy_only=False)
+    num_shw = all_df["wc_shw_sp_n_20mev_showers"].to_numpy(zero_copy_only=False)
+    num_pro = all_df["wc_N_protons"].to_numpy(zero_copy_only=False)
+    r = all_df["wc_run"].to_numpy(zero_copy_only=False)
+    s = all_df["wc_subrun"].to_numpy(zero_copy_only=False)
+    e = all_df["wc_event"].to_numpy(zero_copy_only=False)
     
-    var_array = all_df[var].to_numpy()
+    var_array = all_df[var].to_numpy(zero_copy_only=False)
     
     var_array_sig = []
     var_array_bkg = []
     var_array_data = []
 
-    y = all_df["true_event_type"].to_numpy()
+    y = all_df["true_event_type"].to_numpy(zero_copy_only=False)
     num_evts = all_df.shape[0]
     passed_sel = PassSelection(selection, all_df, -1)
 
@@ -1795,7 +1907,7 @@ def GetVariableArrays(all_df, var, array_name, array_sig = [0,1,2,3,111], select
 def GetEffPur(all_df, selection, array_sig = [0,1,2,3,111], ignore_cat = []):
     #return the efficiency and purity of the selection
 
-    y = all_df["true_event_type"].to_numpy()
+    y = all_df["true_event_type"].to_numpy(zero_copy_only=False)
     num_evts = all_df.shape[0]
     passed_sel = PassSelection(selection, all_df, -1)
 
@@ -2018,8 +2130,8 @@ def GetPOT(file):
     subrun = 0
     pot_vars = ["pot_tor875good","subRunNo"]
     with uproot.open(file)["wcpselection/T_pot"] as f_in:
-        all_df_in_fin = f_in.arrays(pot_vars, library="pd")
-    pot_tor875 = all_df_in_fin["pot_tor875good"].to_numpy()
+        all_df_in_fin = pl.from_pandas(f_in.arrays(pot_vars, library="pd"))
+    pot_tor875 = all_df_in_fin["pot_tor875good"].to_numpy(zero_copy_only=False)
     p = np.sum(pot_tor875) 
     
     print(p)
@@ -2037,18 +2149,18 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
     for var_name, file_name in pot_vars:
         globals()[var_name] = GetPOT(file_name)
     
-    weight_cv = all_df["wc_weight_cv"].to_numpy()
-    weight_spline = all_df["wc_weight_spline"].to_numpy()
-    is_ext = (all_df["true_event_type"].to_numpy() == 12) #% 10 == 4)
-    is_mccosmic = (all_df["true_event_type"].to_numpy() == 10)
-    is_dirt = (all_df["true_event_type"].to_numpy() == 11)
-    is_data = (all_df["true_event_type"].to_numpy() == 13)
-    is_lee = (all_df["true_event_type"].to_numpy() == -100)
-    is_sigoverlay = (all_df["wc_is_sigoverlay"].to_numpy() == 1)
-    is_ncpi0overlay = (all_df["true_event_type"].to_numpy() == -3)
-    is_modpi0 = (all_df["filetype"].to_numpy() == "modpi0_overlay")
-    has_muon = (all_df["wc_is_sigoverlay"].to_numpy() == 0)# (all_df["reco_muonMomentum"].to_numpy() > 0)
-    run_number = all_df["wc_run_period"].to_numpy()
+    weight_cv = all_df["wc_weight_cv"].to_numpy(zero_copy_only=False)
+    weight_spline = all_df["wc_weight_spline"].to_numpy(zero_copy_only=False)
+    is_ext = (all_df["true_event_type"].to_numpy(zero_copy_only=False) == 12) #% 10 == 4)
+    is_mccosmic = (all_df["true_event_type"].to_numpy(zero_copy_only=False) == 10)
+    is_dirt = (all_df["true_event_type"].to_numpy(zero_copy_only=False) == 11)
+    is_data = (all_df["true_event_type"].to_numpy(zero_copy_only=False) == 13)
+    is_lee = (all_df["true_event_type"].to_numpy(zero_copy_only=False) == -100)
+    is_sigoverlay = (all_df["wc_is_sigoverlay"].to_numpy(zero_copy_only=False) == 1)
+    is_ncpi0overlay = (all_df["true_event_type"].to_numpy(zero_copy_only=False) == -3)
+    is_modpi0 = (all_df["filetype"].to_numpy(zero_copy_only=False) == "modpi0_overlay")
+    has_muon = (all_df["wc_is_sigoverlay"].to_numpy(zero_copy_only=False) == 0)# (all_df["reco_muonMomentum"].to_numpy(zero_copy_only=False) > 0)
+    run_number = all_df["wc_run_period"].to_numpy(zero_copy_only=False)
 
     POT_factor = []
     for i in range(len(is_ext)):
@@ -2184,10 +2296,10 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
             w.append(weight_cv[i]*weight_spline[i] * POT_factor[i] * nueff_nomu) #0.83 *     
         if w[i] <= 0. or w[i] > 30. or np.isnan(w[i]): # something went wrong with the saved weights.:
             w[i] =  POT_factor[i] * nueff_mu #0.83 * 
-            
-    all_df["weights"] = w
+                
+    all_df = all_df.with_columns([pl.Series("weights", w)])
 
-    return w
+    return all_df, w
 
 
 ###
@@ -2203,23 +2315,23 @@ def PassSelection(selection, all_df, i):
             p = [True for j in range(num_evts)]
         else:
             p = [False for j in range(num_evts)]
-            numu_score = all_df["wc_single_photon_numu_score"].to_numpy()
-            other_score = all_df["wc_single_photon_other_score"].to_numpy()
-            ncpi0_score = all_df["wc_single_photon_ncpi0_score"].to_numpy()
-            nue_score = all_df["wc_single_photon_nue_score"].to_numpy()
-            num_shw = all_df["wc_shw_sp_n_20mev_showers"].to_numpy()
-            num_pro = all_df["wc_N_protons"].to_numpy()
-            r = all_df["wc_run"].to_numpy()
-            s = all_df["wc_subrun"].to_numpy()
-            e = all_df["wc_event"].to_numpy()
-            enu = all_df["wc_kine_reco_Enu"].to_numpy()
-            wc_showers = all_df["wc_shw_sp_n_20br1_showers"].to_numpy()
-            pelee_showers = all_df["pelee_n_showers_contained"].to_numpy()
-            glee_showers = all_df["glee_reco_asso_showers"].to_numpy()
-            lantern_showers = all_df["lantern_nShowers"].to_numpy()
-            lantern_vtxfv = all_df["lantern_vtxIsFiducial"].to_numpy()
-            pelee_flash_matched = all_df["pelee_slice_orig_pass_id"].to_numpy()
-            pelee_top_score =  all_df["pelee_topological_score"].to_numpy()
+            numu_score = all_df["wc_single_photon_numu_score"].to_numpy(zero_copy_only=False)
+            other_score = all_df["wc_single_photon_other_score"].to_numpy(zero_copy_only=False)
+            ncpi0_score = all_df["wc_single_photon_ncpi0_score"].to_numpy(zero_copy_only=False)
+            nue_score = all_df["wc_single_photon_nue_score"].to_numpy(zero_copy_only=False)
+            num_shw = all_df["wc_shw_sp_n_20mev_showers"].to_numpy(zero_copy_only=False)
+            num_pro = all_df["wc_N_protons"].to_numpy(zero_copy_only=False)
+            r = all_df["wc_run"].to_numpy(zero_copy_only=False)
+            s = all_df["wc_subrun"].to_numpy(zero_copy_only=False)
+            e = all_df["wc_event"].to_numpy(zero_copy_only=False)
+            enu = all_df["wc_kine_reco_Enu"].to_numpy(zero_copy_only=False)
+            wc_showers = all_df["wc_shw_sp_n_20br1_showers"].to_numpy(zero_copy_only=False)
+            pelee_showers = all_df["pelee_n_showers_contained"].to_numpy(zero_copy_only=False)
+            glee_showers = all_df["glee_reco_asso_showers"].to_numpy(zero_copy_only=False)
+            lantern_showers = all_df["lantern_nShowers"].to_numpy(zero_copy_only=False)
+            lantern_vtxfv = all_df["lantern_vtxIsFiducial"].to_numpy(zero_copy_only=False)
+            pelee_flash_matched = all_df["pelee_slice_orig_pass_id"].to_numpy(zero_copy_only=False)
+            pelee_top_score =  all_df["pelee_topological_score"].to_numpy(zero_copy_only=False)
             #get number of photons from each reconstruction
             nphotons_wc = []
             nphotons_lantern = []
@@ -2229,17 +2341,17 @@ def PassSelection(selection, all_df, i):
                     all_df = Get2Photons(all_df, "wc")
                     all_df = Get2Photons(all_df, "lantern")
                     all_df = Get2Photons(all_df, "pandora")
-                nphotons_wc = all_df["nphotons_wc"].to_numpy()
-                nphotons_lantern = all_df["nphotons_lantern"].to_numpy()
-                nphotons_pandora = all_df["nphotons_pandora"].to_numpy()
+                nphotons_wc = all_df["nphotons_wc"].to_numpy(zero_copy_only=False)
+                nphotons_lantern = all_df["nphotons_lantern"].to_numpy(zero_copy_only=False)
+                nphotons_pandora = all_df["nphotons_pandora"].to_numpy(zero_copy_only=False)
             #get the vertex distance between reconstructions
             wc_pandora_dist = [-99999.0 for j in range(num_evts)]
             wc_lantern_dist = [-99999.0 for j in range(num_evts)]
             lantern_pandora_dist = [-99999.0 for j in range(num_evts)]
             if "wc_pandora_dist" in all_df.columns:
-                wc_pandora_dist = all_df["wc_pandora_dist"].to_numpy()
-                wc_lantern_dist = all_df["wc_lantern_dist"].to_numpy()
-                lantern_pandora_dist = all_df["lantern_pandora_dist"].to_numpy()
+                wc_pandora_dist = all_df["wc_pandora_dist"].to_numpy(zero_copy_only=False)
+                wc_lantern_dist = all_df["wc_lantern_dist"].to_numpy(zero_copy_only=False)
+                lantern_pandora_dist = all_df["lantern_pandora_dist"].to_numpy(zero_copy_only=False)
             #get the number of muons from each reconstruction
             nmuon_lantern = []
             nmuon_pandora = []
@@ -2250,9 +2362,9 @@ def PassSelection(selection, all_df, i):
                     all_df = GetMuons(all_df, "wc")
                     all_df = GetMuons(all_df, "lantern")
                     all_df = GetMuons(all_df, "pandora")
-                nmuon_lantern = all_df["nmuons_lantern"].to_numpy()
-                nmuon_pandora = all_df["nmuons_pandora"].to_numpy()
-                nmuon_wc = all_df["nmuons_wc"].to_numpy()
+                nmuon_lantern = all_df["nmuons_lantern"].to_numpy(zero_copy_only=False)
+                nmuon_pandora = all_df["nmuons_pandora"].to_numpy(zero_copy_only=False)
+                nmuon_wc = all_df["nmuons_wc"].to_numpy(zero_copy_only=False)
                 pass_CCNC = PassSelection(selection.replace("_CC","").replace("_NC",""), all_df, -1)
 
             for j in range(num_evts):
@@ -2556,11 +2668,13 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
         h_NCpi0.Delete()
         h_NC.Delete()
         h_nueCC.Delete()
+    if h_NCpi1g != None:
         h_NCpi1g.Delete()
         h_NCdel.Delete()
         h_NCother.Delete()
         h_numuCC1g.Delete()
         h_out1g.Delete()
+    if h_1g != None:
         h_1g.Delete()
     
     h_data = ROOT.TH1F('h_data', title, bin_num, start_edge, end_edge)
@@ -2900,7 +3014,10 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
                 "out of FV 1#gamma("+str(round(sum(selected_out1g_w),2))+")"]
     
     colors_new = []
-    colors_new = colors.copy()
+    if cat5:
+        colors_new = colors_5cat.copy()
+    else:
+        colors_new = colors.copy()
     for i in range(len(seen_new_type)):
         pred_var.append(selected_new_var[i])
         mc_weights.append(selected_new_w[i])
@@ -3409,12 +3526,14 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
         h_NCpi0.Delete()
         h_NC.Delete()
         h_nuepi0.Delete()
-        h_1g.Delete()
+    if h_NCpi1g != None:
         h_NCpi1g.Delete()
         h_NCdel.Delete()
         h_NCother.Delete()
         h_numuCC1g.Delete()
         h_out1g.Delete()
+    if h_1g != None:
+        h_1g.Delete()
     if h_sig != None:
         h_sig.Delete()
         h_bkg.Delete()
@@ -3757,7 +3876,10 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
                 "out of FV 1#gamma("+str(round(sum(selected_out1g_w),2))+")"]
     
     colors_new = []
-    colors_new = colors.copy()
+    if cat5:
+        colors_new = colors_5cat.copy()
+    else:
+        colors_new = colors.copy()
     for i in range(len(seen_new_type)):
         pred_var.append(selected_new_var[i])
         mc_weights.append(selected_new_w[i])
@@ -4094,11 +4216,11 @@ def MakeVarPlots(all_df, var_list, num_bins, folder_name, plot_folder_name, sele
         os.makedirs(plot_folder+'/data')
         os.makedirs(plot_folder+'/mc_only')
 
-    y = all_df["true_event_type"].to_numpy()
+    y = all_df["true_event_type"].to_numpy(zero_copy_only=False)
     num_evts = len(y)
 
     for var_name in var_list:
-        var = all_df[var_name].to_numpy()   
+        var = all_df[var_name].to_numpy(zero_copy_only=False)   
         var_sig = []
         var_bkg = []
         var_data = []
@@ -4847,15 +4969,15 @@ def Get2Photons(all_df, reco):
     em_charge_scale = 1.0
     num_evts = all_df.shape[0]
     data = False 
-    true_event_types = all_df["true_event_type"].to_numpy()
+    true_event_types = all_df["true_event_type"].to_numpy(zero_copy_only=False)
     if reco == "wc":
         em_charge_scale = 0.95
-        reco_Ntrack = all_df["wc_reco_Ntrack"].to_numpy()
-        reco_startXYZT = all_df["wc_reco_startXYZT"].to_numpy()
-        reco_startMomentum = all_df["wc_reco_startMomentum"].to_numpy()
-        reco_pdg = all_df["wc_reco_pdg"].to_numpy()
-        reco_mother = all_df["wc_reco_mother"].to_numpy()
-        reco_id = all_df["wc_reco_id"].to_numpy()
+        reco_Ntrack = all_df["wc_reco_Ntrack"].to_numpy(zero_copy_only=False)
+        reco_startXYZT = all_df["wc_reco_startXYZT"].to_numpy(zero_copy_only=False)
+        reco_startMomentum = all_df["wc_reco_startMomentum"].to_numpy(zero_copy_only=False)
+        reco_pdg = all_df["wc_reco_pdg"].to_numpy(zero_copy_only=False)
+        reco_mother = all_df["wc_reco_mother"].to_numpy(zero_copy_only=False)
+        reco_id = all_df["wc_reco_id"].to_numpy(zero_copy_only=False)
         for i in range(num_evts):
             if true_event_types[i]==12 or true_event_types[i]==13:
                 data = True
@@ -4870,7 +4992,7 @@ def Get2Photons(all_df, reco):
                 ey = reco_startXYZT[i][j][1]
                 ez = reco_startXYZT[i][j][2]
                 mother = FindWCMother(reco_mother[i][j], reco_Ntrack[i], reco_id[i], reco_pdg[i])
-                mom = reco_startMomentum[i][j]
+                mom = reco_startMomentum[i][j].copy()
                 mom[0] *= 1000.0
                 mom[1] *= 1000.0
                 mom[2] *= 1000.0
@@ -4906,26 +5028,28 @@ def Get2Photons(all_df, reco):
             nphotons_list.append(nphotons_wc)
             inv_mass.append(mass)
 
-        all_df["nphotons_wc"] = nphotons_list
-        all_df["photon1_mom_wc"] = photon1_mom
-        all_df["photon2_mom_wc"] = photon2_mom
-        all_df["photon1_XYZT_wc"] = photon1_XYZT
-        all_df["photon2_XYZT_wc"] = photon2_XYZT
-        all_df["photon1_mother_wc"] = photon1_mother
-        all_df["photon2_mother_wc"] = photon2_mother
-        all_df["photon_inv_mass_wc"] = inv_mass
+        all_df = all_df.with_columns([
+            pl.Series("nphotons_wc", nphotons_list),
+            pl.Series("photon1_mom_wc", photon1_mom),
+            pl.Series("photon2_mom_wc", photon2_mom),
+            pl.Series("photon1_XYZT_wc", photon1_XYZT),
+            pl.Series("photon2_XYZT_wc", photon2_XYZT),
+            pl.Series("photon1_mother_wc", photon1_mother),
+            pl.Series("photon2_mother_wc", photon2_mother),
+            pl.Series("photon_inv_mass_wc", inv_mass)
+        ])
     
     if reco == "lantern":
-        nShowers = all_df["lantern_nShowers"].to_numpy()
-        showerPID = all_df["lantern_showerPID"].to_numpy()
-        showerStartPosX = all_df["lantern_showerStartPosX"].to_numpy()
-        showerStartPosY = all_df["lantern_showerStartPosY"].to_numpy()
-        showerStartPosZ = all_df["lantern_showerStartPosZ"].to_numpy()
-        showerStartDirX = all_df["lantern_showerStartDirX"].to_numpy()
-        showerStartDirY = all_df["lantern_showerStartDirY"].to_numpy()
-        showerStartDirZ = all_df["lantern_showerStartDirZ"].to_numpy()
-        showerRecoE = all_df["lantern_showerRecoE"].to_numpy()
-        showerProcess = all_df["lantern_showerProcess"].to_numpy()
+        nShowers = all_df["lantern_nShowers"].to_numpy(zero_copy_only=False)
+        showerPID = all_df["lantern_showerPID"].to_numpy(zero_copy_only=False)
+        showerStartPosX = all_df["lantern_showerStartPosX"].to_numpy(zero_copy_only=False)
+        showerStartPosY = all_df["lantern_showerStartPosY"].to_numpy(zero_copy_only=False)
+        showerStartPosZ = all_df["lantern_showerStartPosZ"].to_numpy(zero_copy_only=False)
+        showerStartDirX = all_df["lantern_showerStartDirX"].to_numpy(zero_copy_only=False)
+        showerStartDirY = all_df["lantern_showerStartDirY"].to_numpy(zero_copy_only=False)
+        showerStartDirZ = all_df["lantern_showerStartDirZ"].to_numpy(zero_copy_only=False)
+        showerRecoE = all_df["lantern_showerRecoE"].to_numpy(zero_copy_only=False)
+        showerProcess = all_df["lantern_showerProcess"].to_numpy(zero_copy_only=False)
         for i in range(num_evts):
             if true_event_types[i]==12 or true_event_types[i]==13:
                 data = True
@@ -4965,30 +5089,32 @@ def Get2Photons(all_df, reco):
             nphotons_list.append(nphotons_lantern)
             inv_mass.append(mass)
 
-        all_df["nphotons_lantern"] = nphotons_list
-        all_df["photon1_mom_lantern"] = photon1_mom
-        all_df["photon2_mom_lantern"] = photon2_mom
-        all_df["photon1_XYZT_lantern"] = photon1_XYZT
-        all_df["photon2_XYZT_lantern"] = photon2_XYZT
-        all_df["photon1_process_lantern"] = photon1_mother
-        all_df["photon2_process_lantern"] = photon2_mother
-        all_df["photon_inv_mass_lantern"] = inv_mass
+        all_df = all_df.with_columns([
+            pl.Series("nphotons_lantern", nphotons_list),
+            pl.Series("photon1_mom_lantern", photon1_mom),
+            pl.Series("photon2_mom_lantern", photon2_mom),
+            pl.Series("photon1_XYZT_lantern", photon1_XYZT),
+            pl.Series("photon2_XYZT_lantern", photon2_XYZT),
+            pl.Series("photon1_process_lantern", photon1_mother),
+            pl.Series("photon2_process_lantern", photon2_mother),
+            pl.Series("photon_inv_mass_lantern", inv_mass)
+        ])
 
     if reco == "pandora":
-        n_showers_contained = all_df["pelee_n_showers_contained"].to_numpy()
-        pi0_energy1_Y = [(x/0.83) * 1.10 for x in all_df["pelee_pi0_energy1_Y"].to_numpy()]
-        pi0_energy2_Y = [(x/0.83) * 1.10 for x in all_df["pelee_pi0_energy2_Y"].to_numpy()]
-        pi0_dir1_x = all_df["pelee_pi0_dir1_x"].to_numpy()
-        pi0_dir1_y = all_df["pelee_pi0_dir1_y"].to_numpy()
-        pi0_dir1_z = all_df["pelee_pi0_dir1_z"].to_numpy()
-        pi0_dir2_x = all_df["pelee_pi0_dir2_x"].to_numpy()
-        pi0_dir2_y = all_df["pelee_pi0_dir2_y"].to_numpy()
-        pi0_dir2_z = all_df["pelee_pi0_dir2_z"].to_numpy()
-        pi0_radlen1 = all_df["pelee_pi0_radlen1"].to_numpy()
-        pi0_radlen2 = all_df["pelee_pi0_radlen2"].to_numpy()
-        pi0_rc_vtx_x = all_df["pelee_pi0_rc_vtx_x"].to_numpy()
-        pi0_rc_vtx_y = all_df["pelee_pi0_rc_vtx_y"].to_numpy()
-        pi0_rc_vtx_z = all_df["pelee_pi0_rc_vtx_z"].to_numpy() 
+        n_showers_contained = all_df["pelee_n_showers_contained"].to_numpy(zero_copy_only=False)
+        pi0_energy1_Y = [(x/0.83) * 1.10 for x in all_df["pelee_pi0_energy1_Y"].to_numpy(zero_copy_only=False)]
+        pi0_energy2_Y = [(x/0.83) * 1.10 for x in all_df["pelee_pi0_energy2_Y"].to_numpy(zero_copy_only=False)]
+        pi0_dir1_x = all_df["pelee_pi0_dir1_x"].to_numpy(zero_copy_only=False)
+        pi0_dir1_y = all_df["pelee_pi0_dir1_y"].to_numpy(zero_copy_only=False)
+        pi0_dir1_z = all_df["pelee_pi0_dir1_z"].to_numpy(zero_copy_only=False)
+        pi0_dir2_x = all_df["pelee_pi0_dir2_x"].to_numpy(zero_copy_only=False)
+        pi0_dir2_y = all_df["pelee_pi0_dir2_y"].to_numpy(zero_copy_only=False)
+        pi0_dir2_z = all_df["pelee_pi0_dir2_z"].to_numpy(zero_copy_only=False)
+        pi0_radlen1 = all_df["pelee_pi0_radlen1"].to_numpy(zero_copy_only=False)
+        pi0_radlen2 = all_df["pelee_pi0_radlen2"].to_numpy(zero_copy_only=False)
+        pi0_rc_vtx_x = all_df["pelee_pi0_rc_vtx_x"].to_numpy(zero_copy_only=False)
+        pi0_rc_vtx_y = all_df["pelee_pi0_rc_vtx_y"].to_numpy(zero_copy_only=False)
+        pi0_rc_vtx_z = all_df["pelee_pi0_rc_vtx_z"].to_numpy(zero_copy_only=False) 
         for i in range(num_evts):
             if true_event_types[i]==12 or true_event_types[i]==13:
                 data = True
@@ -5013,7 +5139,7 @@ def Get2Photons(all_df, reco):
                 pos = [posA*pi0_dir1_x[i], posA*pi0_dir1_y[i], posA*pi0_dir1_z[i], posA]
                 photon1_mom.append(mom)
                 photon1_XYZT.append(pos)
-                photon1_mother.append(-9999.)
+                photon1_mother.append(-9999)
             if pi0_energy2_Y[i] > 0.:
                 photon2 = True
                 mom = [pi0_energy2_Y[i]*pi0_dir2_x[i], pi0_energy2_Y[i]*pi0_dir2_y[i], pi0_energy2_Y[i]*pi0_dir2_z[i], pi0_energy2_Y[i]]
@@ -5028,7 +5154,7 @@ def Get2Photons(all_df, reco):
                 pos = [posA*pi0_dir2_x[i], posA*pi0_dir2_y[i], posA*pi0_dir2_z[i], posA]
                 photon2_mom.append(mom)
                 photon2_XYZT.append(pos)
-                photon2_mother.append(-9999.)
+                photon2_mother.append(-9999)
             if not photon1:
                 photon1_mom.append([-9999.,-9999.,-9999.,-9999.])
                 photon1_XYZT.append([-9999.,-9999.,-9999.,-9999.])
@@ -5042,14 +5168,16 @@ def Get2Photons(all_df, reco):
             nphotons_list.append(nphotons_pandora)
             inv_mass.append(mass)
 
-        all_df["nphotons_pandora"] = nphotons_list
-        all_df["photon1_mom_pandora"] = photon1_mom
-        all_df["photon2_mom_pandora"] = photon2_mom
-        all_df["photon1_XYZT_pandora"] = photon1_XYZT
-        all_df["photon2_XYZT_pandora"] = photon2_XYZT
-        all_df["photon1_process_pandora"] = photon1_mother
-        all_df["photon2_process_pandora"] = photon2_mother
-        all_df["photon_inv_mass_pandora"] = inv_mass
+        all_df = all_df.with_columns([
+            pl.Series("nphotons_pandora", nphotons_list),
+            pl.Series("photon1_mom_pandora", photon1_mom),
+            pl.Series("photon2_mom_pandora", photon2_mom),
+            pl.Series("photon1_XYZT_pandora", photon1_XYZT),
+            pl.Series("photon2_XYZT_pandora", photon2_XYZT),
+            pl.Series("photon1_process_pandora", photon1_mother),
+            pl.Series("photon2_process_pandora", photon2_mother),
+            pl.Series("photon_inv_mass_pandora", inv_mass)
+        ])
 
     #if reco == "nugraph":
 
@@ -5061,7 +5189,7 @@ def GetMuons(all_df, reco):
     num_evts = all_df.shape[0]
 
     if reco == "wc":
-        reco_pdg = all_df["wc_reco_pdg"].to_numpy()
+        reco_pdg = all_df["wc_reco_pdg"].to_numpy(zero_copy_only=False)
         for i in range(num_evts):
             nmuon_wc = 0
             for pdg in reco_pdg[i]:
@@ -5069,10 +5197,10 @@ def GetMuons(all_df, reco):
                     nmuon_wc += 1
             nmuons_list.append(nmuon_wc)
 
-        all_df["nmuons_wc"] = nmuons_list
+        all_df = all_df.with_columns(pl.Series("nmuons_wc", nmuons_list))
     
     if reco == "lantern":
-        trackPID = all_df["lantern_trackPID"].to_numpy()
+        trackPID = all_df["lantern_trackPID"].to_numpy(zero_copy_only=False)
         for i in range(num_evts):
             nmuon_lantern = 0
             for pid in trackPID[i]:
@@ -5080,10 +5208,10 @@ def GetMuons(all_df, reco):
                     nmuon_lantern += 1
             nmuons_list.append(nmuon_lantern)
 
-        all_df["nmuons_lantern"] = nmuons_list
+        all_df = all_df.with_columns(pl.Series("nmuons_lantern", nmuons_list))
 
     if reco == "pandora":
-        pfng2mipfrac = all_df["pelee_pfng2mipfrac"].to_numpy()
+        pfng2mipfrac = all_df["pelee_pfng2mipfrac"].to_numpy(zero_copy_only=False)
         for i in range(num_evts):
             nmuon_pandora = 0
             for pid in pfng2mipfrac[i]:
@@ -5091,7 +5219,7 @@ def GetMuons(all_df, reco):
                     nmuon_pandora += 1
             nmuons_list.append(nmuon_pandora)
 
-        all_df["nmuons_pandora"] = nmuons_list
+        all_df = all_df.with_columns(pl.Series("nmuons_pandora", nmuons_list))
 
     #if reco == "nugraph":
 
@@ -5136,9 +5264,9 @@ def CombinePhotonVars(all_df, var):
     # save one kinematic variable in the case where not all recos have found two photons
     # Priority (based on current evaluation of resolution): WC, Pandora, Lantern
     var_list = []
-    var_wc = all_df[var+"_wc"].to_numpy()
-    var_pandora = all_df[var+"_pandora"].to_numpy()
-    var_lantern = all_df[var+"_lantern"].to_numpy()
+    var_wc = all_df[var+"_wc"].to_numpy(zero_copy_only=False)
+    var_pandora = all_df[var+"_pandora"].to_numpy(zero_copy_only=False)
+    var_lantern = all_df[var+"_lantern"].to_numpy(zero_copy_only=False)
 
     passed_wc = PassSelection("2photon_wc", all_df, -1)
     passed_pandora = PassSelection("2photon_pandora", all_df, -1)
@@ -5156,17 +5284,17 @@ def CombinePhotonVars(all_df, var):
         else:
             var_list.append(-9999.)
 
-    all_df[var] = var_list
+    all_df = all_df.with_columns(pl.Series(var, var_list))
     
-    return var_list
+    return all_df, var_list
 
 
 ###
 def MakeCovMatrix(all_df, selname, var, bin_width, start_edge, end_edge):
     bins = np.arange(start_edge, end_edge + bin_width, bin_width)
     passed_sel = PassSelection(selname, all_df, -1)
-    all_df["passed_sel"] = passed_sel
-    pred_sel_df = pl.from_pandas(all_df.query("passed_sel == True and filetype != 'data'"))
+    all_df = all_df.with_columns(pl.lit(passed_sel).alias("passed_sel"))
+    pred_sel_df = all_df.filter((pl.col("passed_sel") == True) & (pl.col("filetype") != "data"))
     rw_sys_frac_cov_dic = get_rw_sys_frac_cov_matrices(
             pred_sel_df.filter(pl.col("filetype") != "ext"), selname, var, bins, dont_load_rw_from_systematic_cache=dont_load_rw_from_systematic_cache, weights_df=None
         )
@@ -5175,7 +5303,7 @@ def MakeCovMatrix(all_df, selname, var, bin_width, start_edge, end_edge):
         combined_rw_sys_frac_cov += rw_sys_frac_cov
     combined_rw_sys_cov = combined_rw_sys_frac_cov * np.outer(mc_pred_counts, mc_pred_counts) # fractional uncertainty on the MC pred, not including EXT
     data_stat_cov = get_data_stat_cov(data_counts, pred_counts)
-    pred_stat_cov = get_pred_stat_cov(get_vals(pred_sel_df, var), pred_sel_df.get_column("wc_net_weight").to_numpy(), bins)
+    pred_stat_cov = get_pred_stat_cov(get_vals(pred_sel_df, var), pred_sel_df.get_column("wc_net_weight").to_numpy(zero_copy_only=False), bins)
     nodetvar_sys_cov = combined_rw_sys_cov + data_stat_cov + pred_stat_cov
     denom = np.outer(pred_counts, pred_counts)
     nodetvar_sys_frac_cov = np.divide(nodetvar_sys_cov, denom, out=np.zeros_like(nodetvar_sys_cov), where=(denom != 0))
@@ -6550,4 +6678,3 @@ lantern_reco_variables = [
     "trackPiScore",
     "trackPrScore"
 ]
-
