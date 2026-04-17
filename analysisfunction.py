@@ -148,31 +148,32 @@ def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
         truth_process = all_df["wc_truth_process"].to_numpy(zero_copy_only=False)
         truth_mother = all_df["wc_truth_mother"].to_numpy(zero_copy_only=False)
         truth_endXYZT = all_df["wc_truth_endXYZT"].to_numpy(zero_copy_only=False)
+        default_list = [-999.,-999.,-999.,-999.]
         for i in range(len(true_event_types)):
             if true_event_types[i] == 12:
                 newcat.append(12)
                 newcatname.append("Extbnb")
                 newcatcolor.append(ROOT.kGray)
-                photon1_mom.append([-999.,-999.,-999.,-999.])
-                photon2_mom.append([-999.,-999.,-999.,-999.])
+                photon1_mom.append(np.array(default_list, dtype='float64'))
+                photon2_mom.append(np.array(default_list, dtype='float64'))
                 photon1_process.append("none")
                 photon2_process.append("none")
-                photon1_XYZT.append([-999.,-999.,-999.,-999.])
-                photon2_XYZT.append([-999.,-999.,-999.,-999.])
-                photon1_mother.append(-999)
-                photon2_mother.append(-999)
+                photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_mother.append(np.int32(-999))
+                photon2_mother.append(np.int32(-999))
             elif true_event_types[i] == 13:
                 newcat.append(13)
                 newcatname.append("Data")
                 newcatcolor.append(ROOT.kBlack)
-                photon1_mom.append([-999.,-999.,-999.,-999.])
-                photon2_mom.append([-999.,-999.,-999.,-999.])
+                photon1_mom.append(np.array(default_list, dtype='float64'))
+                photon2_mom.append(np.array(default_list, dtype='float64'))
                 photon1_process.append("none")
                 photon2_process.append("none")
-                photon1_XYZT.append([-999.,-999.,-999.,-999.])
-                photon2_XYZT.append([-999.,-999.,-999.,-999.])
-                photon1_mother.append(-999)
-                photon2_mother.append(-999)
+                photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_mother.append(np.int32(-999))
+                photon2_mother.append(np.int32(-999))
             else:
                 nphotons = 0
                 photon1 = False
@@ -214,15 +215,15 @@ def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
                     newcatname.append("old cat")
                     newcatcolor.append(ROOT.kWhite)
                     if not photon1:
-                        photon1_mom.append([-999.,-999.,-999.,-999.])
+                        photon1_mom.append(np.array(default_list, dtype='float64'))
                         photon1_process.append("none")
-                        photon1_XYZT.append([-999.,-999.,-999.,-999.])
-                        photon1_mother.append(-999)
+                        photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                        photon1_mother.append(np.int32(-999))
                     if not photon2:
-                        photon2_mom.append([-999.,-999.,-999.,-999.])
+                        photon2_mom.append(np.array(default_list, dtype='float64'))
                         photon2_process.append("none")
-                        photon2_XYZT.append([-999.,-999.,-999.,-999.])
-                        photon2_mother.append(-999)
+                        photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                        photon2_mother.append(np.int32(-999))
 
     elif catname == "CC gg" or catname == "NC gg":
         if "true_event_type_name" not in all_df.columns:
@@ -426,23 +427,26 @@ def LoadTreesTruth1(file1, su = False):
         all_df_in_eval_over = pl.from_pandas(f_in_eval_over.arrays(eval_variables + eval_truth_variables, library="pd"))
 
     run_number = []
-    if "run1" in file1 or "Run1" in file1:
+    if "run1" in file1 or "Run1" in file1 or "run_1" in file1.lower():
         run_number = [1 for i in range(len(all_df_in_bdt_over))]
-    elif "run2" in file1 or "Run2" in file1:
+    elif "run2" in file1 or "Run2" in file1 or "run_2" in file1.lower():
         run_number = [2 for i in range(len(all_df_in_bdt_over))]
-    elif "run3" in file1 or "Run3" in file1:
+    elif "run3" in file1 or "Run3" in file1 or "run_3" in file1.lower():
         run_number = [3 for i in range(len(all_df_in_bdt_over))]
-    elif "run4a" in file1 or "Run4a" in file1:
+    elif "run4a" in file1 or "Run4a" in file1 or "run_4a" in file1.lower():
         run_number = [41 for i in range(len(all_df_in_bdt_over))]
-    elif "run4" in file1 or "Run4" in file1:
+    elif "run4" in file1 or "Run4" in file1 or "run_4" in file1.lower():
         run_number = [4 for i in range(len(all_df_in_bdt_over))]
-    elif "run5" in file1 or "Run5" in file1:
+    elif "run5" in file1 or "Run5" in file1 or "run_5" in file1.lower():
         run_number = [5 for i in range(len(all_df_in_bdt_over))]
     else:  
         print("Error: run number not found in file name")
         run_number = [-999 for i in range(len(all_df_in_bdt_over))]
 
+    file_path = [file1 for i in range(len(all_df_in_bdt_over))]
+
     all_df_in_bdt_over = all_df_in_bdt_over.with_columns(pl.Series("run_period", run_number))
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns(pl.Series("file_name", file_path))
 
     if su:
         with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
@@ -565,7 +569,11 @@ def LoadTreesData1(file1, su = False):
         print("Error: run number not found in file name")
         run_number = [-999 for i in range(len(all_df_in_bdt_over))]
 
+    file_path = []
+    file_path = [file1 for i in range(len(all_df_in_bdt_over))]
+
     all_df_in_bdt_over = all_df_in_bdt_over.with_columns(pl.Series("run_period", run_number))
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns(pl.Series("file_name", file_path))
 
     if su:
         with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
@@ -781,27 +789,27 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
         
         if (kine_reco_Enu_vec[i] >= 0 and shw_sp_n_20mev_showers_vec[i]>0 and reco_nuvtxX_vec[i]>5.0 and reco_nuvtxX_vec[i]<250.0): 
             if (math.isnan(single_photon_numu_scores[i])):
-                single_photon_numu_score.append(-99999.0)
+                single_photon_numu_score.append(np.float32(-99999.0))
             else:
                 single_photon_numu_score.append(single_photon_numu_scores[i])
             if (math.isnan(single_photon_other_scores[i])):
-                single_photon_other_score.append(-99999.0)
+                single_photon_other_score.append(np.float32(-99999.0))
             else:
                 single_photon_other_score.append(single_photon_other_scores[i])
             if (math.isnan(single_photon_ncpi0_scores[i])):
-                single_photon_ncpi0_score.append(-99999.0)
+                single_photon_ncpi0_score.append(np.float32(-99999.0))
             else:
                 single_photon_ncpi0_score.append(single_photon_ncpi0_scores[i])
             if (math.isnan(single_photon_nue_scores[i])):
-                single_photon_nue_score.append(-99999.0)
+                single_photon_nue_score.append(np.float32(-99999.0))
             else:
                 single_photon_nue_score.append(single_photon_nue_scores[i])
         else:
             #shw_sp_energy.append(-99999.0)
-            single_photon_numu_score.append(-99999.0)
-            single_photon_other_score.append(-99999.0)
-            single_photon_ncpi0_score.append(-99999.0)
-            single_photon_nue_score.append(-99999.0)
+            single_photon_numu_score.append(np.float32(-99999.0))
+            single_photon_other_score.append(np.float32(-99999.0))
+            single_photon_ncpi0_score.append(np.float32(-99999.0))
+            single_photon_nue_score.append(np.float32(-99999.0))
             #N_protons.append(-1)
 
         
@@ -1031,27 +1039,27 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
         
         if (kine_reco_Enu_vec[i] >= 0 and shw_sp_n_20mev_showers_vec[i]>0 and reco_nuvtxX_vec[i]>5.0 and reco_nuvtxX_vec[i]<250.0):
             if (math.isnan(single_photon_numu_scores[i])):
-                single_photon_numu_score.append(-99999.0)
+                single_photon_numu_score.append(np.float32(-99999.0))
             else:
                 single_photon_numu_score.append(single_photon_numu_scores[i])
             if (math.isnan(single_photon_other_scores[i])):
-                single_photon_other_score.append(-99999.0)
+                single_photon_other_score.append(np.float32(-99999.0))
             else:
                 single_photon_other_score.append(single_photon_other_scores[i])
             if (math.isnan(single_photon_ncpi0_scores[i])):
-                single_photon_ncpi0_score.append(-99999.0)
+                single_photon_ncpi0_score.append(np.float32(-99999.0))
             else:
                 single_photon_ncpi0_score.append(single_photon_ncpi0_scores[i])
             if (math.isnan(single_photon_nue_scores[i])):
-                single_photon_nue_score.append(-99999.0)
+                single_photon_nue_score.append(np.float32(-99999.0))
             else:
                 single_photon_nue_score.append(single_photon_nue_scores[i])
         else:
             #shw_sp_energy.append(-99999.0)
-            single_photon_numu_score.append(-99999.0)
-            single_photon_other_score.append(-99999.0)
-            single_photon_ncpi0_score.append(-99999.0)
-            single_photon_nue_score.append(-99999.0)
+            single_photon_numu_score.append(np.float32(-99999.0))
+            single_photon_other_score.append(np.float32(-99999.0))
+            single_photon_ncpi0_score.append(np.float32(-99999.0))
+            single_photon_nue_score.append(np.float32(-99999.0))
             #N_protons.append(-1)
 
     
@@ -1233,27 +1241,27 @@ def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_
         
         if (kine_reco_Enu_vec[i] >= 0 and shw_sp_n_20mev_showers_vec[i]>0 and reco_nuvtxX_vec[i]>5.0 and reco_nuvtxX_vec[i]<250.0):
             if (math.isnan(single_photon_numu_scores[i])):
-                single_photon_numu_score.append(-99999.0)
+                single_photon_numu_score.append(np.float32(-99999.0))
             else:
                 single_photon_numu_score.append(single_photon_numu_scores[i])
             if (math.isnan(single_photon_other_scores[i])):
-                single_photon_other_score.append(-99999.0)
+                single_photon_other_score.append(np.float32(-99999.0))
             else:
                 single_photon_other_score.append(single_photon_other_scores[i])
             if (math.isnan(single_photon_ncpi0_scores[i])):
-                single_photon_ncpi0_score.append(-99999.0)
+                single_photon_ncpi0_score.append(np.float32(-99999.0))
             else:
                 single_photon_ncpi0_score.append(single_photon_ncpi0_scores[i])
             if (math.isnan(single_photon_nue_scores[i])):
-                single_photon_nue_score.append(-99999.0)
+                single_photon_nue_score.append(np.float32(-99999.0))
             else:
                 single_photon_nue_score.append(single_photon_nue_scores[i])
         else:
             #shw_sp_energy.append(-99999.0)
-            single_photon_numu_score.append(-99999.0)
-            single_photon_other_score.append(-99999.0)
-            single_photon_ncpi0_score.append(-99999.0)
-            single_photon_nue_score.append(-99999.0)
+            single_photon_numu_score.append(np.float32(-99999.0))
+            single_photon_other_score.append(np.float32(-99999.0))
+            single_photon_ncpi0_score.append(np.float32(-99999.0))
+            single_photon_nue_score.append(np.float32(-99999.0))
             #N_protons.append(-1)
 
         
@@ -1467,27 +1475,27 @@ def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_
             
         if (kine_reco_Enu_vec[i] >= 0 and shw_sp_n_20mev_showers_vec[i]>0 and reco_nuvtxX_vec[i]>5.0 and reco_nuvtxX_vec[i]<250.0):# and event_time > -6.6 and event_time < 3.4):
             if (math.isnan(single_photon_numu_scores[i])):
-                single_photon_numu_score.append(-99999.0)
+                single_photon_numu_score.append(np.float32(-99999.0))
             else:
                 single_photon_numu_score.append(single_photon_numu_scores[i])
             if (math.isnan(single_photon_other_scores[i])):
-                single_photon_other_score.append(-99999.0)
+                single_photon_other_score.append(np.float32(-99999.0))
             else:
                 single_photon_other_score.append(single_photon_other_scores[i])
             if (math.isnan(single_photon_ncpi0_scores[i])):
-                single_photon_ncpi0_score.append(-99999.0)
+                single_photon_ncpi0_score.append(np.float32(-99999.0))
             else:
                 single_photon_ncpi0_score.append(single_photon_ncpi0_scores[i])
             if (math.isnan(single_photon_nue_scores[i])):
-                single_photon_nue_score.append(-99999.0)
+                single_photon_nue_score.append(np.float32(-99999.0))
             else:
                 single_photon_nue_score.append(single_photon_nue_scores[i])
         else:
             #shw_sp_energy.append(-99999.0)
-            single_photon_numu_score.append(-99999.0)
-            single_photon_other_score.append(-99999.0)
-            single_photon_ncpi0_score.append(-99999.0)
-            single_photon_nue_score.append(-99999.0)
+            single_photon_numu_score.append(np.float32(-99999.0))
+            single_photon_other_score.append(np.float32(-99999.0))
+            single_photon_ncpi0_score.append(np.float32(-99999.0))
+            single_photon_nue_score.append(np.float32(-99999.0))
             #N_protons.append(-1)
 
     cols_to_add = []
@@ -1771,27 +1779,27 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
         
         if (kine_reco_Enu_vec[i] >= 0 and shw_sp_n_20mev_showers_vec[i]>0 and reco_nuvtxX_vec[i]>5.0 and reco_nuvtxX_vec[i]<250.0): 
             if (math.isnan(single_photon_numu_scores[i])):
-                single_photon_numu_score.append(-99999.0)
+                single_photon_numu_score.append(np.float32(-99999.0))
             else:
                 single_photon_numu_score.append(single_photon_numu_scores[i])
             if (math.isnan(single_photon_other_scores[i])):
-                single_photon_other_score.append(-99999.0)
+                single_photon_other_score.append(np.float32(-99999.0))
             else:
                 single_photon_other_score.append(single_photon_other_scores[i])
             if (math.isnan(single_photon_ncpi0_scores[i])):
-                single_photon_ncpi0_score.append(-99999.0)
+                single_photon_ncpi0_score.append(np.float32(-99999.0))
             else:
                 single_photon_ncpi0_score.append(single_photon_ncpi0_scores[i])
             if (math.isnan(single_photon_nue_scores[i])):
-                single_photon_nue_score.append(-99999.0)
+                single_photon_nue_score.append(np.float32(-99999.0))
             else:
                 single_photon_nue_score.append(single_photon_nue_scores[i])
         else:
             #shw_sp_energy.append(-99999.0)
-            single_photon_numu_score.append(-99999.0)
-            single_photon_other_score.append(-99999.0)
-            single_photon_ncpi0_score.append(-99999.0)
-            single_photon_nue_score.append(-99999.0)
+            single_photon_numu_score.append(np.float32(-99999.0))
+            single_photon_other_score.append(np.float32(-99999.0))
+            single_photon_ncpi0_score.append(np.float32(-99999.0))
+            single_photon_nue_score.append(np.float32(-99999.0))
             #N_protons.append(-1)
 
         
@@ -2122,17 +2130,20 @@ def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat 
     return selection_table
 
 ###
-def GetPOT(file):
+def GetPOT(file, inputPOT = -1.0):
     # for calculating the POT of a file
     #returns p: the pot of the file
 
     #f_in = uproot.open(file)["wcpselection/T_pot"]
-    subrun = 0
-    pot_vars = ["pot_tor875good","subRunNo"]
-    with uproot.open(file)["wcpselection/T_pot"] as f_in:
-        all_df_in_fin = pl.from_pandas(f_in.arrays(pot_vars, library="pd"))
-    pot_tor875 = all_df_in_fin["pot_tor875good"].to_numpy(zero_copy_only=False)
-    p = np.sum(pot_tor875) 
+    if inputPOT > 0.0:
+        p = inputPOT
+    else:
+        subrun = 0
+        pot_vars = ["pot_tor875good","subRunNo"]
+        with uproot.open(file)["wcpselection/T_pot"] as f_in:
+            all_df_in_fin = pl.from_pandas(f_in.arrays(pot_vars, library="pd"))
+        pot_tor875 = all_df_in_fin["pot_tor875good"].to_numpy(zero_copy_only=False)
+        p = np.sum(pot_tor875) 
     
     print(p)
             
@@ -2595,6 +2606,130 @@ def PassSelection(selection, all_df, i):
         p = pass_vec[i]  
     
     return p
+
+def GetSelectionROOTExpression(selection):
+    """
+    Generate a ROOT cut expression string from a selection name by analyzing PassSelection logic.
+    Maps selection names to ROOT variable names and converts boolean conditions to ROOT expressions.
+    
+    Parameters:
+    -----------
+    selection : str
+        Selection name matching those in PassSelection
+        
+    Returns:
+    --------
+    str
+        ROOT cut expression for the selection
+    """
+    
+    # Variable name mapping: Python variable names (used in PassSelection) -> ROOT branch names
+    var_map = {
+        "numu_score": "single_photon_numu_score",
+        "other_score": "single_photon_other_score",
+        "ncpi0_score": "single_photon_ncpi0_score",
+        "nue_score": "single_photon_nue_score",
+        "num_shw": "shw_sp_n_20mev_showers",
+        "num_pro": "N_protons",
+        "enu": "kine_reco_Enu",
+        "wc_showers": "shw_sp_n_20br1_showers",
+        "pelee_showers": "pelee_n_showers_contained",
+        "glee_showers": "glee_reco_asso_showers",
+        "lantern_showers": "lantern_nShowers",
+        "lantern_vtxfv": "lantern_vtxIsFiducial",
+        "pelee_flash_matched": "pelee_slice_orig_pass_id",
+        "pelee_top_score": "pelee_topological_score",
+        "wc_pandora_dist": "wc_pandora_dist",
+        "wc_lantern_dist": "wc_lantern_dist",
+        "lantern_pandora_dist": "lantern_pandora_dist",
+    }
+    
+    # Selection definitions: structured mapping of selections to their conditions
+    # Format: "selection_name": [(variable, operator, value, logic_op), ...]
+    # logic_op: "&&" (and) or "||" (or), used to combine with next condition
+    selections_def = {
+        "all": [
+            ("enu", ">", "0.0", "&&"),
+            ("num_shw", ">", "0", ""),
+        ],
+        "generic": [
+            ("enu", ">", "0.0", "")
+        ],
+        "numu_sideband": [
+            ("enu", ">", "0.0", "&&"),
+            ("num_shw", ">", "0", "&&"),
+            ("numu_score", "<", "0.1", "&&"),
+            ("numu_score", ">", "-20.0", "&&"),
+            ("num_pro", ">", "0", ""),
+        ],
+        "other_sideband": [
+            ("enu", ">", "0.0", "&&"),
+            ("num_shw", ">", "0", "&&"),
+            ("numu_score", ">", "0.1", "&&"),
+            ("other_score", "<", "-0.4", "&&"),
+            ("other_score", ">", "-20.0", ""),
+        ],
+        "ncpi0_sideband": [
+            ("enu", ">", "0.0", "&&"),
+            ("num_shw", ">", "0", "&&"),
+            ("numu_score", ">", "0.1", "&&"),
+            ("other_score", ">", "-0.4", "&&"),
+            ("ncpi0_score", "<", "-0.4", "&&"),
+            ("ncpi0_score", ">", "-20.0", ""),
+        ],
+        "nue_sideband": [
+            ("enu", ">", "0.0", "&&"),
+            ("num_shw", "==", "1", "&&"),
+            ("numu_score", ">", "0.1", "&&"),
+            ("other_score", ">", "-0.4", "&&"),
+            ("ncpi0_score", ">", "-0.4", "&&"),
+            ("nue_score", "<", "-3.0", "&&"),
+            ("nue_score", ">", "-20.0", ""),
+        ],
+        "eff": [
+            ("enu", ">", "0.0", "&&"),
+            ("num_shw", "==", "1", "&&"),
+            ("numu_score", ">", "0.1", "&&"),
+            ("other_score", ">", "-0.4", "&&"),
+            ("ncpi0_score", ">", "-0.4", "&&"),
+            ("nue_score", ">", "-3.0", ""),
+        ],
+        "pur": [
+            ("enu", ">", "0.0", "&&"),
+            ("num_shw", "==", "1", "&&"),
+            ("numu_score", ">", "0.4", "&&"),
+            ("other_score", ">", "0.2", "&&"),
+            ("ncpi0_score", ">", "-0.05", "&&"),
+            ("nue_score", ">", "-1.0", ""),
+        ],
+        "2photon_wc": [
+            ("enu", ">", "0.0", "&&"),
+            ("wc_showers", "==", "2", ""),
+        ],
+    }
+    
+    # Build the ROOT expression from the selection definition
+    if selection not in selections_def:
+        # Default: return basic kinematic cuts if selection not found
+        print(f"Selection '{selection}' not found in definitions!!")
+        return -1
+    
+    conditions = selections_def[selection]
+    expr_parts = []
+    
+    for var, op, val, logic_op in conditions:
+        # Map variable name to ROOT branch name
+        root_var = var_map.get(var, var)
+        
+        # Build condition
+        cond = f"({root_var} {op} {val})"
+        expr_parts.append(cond)
+    
+    # Join all conditions with && (since all must be true)
+    if expr_parts:
+        return " && ".join(expr_parts)
+    else:
+        return "1"
 
 ###
 def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_label, 
@@ -4970,6 +5105,7 @@ def Get2Photons(all_df, reco):
     num_evts = all_df.shape[0]
     data = False 
     true_event_types = all_df["true_event_type"].to_numpy(zero_copy_only=False)
+    default_list = [-9999., -9999., -9999., -9999.]
     if reco == "wc":
         em_charge_scale = 0.95
         reco_Ntrack = all_df["wc_reco_Ntrack"].to_numpy(zero_copy_only=False)
@@ -4986,7 +5122,7 @@ def Get2Photons(all_df, reco):
             nphotons_wc = 0
             photon1 = False
             photon2 = False
-            mass = -9999.
+            mass = np.float32(-9999.)
             for j in range(int(reco_Ntrack[i])):
                 ex = reco_startXYZT[i][j][0]
                 ey = reco_startXYZT[i][j][1]
@@ -5016,13 +5152,13 @@ def Get2Photons(all_df, reco):
                             photon2_XYZT.append(reco_startXYZT[i][j])
                             photon2_mother.append(reco_mother[i][j])
             if not photon1:
-                photon1_mom.append([-9999.,-9999.,-9999.,-9999.])
-                photon1_XYZT.append([-9999.,-9999.,-9999.,-9999.])
-                photon1_mother.append(-9999)
+                photon1_mom.append(np.array(default_list, dtype='float64'))
+                photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_mother.append(np.int32(-9999))
             if not photon2:
-                photon2_mom.append([-9999.,-9999.,-9999.,-9999.])
-                photon2_XYZT.append([-9999.,-9999.,-9999.,-9999.])
-                photon2_mother.append(-9999)
+                photon2_mom.append(np.array(default_list, dtype='float64'))
+                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon2_mother.append(np.int32(-9999))
             else:
                 mass = GetInvariantMass(photon1_mom[i], photon2_mom[i])
             nphotons_list.append(nphotons_wc)
@@ -5058,7 +5194,7 @@ def Get2Photons(all_df, reco):
             nphotons_lantern = 0
             photon1 = False
             photon2 = False
-            mass = -9999.
+            mass = np.float32(-9999.)
             for j in range(nShowers[i]):
                 if showerPID[i][j] == 22:
                     nphotons_lantern += 1
@@ -5077,13 +5213,13 @@ def Get2Photons(all_df, reco):
                         photon2_XYZT.append(pos)
                         photon2_mother.append(showerProcess[i][j])
             if not photon1:
-                photon1_mom.append([-9999.,-9999.,-9999.,-9999.])
-                photon1_XYZT.append([-9999.,-9999.,-9999.,-9999.])
-                photon1_mother.append(-9999)
+                photon1_mom.append(np.array(default_list, dtype='float64'))
+                photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_mother.append(np.int32(-9999))
             if not photon2:
-                photon2_mom.append([-9999.,-9999.,-9999.,-9999.])
-                photon2_XYZT.append([-9999.,-9999.,-9999.,-9999.])
-                photon2_mother.append(-9999)
+                photon2_mom.append(np.array(default_list, dtype='float64'))
+                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon2_mother.append(np.int32(-9999))
             else:
                 mass = GetInvariantMass(photon1_mom[i], photon2_mom[i])
             nphotons_list.append(nphotons_lantern)
@@ -5123,7 +5259,7 @@ def Get2Photons(all_df, reco):
             nphotons_pandora = 0
             photon1 = False
             photon2 = False
-            mass = -9999.
+            mass = np.float32(-9999.)
             nphotons_pandora = n_showers_contained[i]
             if pi0_energy1_Y[i] > 0.:
                 photon1 = True
@@ -5154,15 +5290,15 @@ def Get2Photons(all_df, reco):
                 pos = [posA*pi0_dir2_x[i], posA*pi0_dir2_y[i], posA*pi0_dir2_z[i], posA]
                 photon2_mom.append(mom)
                 photon2_XYZT.append(pos)
-                photon2_mother.append(-9999)
+                photon2_mother.append(np.int32(-9999))
             if not photon1:
-                photon1_mom.append([-9999.,-9999.,-9999.,-9999.])
-                photon1_XYZT.append([-9999.,-9999.,-9999.,-9999.])
-                photon1_mother.append(-9999)
+                photon1_mom.append(np.array(default_list, dtype='float64'))
+                photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_mother.append(np.int32(-9999))
             if not photon2:
-                photon2_mom.append([-9999.,-9999.,-9999.,-9999.])
-                photon2_XYZT.append([-9999.,-9999.,-9999.,-9999.])
-                photon2_mother.append(-9999)
+                photon2_mom.append(np.array(default_list, dtype='float64'))
+                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon2_mother.append(np.int32(-9999))
             else:
                 mass = GetInvariantMass(photon1_mom[i], photon2_mom[i])
             nphotons_list.append(nphotons_pandora)
@@ -5239,7 +5375,7 @@ def GetInvariantMass(gamma1, gamma2):
     mass_squared = (gamma1[3] + gamma2[3])**2 - ((gamma1[0] + gamma2[0])**2 + 
                                                       (gamma1[1] + gamma2[1])**2 + 
                                                       (gamma1[2] + gamma2[2])**2)
-    return np.sqrt(mass_squared) if mass_squared >= 0 else -9999.0
+    return np.sqrt(mass_squared) if mass_squared >= 0 else np.float32(-9999.0)
 
 ###
 def GetOpeningAngle(gamma1, gamma2):
@@ -5316,6 +5452,496 @@ def MakeCovMatrix(all_df, selname, var, bin_width, start_edge, end_edge):
     cov_matrix = nodetvar_pred_sys_frac_cov
 
     return cov_matrix
+
+
+def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
+    outFileName = file_path.removesuffix(".root") + "_" + selection + ".root"
+    print("making file " + outFileName)
+    outfile = ROOT.TFile.Open(outFileName, "RECREATE")
+    print("opening " + file_path)
+    spline_tree_in = ROOT.TTree()
+    spline_tree = ROOT.TTree()
+    if data:
+            print(file_path + " is a data file")
+            #spline_tree = ROOT.TTree()
+    else:
+        print(file_path + " is an overlay file")
+        with ROOT.TFile(file_path, "read") as infile:   
+            spline_tree_in = infile.Get("spline_weights")
+            spline_tree_in.SetDirectory(ROOT.nullptr)
+                
+        spline_tree = spline_tree_in.CloneTree(0)
+
+        print(spline_tree_in.GetEntries())
+        for i in range(spline_tree_in.GetEntries()):
+            spline_tree_in.GetEntry(i)
+            spline_tree.Fill()
+        
+        spline_tree_size = spline_tree.GetEntries()
+        print(spline_tree_size)
+
+    sel_tree = ROOT.TTree()
+    allvars = all_df[var].to_numpy(zero_copy_only=False)
+    print(len(allvars))
+    rs = all_df["wc_run"].to_numpy(zero_copy_only=False)
+    ss = all_df["wc_subrun"].to_numpy(zero_copy_only=False)
+    es = all_df["wc_event"].to_numpy(zero_copy_only=False)
+    passed_vec = PassSelection(selection, all_df, -1)
+    is_file = (all_df["wc_file_name"].to_numpy(zero_copy_only=False) == file_path)
+    var_val = array('d', [0])
+    passed = array('d', [0])
+    r = array('d', [0])
+    s = array('d', [0])
+    e = array('d', [0])
+    file_len = 0
+    alldf_len = 0
+    #print(type(var_val))
+    var_type = str(type(var_val))
+    if "int" in var_type:
+        var_type = "/I"
+    elif "float" in var_type:
+        var_type = "/F"
+    elif "double" in var_type:
+        var_type = "/D"
+    else:
+        var_type = ""
+    sel_tree.Branch("run", r[0], "run/I")
+    sel_tree.Branch("subrun", s[0], "subrun/I")
+    sel_tree.Branch("event", e[0], "event/I")
+    sel_tree.Branch(var, var_val[0], var+var_type)
+    sel_tree.Branch("passed", passed[0], "passed/B")
+    for i in range(len(allvars)):
+        alldf_len+=1
+        if is_file[i]:
+            file_len+=1
+            r[0] = rs[i]
+            s[0] = ss[i]
+            e[0] = es[i]
+            var_val[0] = allvars[i]
+            passed[0] = passed_vec[i]
+            sel_tree.Fill()
+    print(alldf_len)
+    print(file_len)
+    
+    outfile.WriteObject(spline_tree, "spline_tree")
+    outfile.WriteObject(sel_tree, "sel_tree")
+    outfile.Close()
+
+
+    
+
+def MakePROfitXML(files, selname, var, var_label, nbins, bin_min, bin_max, pot, subchannel_map=None, include_detvar=True, su=True):
+    """
+    Generate a PRofit XML file from input files, selection, variable, and binning.
+    
+    Parameters:
+    -----------
+    files : dict or list
+        Can be either:
+        - Dictionary mapping file keys to file paths (legacy format)
+        - List of dicts with keys: "file_path", "subchannel", and optionally "pot"
+          Example: [
+              {"file_path": "/path/to/file1.root", "subchannel": "overlay"},
+              {"file_path": "/path/to/file2.root", "subchannel": "dirt", "pot": "1.5e20"}
+          ]
+    selname : str
+        Selection name (used for channel name)
+    var : str
+        Variable name in the file (used in branch variable element)
+    var_label : str
+        Variable label with units (used for axis labels and plot names)
+    nbins : int
+        Number of bins
+    bin_min : float
+        Minimum bin edge
+    bin_max : float
+        Maximum bin edge
+    pot : str
+        Total POT to normalize to (used when not specified per file)
+    subchannel_map : dict, optional
+        Dictionary mapping file keys to subchannel names. Only used with legacy dict format.
+        If not provided with dict format, file keys are used as subchannel names.
+        Example: {"dirt1": "dirt", "dirt2": "dirt", "ext1": "ext"}
+    include_detvar : bool, optional
+        Whether to include DetVar systematics (default: True)
+    su : bool, optional
+        Whether to include extra friend trees (NeutrinoSelectionFilter, vertex_tree, EventTree)
+        in addition to standard friends (default: True)
+    
+    Returns:
+    --------
+    None - writes XML file to current directory as [selname]_[var].xml
+    """
+    import xml.etree.ElementTree as ET
+    from xml.dom import minidom
+    
+    # Normalize files input to list format
+    if isinstance(files, dict):
+        # Legacy format: dict of file_key -> file_path
+        if subchannel_map is None:
+            subchannel_map = {key: key for key in files.keys()}
+        file_entries = []
+        for file_key, file_path in files.items():
+            file_entries.append({
+                "file_path": file_path,
+                "subchannel": subchannel_map.get(file_key, file_key),
+                "pot": None  # Will be computed from file
+            })
+    else:
+        # New format: list of dicts with file_path, subchannel, pot
+        file_entries = files
+    
+    # Create wrapper for ElementTree (will be removed before writing)
+    wrapper = ET.Element("wrapper")
+    
+    # Add mode
+    mode = ET.SubElement(wrapper, "mode")
+    mode.set("name", "nu")
+    
+    # Add detector
+    detector = ET.SubElement(wrapper, "detector")
+    detector.set("name", "uBooNE")
+    detector.set("pot", pot)
+    
+    # Add channel
+    channel = ET.SubElement(wrapper, "channel")
+    channel.set("name", selname)
+    channel.set("plotname", f"{var_label}")
+    
+    # Add bins
+    bins_elem = ET.SubElement(channel, "bins")
+    bins_elem.set("unit", var_label)
+    bins_elem.set("min", str(bin_min))
+    bins_elem.set("max", str(bin_max))
+    bins_elem.set("nbins", str(nbins))
+
+    bins_elem2 = ET.SubElement(channel, "bins")
+    bins_elem2.set("unit", "Placeholder 2nd Var")
+    bins_elem2.set("min", "0")
+    bins_elem2.set("max", "10")
+    bins_elem2.set("nbins", "2")
+    
+    # Add subchannels - only add unique subchannel names
+    color_map = {"ext": "#676a67", "dirt": "#895129", "overlay": "#21B1FF"}
+    # Define default colors for unknown file types
+    default_colors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E2"]
+    color_idx = 0
+    
+    # Get unique subchannel names
+    unique_subchannels = {}
+    for entry in file_entries:
+        subchannel_name = str(entry["subchannel"])  # Ensure string
+        if subchannel_name not in unique_subchannels and subchannel_name != "data":
+            if subchannel_name in color_map:
+                color = color_map[subchannel_name]
+            else:
+                # Assign default colors to unknown file types
+                color = default_colors[color_idx % len(default_colors)]
+                color_idx += 1
+            unique_subchannels[subchannel_name] = color
+    
+    # Add subchannel elements
+    for subchannel_name, color in unique_subchannels.items():
+        subchannel = ET.SubElement(channel, "subchannel")
+        subchannel.set("name", str(subchannel_name))
+        subchannel.set("plotname", str(subchannel_name).capitalize())
+        subchannel.set("color", str(color))
+    
+    # Add model
+    model = ET.SubElement(wrapper, "model")
+    model.set("tag", "nullmodel")
+    rule = ET.SubElement(model, "rule")
+    rule.set("index", "0")
+    rule.set("name", "No Osc")
+    
+    # Add MCFile entries - separate data from MC
+    data_entries = [e for e in file_entries if str(e["subchannel"]) == "data"]
+    mc_entries = [e for e in file_entries if str(e["subchannel"]) != "data"]
+    
+    # Get selection-based weight_1 expression
+    weight_1_expr = GetSelectionROOTExpression(selname)
+    
+    # Define friend trees for MC files
+    mc_friends = ["wcpselection/T_eval", "wcpselection/T_PFeval", 
+                  "wcpselection/T_BDTvars"]
+
+    if su:
+        mc_friends.extend(["nuselection/NeutrinoSelectionFilter",
+                          "singlephotonana/vertex_tree", "lantern/EventTree"])
+    
+    # Add MC MCFile entries first
+    for entry in mc_entries:
+        file_path = entry["file_path"]
+        subchannel_name = str(entry["subchannel"])  # Ensure string
+        # Use POT from entry if provided, otherwise compute from file
+        file_pot = entry.get("pot")
+        if file_pot is None:
+            file_pot = str(GetPOT(file_path))
+        else:
+            file_pot = str(file_pot)
+        
+        mcfile = ET.SubElement(wrapper, "MCFile")
+        mcfile.set("treename", "wcpselection/T_KINEvars")
+        mcfile.set("filename", str(file_path))
+        mcfile.set("pot", str(file_pot))
+        mcfile.set("partial_load_frac", "1.0")
+        
+        # Add friends
+        for friend_tree in mc_friends:
+            friend = ET.SubElement(mcfile, "friend")
+            friend.set("treename", friend_tree)
+        if subchannel_name != "ext" and subchannel_name != "data":
+            friend.set("treename", "spline_weights")
+        
+        # Add branch
+        branch = ET.SubElement(mcfile, "branch")
+        # Format: mode_detector_selection_subchannel
+        associated_subchannel = f"nu_uBooNE_{selname}_{subchannel_name}"
+        branch.set("associated_subchannel", associated_subchannel)
+        
+        if subchannel_name == "ext":
+            branch.set("model_rule", "0")
+            branch.set("incl_systematics", "false")
+        else:
+            branch.set("model_rule", "0")
+        
+        # Set weight_1 from selection
+        branch.set("weight_1", weight_1_expr)
+        
+        # Set weight_2 based on subchannel type
+        if subchannel_name not in ["ext", "data"]:
+            weight_2 = "(weight_cv * weight_spline * (weight_cv * weight_spline < 30) * (weight_cv * weight_spline > 0) + 1 * !((weight_cv * weight_spline < 30) * (weight_cv * weight_spline > 0)))"
+            branch.set("weight_2", weight_2)
+        
+        # Add variable
+        variable = ET.SubElement(branch, "variable")
+        variable.text = var
+
+        variable2 = ET.SubElement(branch, "variable")
+        variable2.text = "0"
+    
+    # Add systematics
+    systematics = ET.SubElement(wrapper, "systematics")
+    
+    # Default systematics list based on template
+    default_systematics = [
+        {"type": "mcstat", "plotname": "MC Stats", "tag": "other", "text": "MCStat"},
+    ]
+    
+    # DetVar systematics (optional)
+    detvar_systematics = [
+        {"name": "Recomb2", "type": "spline", "plotname": "Recomb2", "tag": "DetVar"},
+        {"name": "LYAtt", "type": "spline", "plotname": "LYAtt", "tag": "DetVar"},
+        {"name": "LYDown", "type": "spline", "plotname": "LYDown", "tag": "DetVar"},
+        {"name": "LYRayleigh", "type": "spline", "plotname": "LYRayleigh", "tag": "DetVar"},
+        {"name": "SCE", "type": "spline", "plotname": "SCE", "tag": "DetVar"},
+        {"name": "WireModX", "type": "spline", "plotname": "WireModX", "tag": "DetVar"},
+        {"name": "WireModYZ", "type": "spline", "plotname": "WireModYZ", "tag": "DetVar"},
+    ]
+    
+    # Cross Section Systematics
+    xs_systematics = [
+        {"type": "spline", "binning": "var0", "plotname": "MACCQE", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "MaCCQE_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "AxFFCCQEshape", "knobvals": "0, 1", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "AxFFCCQEshape_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "VecFFCCQEshape", "knobvals": "0, 1", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "VecFFCCQEshape_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "RPA_CCQE", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "RPA_CCQE_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "CoulombCCQE", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "CoulombCCQE_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NormCCMEC", "knobvals": "-2, -1, 0, 1, 2, 3", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "NormCCMEC_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NormNCMEC", "knobvals": "-1, 0, 1, 2, 3", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "NormNCMEC_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "XSecShape_CCMEC", "knobvals": "0, 1", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "XSecShape_CCMEC_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "DecayAngMEC", "knobvals": "0, 1", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "DecayAngMEC_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "FracPN_CCMEC", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "FracPN_CCMEC_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "FracDelta_CCMEC", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "FracDelta_CCMEC_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "MaCCRES", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "MaCCRES_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "MvCCRES", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "MvCCRES_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "MaNCRES", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "MaNCRES_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "MvNCRES", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "MvNCRES_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "RDecBR1eta", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "RDecBR1eta_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "Theta_Delta2Npi", "knobvals": "0, 1", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "Theta_Delta2Npi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "RDecBR1gamma", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "RDecBR1gamma_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "ThetaDelta2NRad", "knobvals": "0, 1", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "ThetaDelta2NRad_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NormCCCOH", "knobvals": "-1, 0, 1, 2, 3", "tag": "COH", "force_0_cv": "true", "include_only_weights": "1", "text": "NormCCCOH_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NormNCCOH", "knobvals": "-1, 0, 1, 2, 3", "tag": "COH", "force_0_cv": "true", "include_only_weights": "1", "text": "NormNCCOH_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "MaNCEL", "tag": "NC", "force_0_cv": "true", "include_only_weights": "1", "text": "MaNCEL_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "EtaNCEL", "tag": "NC", "force_0_cv": "true", "include_only_weights": "1", "text": "EtaNCEL_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "AGKYxF1pi", "tag": "Hadr.", "force_0_cv": "true", "include_only_weights": "1", "text": "AGKYxF1pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "AGKYpT1pi", "tag": "Hadr.", "force_0_cv": "true", "include_only_weights": "1", "text": "AGKYpT1pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvbarnNC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarnNC1pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvbarnNC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarnNC2pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvbarpNC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarpNC1pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvbarpNC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarpNC2pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvnNC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvnNC1pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvnNC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvnNC2pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvpNC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvpNC1pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvpNC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvpNC2pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvbarnCC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarnCC1pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvbarnCC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarnCC2pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvbarpCC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarpCC1pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvbarpCC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarpCC2pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvnCC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvnCC1pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvnCC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvnCC2pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvpCC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvpCC1pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvpCC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvpCC2pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "AhtBY", "tag": "Struct.", "force_0_cv": "true", "include_only_weights": "1", "text": "AhtBY_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "BhtBY", "tag": "Struct.", "force_0_cv": "true", "include_only_weights": "1", "text": "BhtBY_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "CV1uBY", "tag": "Struct.", "force_0_cv": "true", "include_only_weights": "1", "text": "CV1uBY_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "CV2uBY", "tag": "Struct.", "force_0_cv": "true", "include_only_weights": "1", "text": "CV2uBY_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "MFP_pi", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "MFP_pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "FrCEx_pi", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrCEx_pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "FrInel_pi", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrInel_pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "FrAbs_pi", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrAbs_pi_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "MFP_N", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "MFP_N_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "FrCEx_N", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrCEx_N_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "FrInel_N", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrInel_N_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "FrAbs_N", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrAbs_N_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "xsr_scc_Fa3_SCC", "tag": "SCC", "force_0_cv": "true", "include_only_weights": "1", "text": "xsr_scc_Fa3_SCC"},
+        {"type": "spline", "binning": "var0", "plotname": "xsr_scc_Fv3_SCC", "tag": "SCC", "force_0_cv": "true", "include_only_weights": "1", "text": "xsr_scc_Fv3_SCC"},
+    ]
+    
+    # Flux Systematics
+    flux_systematics = [
+        {"type": "spline", "binning": "var0", "plotname": "horncurrent", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "horncurrent_FluxUnisim"},
+        {"type": "spline", "binning": "var0", "plotname": "expskin", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "expskin_FluxUnisim"},
+        {"type": "spline", "binning": "var0", "plotname": "kminus", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "kminus_PrimaryHadronNormalization"},
+        {"type": "spline", "binning": "var0", "plotname": "kplus", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "kplus_PrimaryHadronFeynmanScaling"},
+        {"type": "spline", "binning": "var0", "plotname": "kzero", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "kzero_PrimaryHadronSanfordWang"},
+        {"type": "spline", "binning": "var0", "plotname": "nucleoninexsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "nucleoninexsec_FluxUnisim"},
+        {"type": "spline", "binning": "var0", "plotname": "nucleonqexsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "nucleonqexsec_FluxUnisim"},
+        {"type": "spline", "binning": "var0", "plotname": "nucleontotxsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "nucleontotxsec_FluxUnisim"},
+        {"type": "spline", "binning": "var0", "plotname": "pioninexsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "pioninexsec_FluxUnisim"},
+        {"type": "spline", "binning": "var0", "plotname": "pionqexsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "pionqexsec_FluxUnisim"},
+        {"type": "spline", "binning": "var0", "plotname": "piontotxsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "piontotxsec_FluxUnisim"},
+        {"type": "covariance", "plotname": "piplus_prod", "tag": "piprod", "text": "piplus_PrimaryHadronSWCentralSplineVariation"},
+        {"type": "covariance", "plotname": "piminus_prod", "tag": "piprod", "text": "piminus_PrimaryHadronSWCentralSplineVariation"},
+    ]
+    
+    # Other Systematics
+    other_systematics = [
+        {"type": "covariance", "tag": "Reint", "scale": "0.001", "text": "weightsReint"},
+        {"type": "norm", "binning": "reco", "plotname": "Targets_POT", "tag": "norm", "text": "nu_uBooNE:0.02"},
+    ]
+    
+    # Combine all systematics
+    all_systematics = default_systematics.copy()
+    if include_detvar:
+        all_systematics.extend(detvar_systematics)
+    all_systematics.extend(xs_systematics)
+    all_systematics.extend(flux_systematics)
+    all_systematics.extend(other_systematics)
+    
+    # Add systematic elements
+    for sys_info in all_systematics:
+        systematic = ET.SubElement(systematics, "systematic")
+        
+        # Add all attributes from the dict to the systematic element
+        for key, value in sys_info.items():
+            if key != "text":  # "text" is the element content, not an attribute
+                systematic.set(key, str(value))
+        
+        # Set element text if provided
+        if "text" in sys_info:
+            systematic.text = sys_info["text"]
+    
+    # Add data MCFile entries in a <data> block after systematics
+    if data_entries:
+        data_block = ET.SubElement(wrapper, "data")
+        
+        # Define friend trees for data files
+        data_friends = ["wcpselection/T_eval", "wcpselection/T_PFeval", 
+                        "wcpselection/T_BDTvars"]
+        if su:
+            data_friends.extend(["nuselection/NeutrinoSelectionFilter",
+                                "singlephotonana/vertex_tree", "lantern/EventTree"])
+        
+        for entry in data_entries:
+            file_path = entry["file_path"]
+            subchannel_name = str(entry["subchannel"])  # Ensure string
+            # Use POT from entry if provided, otherwise compute from file
+            file_pot = entry.get("pot")
+            if file_pot is None:
+                file_pot = str(GetPOT(file_path))
+            else:
+                file_pot = str(file_pot)
+            
+            mcfile = ET.SubElement(data_block, "MCFile")
+            mcfile.set("treename", "wcpselection/T_KINEvars")
+            mcfile.set("filename", str(file_path))
+            mcfile.set("pot", str(file_pot))
+            
+            # Add friends
+            for friend_tree in data_friends:
+                friend = ET.SubElement(mcfile, "friend")
+                friend.set("treename", friend_tree)
+            
+            # Add branch for data (no systematics, model_rule 0)
+            branch = ET.SubElement(mcfile, "branch")
+            associated_subchannel = f"nu_uBooNE_{selname}_{subchannel_name}"
+            branch.set("associated_subchannel", associated_subchannel)
+            branch.set("incl_systematics", "false")
+            branch.set("model_rule", "0")
+            # Set weight_1 from selection (same as MC files)
+            branch.set("weight_1", weight_1_expr)
+            
+            # Add variable
+            variable = ET.SubElement(branch, "variable")
+            variable.text = var
+
+            variable2 = ET.SubElement(branch, "variable")
+            variable2.text = "0"
+    
+    # Pretty print and remove wrapper element
+    def prettify(elem):
+        rough_string = ET.tostring(elem, encoding='unicode')
+        reparsed = minidom.parseString(rough_string)
+        return reparsed.toprettyxml(indent="  ")
+    
+    xml_str = prettify(wrapper)
+    # Remove the wrapper tags from beginning and end and fix indentation
+    lines = xml_str.split('\n')
+    # Keep XML declaration, skip wrapper tags, keep content
+    xml_lines = [lines[0]]  # XML declaration
+    for line in lines[1:]:
+        if '<wrapper' not in line and '</wrapper>' not in line and line.strip():
+            # Remove 2 spaces of indentation from lines inside wrapper
+            if line.startswith('  '):
+                xml_lines.append(line[2:])
+            else:
+                xml_lines.append(line)
+    xml_str = '\n'.join(xml_lines)
+    
+    # Format branch elements with attributes on separate lines
+    import re
+    # Process the XML string to format branch tags properly
+    # Replace single-line branch tags with multi-line formatted ones
+    branch_pattern = r'<branch([^>]*)>'
+    
+    def format_branch(match):
+        attrs_str = match.group(1).strip()
+        # Parse attributes while preserving their order
+        attr_matches = re.findall(r'(\w+)="([^"]*)"', attrs_str)
+        
+        if not attr_matches:
+            return '<branch>'
+        
+        # Build formatted branch tag with attributes on separate lines
+        formatted = '<branch'
+        for attr_name, attr_value in attr_matches:
+            formatted += f'\n        \t{attr_name} = "{attr_value}"'
+        formatted += '\n      \t>'
+        return formatted
+    
+    xml_str = re.sub(branch_pattern, format_branch, xml_str)
+    
+    # Unescape HTML entities (convert &lt; and &gt; back to < and >)
+    from html import unescape
+    xml_str = unescape(xml_str)
+    
+    # Write to file
+    output_filename = f"{selname}_{var}.xml"
+    with open("../xml/" + output_filename, 'w') as f:
+        f.write(xml_str)
+    
+    print(f"PRofit XML file created: {output_filename}")
 
 
 
