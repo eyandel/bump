@@ -5488,23 +5488,28 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
     es = all_df["wc_event"].to_numpy(zero_copy_only=False)
     passed_vec = PassSelection(selection, all_df, -1)
     is_file = (all_df["wc_file_name"].to_numpy(zero_copy_only=False) == file_path)
-    var_val = array('d', [0])
-    passed = array('d', [0])
-    r = array('d', [0])
-    s = array('d', [0])
-    e = array('d', [0])
+    var_type = str(type(allvars[0]))
+    var_type_array = 'd'
+    if "int" in var_type:
+        var_type = "/I"
+        var_type_array = 'i'
+    elif "float" in var_type:
+        var_type = "/F"
+        var_type_array = 'f'
+    elif "double" in var_type:
+        var_type = "/D"
+        var_type_array = 'd'
+    else:
+        var_type = ""
+        var_type_array = 'f'
+    var_val = array(var_type_array, [0])
+    passed = array('b', [0])
+    r = array('i', [0])
+    s = array('i', [0])
+    e = array('i', [0])
     file_len = 0
     alldf_len = 0
     #print(type(var_val))
-    var_type = str(type(var_val))
-    if "int" in var_type:
-        var_type = "/I"
-    elif "float" in var_type:
-        var_type = "/F"
-    elif "double" in var_type:
-        var_type = "/D"
-    else:
-        var_type = ""
     sel_tree.Branch("run", r[0], "run/I")
     sel_tree.Branch("subrun", s[0], "subrun/I")
     sel_tree.Branch("event", e[0], "event/I")
