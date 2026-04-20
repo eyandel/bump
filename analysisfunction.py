@@ -5457,10 +5457,9 @@ def MakeCovMatrix(all_df, selname, var, bin_width, start_edge, end_edge):
 def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
     outFileName = file_path.removesuffix(".root") + "_" + selection + ".root"
     print("making file " + outFileName)
-    outfile = ROOT.TFile.Open(outFileName, "RECREATE")
     print("opening " + file_path)
     spline_tree_in = ROOT.TTree()
-    spline_tree = ROOT.TTree()
+    spline_tree = ROOT.TTree("spline_tree", "spline_tree")
     if data:
             print(file_path + " is a data file")
             #spline_tree = ROOT.TTree()
@@ -5480,57 +5479,60 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
         spline_tree_size = spline_tree.GetEntries()
         print(spline_tree_size)
 
-    sel_tree = ROOT.TTree()
-    allvars = all_df[var].to_numpy(zero_copy_only=False)
-    print(len(allvars))
-    rs = all_df["wc_run"].to_numpy(zero_copy_only=False)
-    ss = all_df["wc_subrun"].to_numpy(zero_copy_only=False)
-    es = all_df["wc_event"].to_numpy(zero_copy_only=False)
-    passed_vec = PassSelection(selection, all_df, -1)
-    is_file = (all_df["wc_file_name"].to_numpy(zero_copy_only=False) == file_path)
-    var_type = str(type(allvars[0]))
-    var_type_array = 'd'
-    if "int" in var_type:
-        var_type = "/I"
-        var_type_array = 'i'
-    elif "float" in var_type:
-        var_type = "/F"
-        var_type_array = 'f'
-    elif "double" in var_type:
-        var_type = "/D"
+    with ROOT.TFile(outFileName, "RECREATE") as outfile:
+        sel_tree = ROOT.TTree("sel_tree", "sel_tree")
+        allvars = all_df[var].to_numpy(zero_copy_only=False)
+        print(len(allvars))
+        rs = all_df["wc_run"].to_numpy(zero_copy_only=False)
+        ss = all_df["wc_subrun"].to_numpy(zero_copy_only=False)
+        es = all_df["wc_event"].to_numpy(zero_copy_only=False)
+        passed_vec = PassSelection(selection, all_df, -1)
+        is_file = (all_df["wc_file_name"].to_numpy(zero_copy_only=False) == file_path)
+        var_type = str(type(allvars[0]))
         var_type_array = 'd'
-    else:
-        var_type = ""
-        var_type_array = 'f'
-    var_val = array(var_type_array, [0])
-    passed = array('b', [0])
-    r = array('i', [0])
-    s = array('i', [0])
-    e = array('i', [0])
-    file_len = 0
-    alldf_len = 0
-    #print(type(var_val))
-    sel_tree.Branch("run", r[0], "run/I")
-    sel_tree.Branch("subrun", s[0], "subrun/I")
-    sel_tree.Branch("event", e[0], "event/I")
-    sel_tree.Branch(var, var_val[0], var+var_type)
-    sel_tree.Branch("passed", passed[0], "passed/B")
-    for i in range(len(allvars)):
-        alldf_len+=1
-        if is_file[i]:
-            file_len+=1
-            r[0] = rs[i]
-            s[0] = ss[i]
-            e[0] = es[i]
-            var_val[0] = allvars[i]
-            passed[0] = passed_vec[i]
-            sel_tree.Fill()
-    print(alldf_len)
-    print(file_len)
-    
-    outfile.WriteObject(spline_tree, "spline_tree")
-    outfile.WriteObject(sel_tree, "sel_tree")
-    outfile.Close()
+        if "int" in var_type:
+            var_type = "/I"
+            var_type_array = 'i'
+        elif "float" in var_type:
+            var_type = "/F"
+            var_type_array = 'f'
+        elif "double" in var_type:
+            var_type = "/D"
+            var_type_array = 'd'
+        else:
+            var_type = ""
+            var_type_array = 'f'
+        var_val = array(var_type_array, [0])
+        passed = array('b', [0])
+        r = array('i', [0])
+        s = array('i', [0])
+        e = array('i', [0])
+        file_len = 0
+        alldf_len = 0
+        #print(type(var_val))
+        sel_tree.Branch("run", r, "run/I")
+        sel_tree.Branch("subrun", s, "subrun/I")
+        sel_tree.Branch("event", e, "event/I")
+        sel_tree.Branch(var, var_val, var+var_type)
+        sel_tree.Branch("passed", passed, "passed/B")
+        for i in range(len(allvars)):
+            alldf_len+=1
+            if is_file[i]:
+                file_len+=1
+                r[0] = rs[i]
+                s[0] = ss[i]
+                e[0] = es[i]
+                var_val[0] = allvars[i]
+                passed[0] = passed_vec[i]
+                sel_tree.Fill()
+        print(alldf_len)
+        print(file_len)
+        
+        spline_tree.Write()
+        sel_tree.Write()
+        #outfile.WriteObject(spline_tree, "spline_tree")
+        #outfile.WriteObject(sel_tree, "sel_tree")
+        #outfile.Close()
 
 
     
