@@ -5458,34 +5458,84 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
     outFileName = file_path.removesuffix(".root") + "_" + selection + ".root"
     print("making file " + outFileName)
     print("opening " + file_path)
+    ROOT.ROOT.EnableImplicitMT()
     spline_tree_in = ROOT.TTree()
     spline_tree = ROOT.TTree("spline_tree", "spline_tree")
-    if data:
-            print(file_path + " is a data file")
-            #spline_tree = ROOT.TTree()
-    else:
-        print(file_path + " is an overlay file")
-        with ROOT.TFile(file_path, "read") as infile:   
-            spline_tree_in = infile.Get("spline_weights")
-            spline_tree_in.SetDirectory(ROOT.nullptr)
-                
-        spline_tree = spline_tree_in.CloneTree(0)
+    NeutrinoSelectionFilter_in = ROOT.TTree()
+    NeutrinoSelectionFilter_out = ROOT.TTree("NeutrinoSelectionFilter_out", "NeutrinoSelectionFilter_out")
+    weightsReint_old = ROOT.std.vector('unsigned short')()
+    weightsReint = ROOT.std.vector('unsigned short')(10*[0])
 
-        print(spline_tree_in.GetEntries())
-        for i in range(spline_tree_in.GetEntries()):
-            spline_tree_in.GetEntry(i)
-            spline_tree.Fill()
-        
-        spline_tree_size = spline_tree.GetEntries()
-        print(spline_tree_size)
+    #using uproot - gives error about types
+    # with uproot.open(file_path) as source:
+    #     spline_weights_in = source["spline_weights"]
+    #     spline_data_in = spline_weights_in.arrays(library="np")
+    #     with uproot.recreate(outFileName) as dest:
+    #         # Direct assignment copies the TTree and its dependencies
+    #         dest["spline_weights"] = spline_data_in
 
+
+    #weightsReint_df = uproot.open(file_path)["nuselection/NeutrinoSelectionFilter"]["weightsReint"].array(library="np")
+    #with uproot.open(file_path)["nuselection/NeutrinoSelectionFilter"] as f_in:
+    #    weightsReint_df  = pl.from_pandas(f_in.arrays(["weightsReint"], library="pd"))
+    #weightsReint_old = weightsReint_df["weightsReint"].to_numpy(zero_copy_only=False)
+    #weightsReint = array('H', [0])
+    
     with ROOT.TFile(outFileName, "RECREATE") as outfile:
+        outfile.SetCompressionLevel(1)
+        if data:
+                print(file_path + " is a data file")
+                #spline_tree = ROOT.TTree()
+        else:
+            print(file_path + " is an overlay file")
+            with ROOT.TFile(file_path, "read") as infile:   
+                spline_tree_in = infile.Get("spline_weights")
+                #spline_tree_in.SetDirectory(ROOT.nullptr)
+                spline_tree_in.SetBranchStatus("*", 1) # set all branches to active
+
+                NeutrinoSelectionFilter_in = infile.Get("nuselection/NeutrinoSelectionFilter")
+                NeutrinoSelectionFilter_in.SetBranchStatus("*", 0)  # Disable all branches
+                NeutrinoSelectionFilter_in.SetBranchStatus("weightsReint", 1)
+
+                # More efficient for large trees
+                outfile.cd()
+                spline_tree = spline_tree_in.CloneTree(0)
+                spline_tree.SetDirectory(outfile)
+                spline_tree.CopyAddresses(spline_tree_in)
+
+                NeutrinoSelectionFilter_out = NeutrinoSelectionFilter_in.CloneTree(-1, "fast")
+                #NeutrinoSelectionFilter_out.SetDirectory(outfile)
+                #NeutrinoSelectionFilter_out.CopyAddresses(NeutrinoSelectionFilter_in)
+
+                # NeutrinoSelectionFilter_in.SetBranchAddress('weightsReint', weightsReint)
+                # NeutrinoSelectionFilter.Branch("weightsReint", weightsReint)
+
+                #print(spline_tree_in.GetEntries())
+                for i in range(spline_tree_in.GetEntriesFast()):
+                    spline_tree_in.GetEntry(i)
+                    #NeutrinoSelectionFilter_in.GetEntry(i)
+                # #     #weightsReint = weightsReint_old
+                    spline_tree.Fill()
+                    #NeutrinoSelectionFilter_out.Fill()
+
+                
+                #spline_tree_size = spline_tree.GetEntries()
+                #print(spline_tree_size)
+                #spline_tree.Write()
+            outfile.WriteObject(spline_tree, "spline_weights")
+            outfile.WriteObject(NeutrinoSelectionFilter_out, "NeutrinoSelectionFilter") 
+
+    #with ROOT.TFile(outFileName, "RECREATE") as outfile:
+    #uncomment here
         sel_tree = ROOT.TTree("sel_tree", "sel_tree")
         allvars = all_df[var].to_numpy(zero_copy_only=False)
         print(len(allvars))
         rs = all_df["wc_run"].to_numpy(zero_copy_only=False)
         ss = all_df["wc_subrun"].to_numpy(zero_copy_only=False)
         es = all_df["wc_event"].to_numpy(zero_copy_only=False)
+        weight_cvs = all_df["wc_weight_cv"].to_numpy(zero_copy_only=False)
+        weight_splines = all_df["wc_weight_spline"].to_numpy(zero_copy_only=False)
+        #weightReints = all_df["pelee_weightsReint"].to_numpy(zero_copy_only=False)
         passed_vec = PassSelection(selection, all_df, -1)
         is_file = (all_df["wc_file_name"].to_numpy(zero_copy_only=False) == file_path)
         var_type = str(type(allvars[0]))
@@ -5507,6 +5557,9 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
         r = array('i', [0])
         s = array('i', [0])
         e = array('i', [0])
+        weight_cv = array('d', [0])
+        weight_spline = array('d', [0])
+        #weightsReint = array('d', [0])
         file_len = 0
         alldf_len = 0
         #print(type(var_val))
@@ -5515,6 +5568,9 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
         sel_tree.Branch("event", e, "event/I")
         sel_tree.Branch(var, var_val, var+var_type)
         sel_tree.Branch("passed", passed, "passed/B")
+        sel_tree.Branch("weight_cv", weight_cv, "weight_cv/D")
+        sel_tree.Branch("weight_spline", weight_spline, "weight_spline/D")
+        #sel_tree.Branch("weightsReint", weightsReint, "weightsReint/D")
         for i in range(len(allvars)):
             alldf_len+=1
             if is_file[i]:
@@ -5524,20 +5580,26 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
                 e[0] = es[i]
                 var_val[0] = allvars[i]
                 passed[0] = passed_vec[i]
+                weight_cv[0] = weight_cvs[i]
+                weight_spline[0] = weight_splines[i]
+                #weightsReint[0] = weightReints[i]
                 sel_tree.Fill()
-        print(alldf_len)
-        print(file_len)
+        #print(alldf_len)
+        #print(file_len)
         
-        spline_tree.Write()
-        sel_tree.Write()
+        #spline_tree.Write()
+        #sel_tree.Write()
+        #outfile.WriteObject(NeutrinoSelectionFilter, "NeutrinoSelectionFilter")
         #outfile.WriteObject(spline_tree, "spline_tree")
-        #outfile.WriteObject(sel_tree, "sel_tree")
+        outfile.WriteObject(sel_tree, "sel_tree")
         #outfile.Close()
+    #end uncomment here
+    return outFileName
 
 
     
 
-def MakePROfitXML(files, selname, var, var_label, nbins, bin_min, bin_max, pot, subchannel_map=None, include_detvar=True, su=True):
+def MakePROfitXML(all_df, files, selname, var, var_label, nbins, bin_min, bin_max, pot, subchannel_map=None, include_detvar=True):
     """
     Generate a PRofit XML file from input files, selection, variable, and binning.
     
@@ -5571,9 +5633,6 @@ def MakePROfitXML(files, selname, var, var_label, nbins, bin_min, bin_max, pot, 
         Example: {"dirt1": "dirt", "dirt2": "dirt", "ext1": "ext"}
     include_detvar : bool, optional
         Whether to include DetVar systematics (default: True)
-    su : bool, optional
-        Whether to include extra friend trees (NeutrinoSelectionFilter, vertex_tree, EventTree)
-        in addition to standard friends (default: True)
     
     Returns:
     --------
@@ -5666,19 +5725,24 @@ def MakePROfitXML(files, selname, var, var_label, nbins, bin_min, bin_max, pot, 
     mc_entries = [e for e in file_entries if str(e["subchannel"]) != "data"]
     
     # Get selection-based weight_1 expression
-    weight_1_expr = GetSelectionROOTExpression(selname)
+    #weight_1_expr = GetSelectionROOTExpression(selname)
+    weight_1_expr = "passed==1"
     
     # Define friend trees for MC files
-    mc_friends = ["wcpselection/T_eval", "wcpselection/T_PFeval", 
-                  "wcpselection/T_BDTvars"]
+    mc_friends = ["NeutrinoSelectionFilter", "spline_weights"]
+    #mc_friends = ["wcpselection/T_eval", "wcpselection/T_PFeval", 
+    #              "wcpselection/T_BDTvars"]
 
-    if su:
-        mc_friends.extend(["nuselection/NeutrinoSelectionFilter",
-                          "singlephotonana/vertex_tree", "lantern/EventTree"])
+    #mc_friends.extend(["nuselection/NeutrinoSelectionFilter",
+    #                      "singlephotonana/vertex_tree", "lantern/EventTree"])
     
     # Add MC MCFile entries first
     for entry in mc_entries:
         file_path = entry["file_path"]
+        is_data_file = False
+        if str(entry["subchannel"]) == "data" or str(entry["subchannel"]) == "ext":
+            is_data_file = True
+        new_file_path = MakePROfitInputFile(all_df, file_path, selname, var, data=is_data_file)
         subchannel_name = str(entry["subchannel"])  # Ensure string
         # Use POT from entry if provided, otherwise compute from file
         file_pot = entry.get("pot")
@@ -5688,17 +5752,17 @@ def MakePROfitXML(files, selname, var, var_label, nbins, bin_min, bin_max, pot, 
             file_pot = str(file_pot)
         
         mcfile = ET.SubElement(wrapper, "MCFile")
-        mcfile.set("treename", "wcpselection/T_KINEvars")
-        mcfile.set("filename", str(file_path))
+        mcfile.set("treename", "sel_tree")#"wcpselection/T_KINEvars")
+        mcfile.set("filename", str(new_file_path))
         mcfile.set("pot", str(file_pot))
         mcfile.set("partial_load_frac", "1.0")
         
         # Add friends
-        for friend_tree in mc_friends:
-            friend = ET.SubElement(mcfile, "friend")
-            friend.set("treename", friend_tree)
         if subchannel_name != "ext" and subchannel_name != "data":
-            friend.set("treename", "spline_weights")
+            for friend_tree in mc_friends:
+                friend = ET.SubElement(mcfile, "friend")
+                friend.set("treename", friend_tree)
+            #friend.set("treename", "spline_weights")
         
         # Add branch
         branch = ET.SubElement(mcfile, "branch")
@@ -5854,14 +5918,16 @@ def MakePROfitXML(files, selname, var, var_label, nbins, bin_min, bin_max, pot, 
         data_block = ET.SubElement(wrapper, "data")
         
         # Define friend trees for data files
-        data_friends = ["wcpselection/T_eval", "wcpselection/T_PFeval", 
-                        "wcpselection/T_BDTvars"]
-        if su:
-            data_friends.extend(["nuselection/NeutrinoSelectionFilter",
-                                "singlephotonana/vertex_tree", "lantern/EventTree"])
+        #data_friends = ["wcpselection/T_eval", "wcpselection/T_PFeval", 
+        #                "wcpselection/T_BDTvars"]
+        #if su:
+        #    data_friends.extend(["nuselection/NeutrinoSelectionFilter",
+        #                        "singlephotonana/vertex_tree", "lantern/EventTree"])
         
         for entry in data_entries:
             file_path = entry["file_path"]
+            is_data_file = True
+            new_file_path = MakePROfitInputFile(all_df, file_path, selname, var, data=is_data_file)
             subchannel_name = str(entry["subchannel"])  # Ensure string
             # Use POT from entry if provided, otherwise compute from file
             file_pot = entry.get("pot")
@@ -5871,14 +5937,14 @@ def MakePROfitXML(files, selname, var, var_label, nbins, bin_min, bin_max, pot, 
                 file_pot = str(file_pot)
             
             mcfile = ET.SubElement(data_block, "MCFile")
-            mcfile.set("treename", "wcpselection/T_KINEvars")
-            mcfile.set("filename", str(file_path))
+            mcfile.set("treename", "sel_tree")#"wcpselection/T_KINEvars")
+            mcfile.set("filename", str(new_file_path))
             mcfile.set("pot", str(file_pot))
             
             # Add friends
-            for friend_tree in data_friends:
-                friend = ET.SubElement(mcfile, "friend")
-                friend.set("treename", friend_tree)
+            #for friend_tree in data_friends:
+            #    friend = ET.SubElement(mcfile, "friend")
+            #    friend.set("treename", friend_tree)
             
             # Add branch for data (no systematics, model_rule 0)
             branch = ET.SubElement(mcfile, "branch")
@@ -5948,7 +6014,7 @@ def MakePROfitXML(files, selname, var, var_label, nbins, bin_min, bin_max, pot, 
     with open("../xml/" + output_filename, 'w') as f:
         f.write(xml_str)
     
-    print(f"PRofit XML file created: {output_filename}")
+    print(f"PROfit XML file created: {output_filename}")
 
 
 
