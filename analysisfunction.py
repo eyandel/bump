@@ -277,6 +277,180 @@ def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
                 newcatname.append(true_event_type_name[i])
                 newcatcolor.append(true_event_type_color[i])
                 newcatfill.append(true_event_type_fill[i])
+    elif catname == "2 true photons - all energies":
+        newcatfill = all_df["true_event_type_fill"].to_numpy(zero_copy_only=False)
+        truth_Ntrack = all_df["wc_truth_Ntrack"].to_numpy(zero_copy_only=False)
+        truth_pdg = all_df["wc_truth_pdg"].to_numpy(zero_copy_only=False)
+        truth_startMomentum = all_df["wc_truth_startMomentum"].to_numpy(zero_copy_only=False)
+        truth_process = all_df["wc_truth_process"].to_numpy(zero_copy_only=False)
+        truth_mother = all_df["wc_truth_mother"].to_numpy(zero_copy_only=False)
+        truth_endXYZT = all_df["wc_truth_endXYZT"].to_numpy(zero_copy_only=False)
+        default_list = [-999.,-999.,-999.,-999.]
+        true_event_type_name = all_df["true_event_type_name"].to_numpy(zero_copy_only=False)
+        true_event_type_color = all_df["true_event_type_color"].to_numpy(zero_copy_only=False)
+        true_event_type_fill = all_df["true_event_type_fill"].to_numpy(zero_copy_only=False)
+        for i in range(len(true_event_types)):
+            if true_event_types[i] == 12:
+                newcat.append(12)
+                newcatname.append("Extbnb")
+                newcatcolor.append(ROOT.kGray)
+                photon1_mom.append(np.array(default_list, dtype='float64'))
+                photon2_mom.append(np.array(default_list, dtype='float64'))
+                photon1_process.append("none")
+                photon2_process.append("none")
+                photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_mother.append(np.int32(-999))
+                photon2_mother.append(np.int32(-999))
+            elif true_event_types[i] == 13:
+                newcat.append(13)
+                newcatname.append("Data")
+                newcatcolor.append(ROOT.kBlack)
+                photon1_mom.append(np.array(default_list, dtype='float64'))
+                photon2_mom.append(np.array(default_list, dtype='float64'))
+                photon1_process.append("none")
+                photon2_process.append("none")
+                photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_mother.append(np.int32(-999))
+                photon2_mother.append(np.int32(-999))
+            else:
+                nphotons = 0
+                photon1 = False
+                photon2 = False
+                vis5mev = 0
+                vis50mev = 0
+                for j in range(int(truth_Ntrack[i])):
+                    ex = truth_endXYZT[i][j][0]
+                    ey = truth_endXYZT[i][j][1]
+                    ez = truth_endXYZT[i][j][2]
+                    pdg = abs(truth_pdg[i][j])
+                    if truth_process[i][j] == "primary" and (pdg == 11 or pdg == 13 or pdg == 211 or pdg == 2212 or pdg == 321):
+                        if truth_startMomentum[i][j][3] > 0.005:
+                            vis5mev += 1
+                            if truth_startMomentum[i][j][3] > 0.05:
+                                vis50mev += 1
+                    if truth_pdg[i][j] == 22:# and truth_startMomentum[i][j][3] > 0.02:
+                        if truth_process[i][j] != "eBrem" and truth_process[i][j] != "annihil":
+                            if ex > 3.0 and ex < 253.0 and ey > -113.0 and ey < 114.0 and ez > 3.0 and ez < 1034.0: #same as single photons
+                                nphotons += 1
+                                if not photon1:
+                                    photon1 = True
+                                    photon1_mom.append(truth_startMomentum[i][j])
+                                    photon1_process.append(truth_process[i][j])
+                                    photon1_XYZT.append(truth_endXYZT[i][j])
+                                    photon1_mother.append(truth_mother[i][j])
+                                elif not photon2:
+                                    photon2 = True
+                                    photon2_mom.append(truth_startMomentum[i][j])
+                                    photon2_process.append(truth_process[i][j])
+                                    photon2_XYZT.append(truth_endXYZT[i][j])
+                                    photon2_mother.append(truth_mother[i][j])
+                if catname == "2 true photons - all energies" and true_event_types[i] != 222 and true_event_types[i] != 2220 and true_event_types[i] != 2221 and nphotons == 2:
+                    newcat.append(catnum)
+                    newcatname.append(catname)
+                    newcatcolor.append(catcolor)
+                else:
+                    newcat.append(true_event_types[i])
+                    newcatname.append(true_event_type_name[i])
+                    newcatcolor.append(true_event_type_color[i])
+                    if not photon1:
+                        photon1_mom.append(np.array(default_list, dtype='float64'))
+                        photon1_process.append("none")
+                        photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                        photon1_mother.append(np.int32(-999))
+                    if not photon2:
+                        photon2_mom.append(np.array(default_list, dtype='float64'))
+                        photon2_process.append("none")
+                        photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                        photon2_mother.append(np.int32(-999))
+    elif catname == "2 true photons - no FV":
+        newcatfill = all_df["true_event_type_fill"].to_numpy(zero_copy_only=False)
+        truth_Ntrack = all_df["wc_truth_Ntrack"].to_numpy(zero_copy_only=False)
+        truth_pdg = all_df["wc_truth_pdg"].to_numpy(zero_copy_only=False)
+        truth_startMomentum = all_df["wc_truth_startMomentum"].to_numpy(zero_copy_only=False)
+        truth_process = all_df["wc_truth_process"].to_numpy(zero_copy_only=False)
+        truth_mother = all_df["wc_truth_mother"].to_numpy(zero_copy_only=False)
+        truth_endXYZT = all_df["wc_truth_endXYZT"].to_numpy(zero_copy_only=False)
+        default_list = [-999.,-999.,-999.,-999.]
+        true_event_type_name = all_df["true_event_type_name"].to_numpy(zero_copy_only=False)
+        true_event_type_color = all_df["true_event_type_color"].to_numpy(zero_copy_only=False)
+        true_event_type_fill = all_df["true_event_type_fill"].to_numpy(zero_copy_only=False)
+        for i in range(len(true_event_types)):
+            if true_event_types[i] == 12:
+                newcat.append(12)
+                newcatname.append("Extbnb")
+                newcatcolor.append(ROOT.kGray)
+                photon1_mom.append(np.array(default_list, dtype='float64'))
+                photon2_mom.append(np.array(default_list, dtype='float64'))
+                photon1_process.append("none")
+                photon2_process.append("none")
+                photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_mother.append(np.int32(-999))
+                photon2_mother.append(np.int32(-999))
+            elif true_event_types[i] == 13:
+                newcat.append(13)
+                newcatname.append("Data")
+                newcatcolor.append(ROOT.kBlack)
+                photon1_mom.append(np.array(default_list, dtype='float64'))
+                photon2_mom.append(np.array(default_list, dtype='float64'))
+                photon1_process.append("none")
+                photon2_process.append("none")
+                photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_mother.append(np.int32(-999))
+                photon2_mother.append(np.int32(-999))
+            else:
+                nphotons = 0
+                photon1 = False
+                photon2 = False
+                vis5mev = 0
+                vis50mev = 0
+                for j in range(int(truth_Ntrack[i])):
+                    ex = truth_endXYZT[i][j][0]
+                    ey = truth_endXYZT[i][j][1]
+                    ez = truth_endXYZT[i][j][2]
+                    pdg = abs(truth_pdg[i][j])
+                    if truth_process[i][j] == "primary" and (pdg == 11 or pdg == 13 or pdg == 211 or pdg == 2212 or pdg == 321):
+                        if truth_startMomentum[i][j][3] > 0.005:
+                            vis5mev += 1
+                            if truth_startMomentum[i][j][3] > 0.05:
+                                vis50mev += 1
+                    if truth_pdg[i][j] == 22 and truth_startMomentum[i][j][3] > 0.02:
+                        if truth_process[i][j] != "eBrem" and truth_process[i][j] != "annihil":
+                            if True: #ex > 3.0 and ex < 253.0 and ey > -113.0 and ey < 114.0 and ez > 3.0 and ez < 1034.0: #same as single photons
+                                nphotons += 1
+                                if not photon1:
+                                    photon1 = True
+                                    photon1_mom.append(truth_startMomentum[i][j])
+                                    photon1_process.append(truth_process[i][j])
+                                    photon1_XYZT.append(truth_endXYZT[i][j])
+                                    photon1_mother.append(truth_mother[i][j])
+                                elif not photon2:
+                                    photon2 = True
+                                    photon2_mom.append(truth_startMomentum[i][j])
+                                    photon2_process.append(truth_process[i][j])
+                                    photon2_XYZT.append(truth_endXYZT[i][j])
+                                    photon2_mother.append(truth_mother[i][j])
+                if catname == "2 true photons - no FV" and true_event_types[i] != 222 and true_event_types[i] != 2220 and true_event_types[i] != 2221 and nphotons == 2:
+                    newcat.append(catnum)
+                    newcatname.append(catname)
+                    newcatcolor.append(catcolor)
+                else:
+                    newcat.append(true_event_types[i])
+                    newcatname.append(true_event_type_name[i])
+                    newcatcolor.append(true_event_type_color[i])
+                    if not photon1:
+                        photon1_mom.append(np.array(default_list, dtype='float64'))
+                        photon1_process.append("none")
+                        photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                        photon1_mother.append(np.int32(-999))
+                    if not photon2:
+                        photon2_mom.append(np.array(default_list, dtype='float64'))
+                        photon2_process.append("none")
+                        photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                        photon2_mother.append(np.int32(-999))
 
     all_df = all_df.with_columns(
         pl.Series("true_event_type", newcat),
@@ -320,14 +494,14 @@ def AddRecoVars(all_df):
         wcldist = np.sqrt(np.pow(wc_x[i] - lantern_x[i], 2) + np.pow(wc_y[i] - lantern_y[i], 2) + np.pow(wc_z[i] - lantern_z[i], 2))
         lpdist = np.sqrt(np.pow(lantern_x[i] - pelee_x[i], 2) + np.pow(lantern_y[i] - pelee_y[i], 2) + np.pow(lantern_z[i] - pelee_z[i], 2))
         if wc_x[i] == -1. and wc_y[i] == -1. and wc_z[i] == -1:
-            wcpdist = -9999.
-            wcldist = -9999.
+            wcpdist = np.float32(-9999.)
+            wcldist = np.float32(-9999.)
         if pelee_z[i] < -1.:
-            wcpdist = -9999.
-            lpdist = -9999.
+            wcpdist = np.float32(-9999.)
+            lpdist = np.float32(-9999.)
         if not lantern_foundvtx[i]:
-            wcldist = -9999.
-            lpdist = -9999.
+            wcldist = np.float32(-9999.)
+            lpdist = np.float32(-9999.)
         wc_pandora_dist.append(wcpdist)
         wc_lantern_dist.append(wcldist)
         lantern_pandora_dist.append(lpdist)
@@ -2748,6 +2922,8 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
         #plotlog: if true plot y as log, bool
         #changey: if true change y, bool
         #y_lim: if x and y true, what to set y to
+    
+    newcatsadded = False
 
     var_sig, var_bkg, var_data = GetVariableArrays(all_df, var, "var", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
     weights_sig, weights_bkg, weights_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
@@ -2755,9 +2931,11 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
     selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
     selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
     selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArrays(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArrays(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_true_event_type_fill_sig, selected_true_event_type_fill_bkg, selected_true_event_type_fill_data = GetVariableArrays(all_df, "true_event_type_fill", "true_event_type_fill", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    if "true_event_type_name" in all_df.columns:
+        newcatsadded = True
+        selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArrays(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArrays(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_true_event_type_fill_sig, selected_true_event_type_fill_bkg, selected_true_event_type_fill_data = GetVariableArrays(all_df, "true_event_type_fill", "true_event_type_fill", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
 
     #single_photon_numu_score_sig, single_photon_numu_score_bkg, single_photon_numu_score_data = GetVariableArrays(all_df, "single_photon_numu_score", "single_photon_numu_score", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
     #single_photon_other_score_sig, single_photon_other_score_bkg, single_photon_other_score_data = GetVariableArrays(all_df, "single_photon_other_score", "single_photon_other_score", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
@@ -2974,22 +3152,26 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
             if (selected_true_event_type_bkg[i] not in seen_new_type):
                 print("There is a new background type")
                 print(selected_true_event_type_bkg[i])
-                seen_new_type.append(selected_true_event_type_bkg[i])
-                seen_new_cat.append(selected_true_event_type_name_bkg[i])
-                seen_new_color.append(int(selected_true_event_type_color_bkg[i]))
-                seen_new_fill.append(int(selected_true_event_type_fill_bkg[i]))
-                h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}")
-                if h_tmp != None:
-                    h_tmp.Delete()
-                h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
-                new_var = []
-                new_w = []
-                selected_new_var.append(new_var)
-                selected_new_w.append(new_w)
-            index = seen_new_type.index(selected_true_event_type_bkg[i])
-            selected_new_var[index].append(selected_var_bkg[i])
-            selected_new_w[index].append(selected_w_bkg[i])
-            h_new[index].Fill(selected_var_bkg[i],selected_w_bkg[i])
+                if newcatsadded:
+                    seen_new_type.append(selected_true_event_type_bkg[i])
+                    seen_new_cat.append(selected_true_event_type_name_bkg[i])
+                    seen_new_color.append(int(selected_true_event_type_color_bkg[i]))
+                    seen_new_fill.append(int(selected_true_event_type_fill_bkg[i]))
+                    h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}")
+                    if h_tmp != None:
+                        h_tmp.Delete()
+                    h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
+                    new_var = []
+                    new_w = []
+                    selected_new_var.append(new_var)
+                    selected_new_w.append(new_w)
+                else:
+                    print("There is a new background type but no additional category information!!")
+            if newcatsadded:
+                index = seen_new_type.index(selected_true_event_type_bkg[i])
+                selected_new_var[index].append(selected_var_bkg[i])
+                selected_new_w[index].append(selected_w_bkg[i])
+                h_new[index].Fill(selected_var_bkg[i],selected_w_bkg[i])
 
     for i in range(len(selected_var_sig)):
         if selected_true_event_type_sig[i]==12:
@@ -3056,22 +3238,26 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
             if (selected_true_event_type_sig[i] not in seen_new_type):
                 print("There is a new signal type")
                 print(selected_true_event_type_sig[i])
-                seen_new_type.append(selected_true_event_type_sig[i])
-                seen_new_cat.append(selected_true_event_type_name_sig[i])
-                seen_new_color.append(int(selected_true_event_type_color_sig[i]))
-                seen_new_fill.append(int(selected_true_event_type_fill_sig[i]))
-                h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}")
-                if h_tmp != None:
-                    h_tmp.Delete()
-                h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
-                new_var = []
-                new_w = []
-                selected_new_var.append(new_var)
-                selected_new_w.append(new_w)
-            index = seen_new_type.index(selected_true_event_type_sig[i])
-            selected_new_var[index].append(selected_var_sig[i])
-            selected_new_w[index].append(selected_w_sig[i])
-            h_new[index].Fill(selected_var_sig[i],selected_w_sig[i])
+                if newcatsadded:
+                    seen_new_type.append(selected_true_event_type_sig[i])
+                    seen_new_cat.append(selected_true_event_type_name_sig[i])
+                    seen_new_color.append(int(selected_true_event_type_color_sig[i]))
+                    seen_new_fill.append(int(selected_true_event_type_fill_sig[i]))
+                    h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}")
+                    if h_tmp != None:
+                        h_tmp.Delete()
+                    h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
+                    new_var = []
+                    new_w = []
+                    selected_new_var.append(new_var)
+                    selected_new_w.append(new_w)
+                else:
+                    print("There is a new signal type but no additional category information!!")
+            if newcatsadded:
+                index = seen_new_type.index(selected_true_event_type_sig[i])
+                selected_new_var[index].append(selected_var_sig[i])
+                selected_new_w[index].append(selected_w_sig[i])
+                h_new[index].Fill(selected_var_sig[i],selected_w_sig[i])
             
     
     root_hists = [h_data, h_cos, h_ext, h_dirt, h_outFV, h_NCpi0, h_numuCCpi0, h_NC,h_numuCC, h_nueCC, 
@@ -3702,6 +3888,8 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     selected_true_event_type_sig = []
     selected_true_event_type_bkg = []
 
+    newcatsadded = False
+
     var_sig, var_bkg, var_data = GetVariableArrays(all_df, var, "var", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
     weights_sig, weights_bkg, weights_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
 
@@ -3709,10 +3897,12 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
     selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
     selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArrays(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArrays(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_true_event_type_fill_sig, selected_true_event_type_fill_bkg, selected_true_event_type_fill_data = GetVariableArrays(all_df, "true_event_type_fill", "true_event_type_fill", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    
+    if "true_event_type_name" in all_df.columns:
+        newcatsadded = True
+        selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArrays(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArrays(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_true_event_type_fill_sig, selected_true_event_type_fill_bkg, selected_true_event_type_fill_data = GetVariableArrays(all_df, "true_event_type_fill", "true_event_type_fill", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        
 
 
     #for i in range(0, len(e_sig)):
@@ -3837,22 +4027,26 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
             if (selected_true_event_type_bkg[i] not in seen_new_type):
                 print("There is a new background type")
                 print(selected_true_event_type_bkg[i])
-                seen_new_type.append(selected_true_event_type_bkg[i])
-                seen_new_cat.append(selected_true_event_type_name_bkg[i])
-                seen_new_color.append(int(selected_true_event_type_color_bkg[i]))
-                seen_new_fill.append(int(selected_true_event_type_fill_bkg[i]))
-                h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}")
-                if h_tmp != None:
-                    h_tmp.Delete()
-                h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
-                new_var = []
-                new_w = []
-                selected_new_var.append(new_var)
-                selected_new_w.append(new_w)
-            index = seen_new_type.index(selected_true_event_type_bkg[i])
-            selected_new_var[index].append(selected_var_bkg[i])
-            selected_new_w[index].append(selected_w_bkg[i])
-            h_new[index].Fill(selected_var_bkg[i],selected_w_bkg[i])
+                if newcatsadded:
+                    seen_new_type.append(selected_true_event_type_bkg[i])
+                    seen_new_cat.append(selected_true_event_type_name_bkg[i])
+                    seen_new_color.append(int(selected_true_event_type_color_bkg[i]))
+                    seen_new_fill.append(int(selected_true_event_type_fill_bkg[i]))
+                    h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}")
+                    if h_tmp != None:
+                        h_tmp.Delete()
+                    h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
+                    new_var = []
+                    new_w = []
+                    selected_new_var.append(new_var)
+                    selected_new_w.append(new_w)
+                else:
+                    print("No additional background categories defined, so not adding this category to the plot")
+            if newcatsadded: 
+                index = seen_new_type.index(selected_true_event_type_bkg[i])
+                selected_new_var[index].append(selected_var_bkg[i])
+                selected_new_w[index].append(selected_w_bkg[i])
+                h_new[index].Fill(selected_var_bkg[i],selected_w_bkg[i])
 
     for i in range(len(selected_var_sig)):
         if selected_true_event_type_sig[i]==12:
@@ -3919,22 +4113,26 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
             if (selected_true_event_type_sig[i] not in seen_new_type):
                 print("There is a new signal type")
                 print(selected_true_event_type_sig[i])
-                seen_new_type.append(selected_true_event_type_sig[i])
-                seen_new_cat.append(selected_true_event_type_name_sig[i])
-                seen_new_color.append(int(selected_true_event_type_color_sig[i]))
-                seen_new_fill.append(int(selected_true_event_type_fill_sig[i]))
-                h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}")
-                if h_tmp != None:
-                    h_tmp.Delete()
-                h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
-                new_var = []
-                new_w = []
-                selected_new_var.append(new_var)
-                selected_new_w.append(new_w)
-            index = seen_new_type.index(selected_true_event_type_sig[i])
-            selected_new_var[index].append(selected_var_sig[i])
-            selected_new_w[index].append(selected_w_sig[i])
-            h_new[index].Fill(selected_var_sig[i],selected_w_sig[i])
+                if newcatsadded:
+                    seen_new_type.append(selected_true_event_type_sig[i])
+                    seen_new_cat.append(selected_true_event_type_name_sig[i])
+                    seen_new_color.append(int(selected_true_event_type_color_sig[i]))
+                    seen_new_fill.append(int(selected_true_event_type_fill_sig[i]))
+                    h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}")
+                    if h_tmp != None:
+                        h_tmp.Delete()
+                    h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
+                    new_var = []
+                    new_w = []
+                    selected_new_var.append(new_var)
+                    selected_new_w.append(new_w)
+                else:
+                    print("No additional signal categories defined, so not adding this category to the plot")
+            if newcatsadded:
+                index = seen_new_type.index(selected_true_event_type_sig[i])
+                selected_new_var[index].append(selected_var_sig[i])
+                selected_new_w[index].append(selected_w_sig[i])
+                h_new[index].Fill(selected_var_sig[i],selected_w_sig[i])
             
             
     root_hists = [h_cos, h_ext, h_dirt, h_outFV, h_NCpi0, h_numuCCpi0, h_NC,h_numuCC, h_nueCC, 
@@ -5375,7 +5573,7 @@ def GetInvariantMass(gamma1, gamma2):
     mass_squared = (gamma1[3] + gamma2[3])**2 - ((gamma1[0] + gamma2[0])**2 + 
                                                       (gamma1[1] + gamma2[1])**2 + 
                                                       (gamma1[2] + gamma2[2])**2)
-    return np.sqrt(mass_squared) if mass_squared >= 0 else np.float32(-9999.0)
+    return np.float32(np.sqrt(mass_squared)) if mass_squared >= 0 else np.float32(-9999.0)
 
 ###
 def GetOpeningAngle(gamma1, gamma2):
@@ -5418,7 +5616,7 @@ def CombinePhotonVars(all_df, var):
         elif passed_lantern[i]:
             var_list.append(var_lantern[i])
         else:
-            var_list.append(-9999.)
+            var_list.append(np.float32(-9999.))
 
     all_df = all_df.with_columns(pl.Series(var, var_list))
     
@@ -5801,87 +5999,87 @@ def MakePROfitXML(all_df, files, selname, var, var_label, nbins, bin_min, bin_ma
     
     # DetVar systematics (optional)
     detvar_systematics = [
-        {"name": "Recomb2", "type": "spline", "plotname": "Recomb2", "tag": "DetVar"},
-        {"name": "LYAtt", "type": "spline", "plotname": "LYAtt", "tag": "DetVar"},
-        {"name": "LYDown", "type": "spline", "plotname": "LYDown", "tag": "DetVar"},
-        {"name": "LYRayleigh", "type": "spline", "plotname": "LYRayleigh", "tag": "DetVar"},
-        {"name": "SCE", "type": "spline", "plotname": "SCE", "tag": "DetVar"},
-        {"name": "WireModX", "type": "spline", "plotname": "WireModX", "tag": "DetVar"},
-        {"name": "WireModYZ", "type": "spline", "plotname": "WireModYZ", "tag": "DetVar"},
+        {"name": "Recomb2", "type": "spline_to_covariance", "plotname": "Recomb2", "tag": "DetVar"},
+        {"name": "LYAtt", "type": "spline_to_covariance", "plotname": "LYAtt", "tag": "DetVar"},
+        {"name": "LYDown", "type": "spline_to_covariance", "plotname": "LYDown", "tag": "DetVar"},
+        {"name": "LYRayleigh", "type": "spline_to_covariance", "plotname": "LYRayleigh", "tag": "DetVar"},
+        {"name": "SCE", "type": "spline_to_covariance", "plotname": "SCE", "tag": "DetVar"},
+        {"name": "WireModX", "type": "spline_to_covariance", "plotname": "WireModX", "tag": "DetVar"},
+        {"name": "WireModYZ", "type": "spline_to_covariance", "plotname": "WireModYZ", "tag": "DetVar"},
     ]
     
     # Cross Section Systematics
     xs_systematics = [
-        {"type": "spline", "binning": "var0", "plotname": "MACCQE", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "MaCCQE_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "AxFFCCQEshape", "knobvals": "0, 1", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "AxFFCCQEshape_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "VecFFCCQEshape", "knobvals": "0, 1", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "VecFFCCQEshape_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "RPA_CCQE", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "RPA_CCQE_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "CoulombCCQE", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "CoulombCCQE_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NormCCMEC", "knobvals": "-2, -1, 0, 1, 2, 3", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "NormCCMEC_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NormNCMEC", "knobvals": "-1, 0, 1, 2, 3", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "NormNCMEC_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "XSecShape_CCMEC", "knobvals": "0, 1", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "XSecShape_CCMEC_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "DecayAngMEC", "knobvals": "0, 1", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "DecayAngMEC_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "FracPN_CCMEC", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "FracPN_CCMEC_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "FracDelta_CCMEC", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "FracDelta_CCMEC_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "MaCCRES", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "MaCCRES_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "MvCCRES", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "MvCCRES_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "MaNCRES", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "MaNCRES_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "MvNCRES", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "MvNCRES_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "RDecBR1eta", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "RDecBR1eta_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "Theta_Delta2Npi", "knobvals": "0, 1", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "Theta_Delta2Npi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "RDecBR1gamma", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "RDecBR1gamma_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "ThetaDelta2NRad", "knobvals": "0, 1", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "ThetaDelta2NRad_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NormCCCOH", "knobvals": "-1, 0, 1, 2, 3", "tag": "COH", "force_0_cv": "true", "include_only_weights": "1", "text": "NormCCCOH_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NormNCCOH", "knobvals": "-1, 0, 1, 2, 3", "tag": "COH", "force_0_cv": "true", "include_only_weights": "1", "text": "NormNCCOH_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "MaNCEL", "tag": "NC", "force_0_cv": "true", "include_only_weights": "1", "text": "MaNCEL_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "EtaNCEL", "tag": "NC", "force_0_cv": "true", "include_only_weights": "1", "text": "EtaNCEL_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "AGKYxF1pi", "tag": "Hadr.", "force_0_cv": "true", "include_only_weights": "1", "text": "AGKYxF1pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "AGKYpT1pi", "tag": "Hadr.", "force_0_cv": "true", "include_only_weights": "1", "text": "AGKYpT1pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvbarnNC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarnNC1pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvbarnNC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarnNC2pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvbarpNC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarpNC1pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvbarpNC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarpNC2pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvnNC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvnNC1pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvnNC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvnNC2pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvpNC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvpNC1pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvpNC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvpNC2pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvbarnCC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarnCC1pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvbarnCC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarnCC2pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvbarpCC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarpCC1pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvbarpCC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarpCC2pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvnCC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvnCC1pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvnCC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvnCC2pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvpCC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvpCC1pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "NonRESBGvpCC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvpCC2pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "AhtBY", "tag": "Struct.", "force_0_cv": "true", "include_only_weights": "1", "text": "AhtBY_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "BhtBY", "tag": "Struct.", "force_0_cv": "true", "include_only_weights": "1", "text": "BhtBY_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "CV1uBY", "tag": "Struct.", "force_0_cv": "true", "include_only_weights": "1", "text": "CV1uBY_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "CV2uBY", "tag": "Struct.", "force_0_cv": "true", "include_only_weights": "1", "text": "CV2uBY_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "MFP_pi", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "MFP_pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "FrCEx_pi", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrCEx_pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "FrInel_pi", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrInel_pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "FrAbs_pi", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrAbs_pi_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "MFP_N", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "MFP_N_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "FrCEx_N", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrCEx_N_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "FrInel_N", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrInel_N_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "FrAbs_N", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrAbs_N_UBGenie"},
-        {"type": "spline", "binning": "var0", "plotname": "xsr_scc_Fa3_SCC", "tag": "SCC", "force_0_cv": "true", "include_only_weights": "1", "text": "xsr_scc_Fa3_SCC"},
-        {"type": "spline", "binning": "var0", "plotname": "xsr_scc_Fv3_SCC", "tag": "SCC", "force_0_cv": "true", "include_only_weights": "1", "text": "xsr_scc_Fv3_SCC"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "MACCQE", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "MaCCQE_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "AxFFCCQEshape", "knobvals": "0, 1", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "AxFFCCQEshape_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "VecFFCCQEshape", "knobvals": "0, 1", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "VecFFCCQEshape_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "RPA_CCQE", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "RPA_CCQE_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "CoulombCCQE", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "CoulombCCQE_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NormCCMEC", "knobvals": "-2, -1, 0, 1, 2, 3", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "NormCCMEC_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NormNCMEC", "knobvals": "-1, 0, 1, 2, 3", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "NormNCMEC_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "XSecShape_CCMEC", "knobvals": "0, 1", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "XSecShape_CCMEC_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "DecayAngMEC", "knobvals": "0, 1", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "DecayAngMEC_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "FracPN_CCMEC", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "FracPN_CCMEC_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "FracDelta_CCMEC", "tag": "MEC", "force_0_cv": "true", "include_only_weights": "1", "text": "FracDelta_CCMEC_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "MaCCRES", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "MaCCRES_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "MvCCRES", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "MvCCRES_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "MaNCRES", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "MaNCRES_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "MvNCRES", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "MvNCRES_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "RDecBR1eta", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "RDecBR1eta_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "Theta_Delta2Npi", "knobvals": "0, 1", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "Theta_Delta2Npi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "RDecBR1gamma", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "RDecBR1gamma_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "ThetaDelta2NRad", "knobvals": "0, 1", "tag": "RES", "force_0_cv": "true", "include_only_weights": "1", "text": "ThetaDelta2NRad_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NormCCCOH", "knobvals": "-1, 0, 1, 2, 3", "tag": "COH", "force_0_cv": "true", "include_only_weights": "1", "text": "NormCCCOH_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NormNCCOH", "knobvals": "-1, 0, 1, 2, 3", "tag": "COH", "force_0_cv": "true", "include_only_weights": "1", "text": "NormNCCOH_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "MaNCEL", "tag": "NC", "force_0_cv": "true", "include_only_weights": "1", "text": "MaNCEL_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "EtaNCEL", "tag": "NC", "force_0_cv": "true", "include_only_weights": "1", "text": "EtaNCEL_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "AGKYxF1pi", "tag": "Hadr.", "force_0_cv": "true", "include_only_weights": "1", "text": "AGKYxF1pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "AGKYpT1pi", "tag": "Hadr.", "force_0_cv": "true", "include_only_weights": "1", "text": "AGKYpT1pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NonRESBGvbarnNC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarnNC1pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NonRESBGvbarnNC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarnNC2pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NonRESBGvbarpNC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarpNC1pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NonRESBGvbarpNC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarpNC2pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NonRESBGvnNC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvnNC1pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NonRESBGvnNC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvnNC2pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NonRESBGvpNC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvpNC1pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NonRESBGvpNC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvpNC2pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NonRESBGvbarnCC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarnCC1pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NonRESBGvbarnCC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarnCC2pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NonRESBGvbarpCC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarpCC1pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NonRESBGvbarpCC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvbarpCC2pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NonRESBGvnCC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvnCC1pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NonRESBGvnCC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvnCC2pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NonRESBGvpCC1pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvpCC1pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "NonRESBGvpCC2pi", "tag": "Non-RES", "force_0_cv": "true", "include_only_weights": "1", "text": "NonRESBGvpCC2pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "AhtBY", "tag": "Struct.", "force_0_cv": "true", "include_only_weights": "1", "text": "AhtBY_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "BhtBY", "tag": "Struct.", "force_0_cv": "true", "include_only_weights": "1", "text": "BhtBY_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "CV1uBY", "tag": "Struct.", "force_0_cv": "true", "include_only_weights": "1", "text": "CV1uBY_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "CV2uBY", "tag": "Struct.", "force_0_cv": "true", "include_only_weights": "1", "text": "CV2uBY_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "MFP_pi", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "MFP_pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "FrCEx_pi", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrCEx_pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "FrInel_pi", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrInel_pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "FrAbs_pi", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrAbs_pi_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "MFP_N", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "MFP_N_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "FrCEx_N", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrCEx_N_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "FrInel_N", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrInel_N_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "FrAbs_N", "tag": "FSI", "force_0_cv": "true", "include_only_weights": "1", "text": "FrAbs_N_UBGenie"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "xsr_scc_Fa3_SCC", "tag": "SCC", "force_0_cv": "true", "include_only_weights": "1", "text": "xsr_scc_Fa3_SCC"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "xsr_scc_Fv3_SCC", "tag": "SCC", "force_0_cv": "true", "include_only_weights": "1", "text": "xsr_scc_Fv3_SCC"},
     ]
     
     # Flux Systematics
     flux_systematics = [
-        {"type": "spline", "binning": "var0", "plotname": "horncurrent", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "horncurrent_FluxUnisim"},
-        {"type": "spline", "binning": "var0", "plotname": "expskin", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "expskin_FluxUnisim"},
-        {"type": "spline", "binning": "var0", "plotname": "kminus", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "kminus_PrimaryHadronNormalization"},
-        {"type": "spline", "binning": "var0", "plotname": "kplus", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "kplus_PrimaryHadronFeynmanScaling"},
-        {"type": "spline", "binning": "var0", "plotname": "kzero", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "kzero_PrimaryHadronSanfordWang"},
-        {"type": "spline", "binning": "var0", "plotname": "nucleoninexsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "nucleoninexsec_FluxUnisim"},
-        {"type": "spline", "binning": "var0", "plotname": "nucleonqexsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "nucleonqexsec_FluxUnisim"},
-        {"type": "spline", "binning": "var0", "plotname": "nucleontotxsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "nucleontotxsec_FluxUnisim"},
-        {"type": "spline", "binning": "var0", "plotname": "pioninexsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "pioninexsec_FluxUnisim"},
-        {"type": "spline", "binning": "var0", "plotname": "pionqexsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "pionqexsec_FluxUnisim"},
-        {"type": "spline", "binning": "var0", "plotname": "piontotxsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "piontotxsec_FluxUnisim"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "horncurrent", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "horncurrent_FluxUnisim"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "expskin", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "expskin_FluxUnisim"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "kminus", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "kminus_PrimaryHadronNormalization"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "kplus", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "kplus_PrimaryHadronFeynmanScaling"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "kzero", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "kzero_PrimaryHadronSanfordWang"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "nucleoninexsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "nucleoninexsec_FluxUnisim"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "nucleonqexsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "nucleonqexsec_FluxUnisim"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "nucleontotxsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "nucleontotxsec_FluxUnisim"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "pioninexsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "pioninexsec_FluxUnisim"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "pionqexsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "pionqexsec_FluxUnisim"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "piontotxsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "piontotxsec_FluxUnisim"},
         {"type": "covariance", "plotname": "piplus_prod", "tag": "piprod", "text": "piplus_PrimaryHadronSWCentralSplineVariation"},
         {"type": "covariance", "plotname": "piminus_prod", "tag": "piprod", "text": "piminus_PrimaryHadronSWCentralSplineVariation"},
     ]

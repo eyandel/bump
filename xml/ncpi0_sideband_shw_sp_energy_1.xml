@@ -1,3 +1,5 @@
+Don't use! Missing a preselection cut!
+
 <?xml version="1.0" ?>
 <mode name="nu"/>
 <detector name="uBooNE" pot="4.031e+19"/>
