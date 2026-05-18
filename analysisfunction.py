@@ -12,6 +12,8 @@ import shutil
 from array import array
 import math
 from tqdm import tqdm
+import subprocess
+import shlex
 
 plt.rcParams['figure.figsize'] = [16, 8]
 #import os
@@ -121,6 +123,24 @@ hatches = ['\\\\','\\\\','\\\\','\\\\',None,None,None,None,None,None,None,None,N
 # 111 = outFV sig, 0=cc1g, 1=nc other 1g, 2=nc del 1g, 3=nc pi0 1g, 
 # 4=nue, 5=nc bkd, 6=ncpi0 bkd, 7=numu bkd, 8=numupi0 bkd, 9=nfv, 10=cosmic, 11=dirt, 12=extbnb, 13=data
 # 222 = true 2 photon
+
+#default files: local run4b
+nu_overlay_4b="/Users/eyandel/Documents/MicroBooNE/processed_checkout_rootfiles/splines/checkout_run4b_nu_overlay_retuple_splines.root"
+DIRT_4b="/Users/eyandel/Documents/MicroBooNE/processed_checkout_rootfiles/splines/checkout_run_4b_dirt_overlay_splines.root"
+EXTBNB_4b="/Users/eyandel/Documents/MicroBooNE/processed_checkout_rootfiles/run4b/MCC9.10_Run4b_v10_04_07_09_Run4b_BNB_beam_off_surprise_reco2_hist.root"
+BNB_4b="/Users/eyandel/Documents/MicroBooNE/processed_checkout_rootfiles/run4b/retuple/checkout_MCC9.10_Run4b_v10_04_07_20_BNB_beam_on_metapatch_retuple_retuple_hist_opendata_20700.root"
+nue_overlay_4b="/Users/eyandel/Documents/MicroBooNE/processed_checkout_rootfiles/splines/checkout_run4b_nue_overlay_splines.root"
+ncpi0_overlay_4b="/Users/eyandel/Documents/MicroBooNE/processed_checkout_rootfiles/splines/checkout_run4b_ncpi0_overlay_splines.root"
+
+run4dataPOT = 4.031e19 
+run4ExtBnbPOT = 3.874e20
+
+default_file_dicts = [
+    {"file_path": nu_overlay_4b, "subchannel": "overlay"},
+    {"file_path": DIRT_4b, "subchannel": "dirt"},
+    {"file_path": EXTBNB_4b, "subchannel": "ext", "pot": run4ExtBnbPOT},
+    {"file_path": BNB_4b, "subchannel": "data", "pot": run4dataPOT}
+]
 
 def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
     newcat = []
@@ -3802,7 +3822,8 @@ def MakeDataPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y
 def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_label, 
                    selection, POT, plot_folder, array_sig = [0,1,2,3,111], ignore_cat = [], 
                    plotlog = False, changey = False, y_lim = 0, legx1 = 0.4, legy1 = 0.55, 
-                   legx2 = 0.87, legy2 = 0.85, systdir="", gausfit = False, cat5 = False):
+                   legx2 = 0.87, legy2 = 0.85, systdir="", gausfit = False, cat5 = False, 
+                   profit=False, include_detvar=False, files=default_file_dicts):
     #function to make a mc plot for a variable, will use whatever cut value and part of chain comes before
         #the call to the function
     #inputs:
@@ -4490,8 +4511,62 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
             hmcerror.GetXaxis().SetTitleSize(label_size)
             hmcerror.GetYaxis().SetTitleSize(label_size)
 
+    #make syst errors using profit
+    if profit:
+        hmcerror = hmc.Clone("hmcerror")
+        hmcerror.Sumw2()
+        #hmcerror.Scale(scalePOT)
+        hmcerror.Draw("same E2")
+        hmcerror.SetFillColor(kGray+2)
+        hmcerror.SetFillStyle(3002)
+        hmcerror.SetLineWidth(0)
+        hmcerror.SetLineColor(12)
+        hmcerror.SetMarkerColor(0)
+        hmcerror.SetMarkerSize(0)
+        #make syst errors using profit
+        GOF = {}
+        sumtotalcov = 0.0
+        print(f"Getting total uncertainty from PROfit covariance matrix")
+
+        # absolute cov matrix
+        matrix_absolute_cov = MakePROfitCovMatrix(plot_folder, all_df, files, selection, var, x_label, num_bins, start_edge, end_edge, str(POT), subchannel_map=None, include_detvar=include_detvar)
+
+        # construct a map from (obsch, bin) to cov index
+        obsch_bin_index = {}
+        index = 0
+        h1 = hmcerror.Clone("h1")  # error --> total uncertainty
+        #h2 = hmcerror.Clone("h2")  # bonus: error --> detector systematic uncertainty
+
+        htemp_data = h1.Clone("htemp_data")
+        htemp_pred = h1.Clone("htemp_pred")
+        htemp_data.Reset()
+        htemp_pred.Reset()
+        temp_sumtotalcov = 0
+        for i in range(h1.GetNbinsX() + 1):
+            index = i #obsch_bin_index[(obsch, i+1)]
+            total_uncertainty = matrix_absolute_cov[index][index]  # only diagonal term
+            # summation of total cov
+            if i != h1.GetNbinsX():  # no overflow bin in this calculation
+                for j in range(h1.GetNbinsX()):
+                    jndex = j #obsch_bin_index[(obsch, j+1)]
+                    temp_sumtotalcov += matrix_absolute_cov[index][jndex]
+            #detector_uncertainty = matrix_absolute_detector_cov[index][index]  # only diagonal term
+            if h1.GetBinContent(i+1) > 0:
+                print(f"{i} {h1.GetBinContent(i+1)} {total_uncertainty} {ROOT.TMath.Sqrt(total_uncertainty)/h1.GetBinContent(i+1)}")
+            h1.SetBinError(i+1, ROOT.TMath.Sqrt(total_uncertainty))
+            #h2.SetBinError(i+1, ROOT.TMath.Sqrt(detector_uncertainty))
+
+            sumtotalcov = temp_sumtotalcov
+            hmcerror.SetBinError(i+1, ROOT.TMath.Sqrt(total_uncertainty))
+            hmcerror.Draw("E2")
+            hmcerror.GetXaxis().SetTitle(x_label)
+            hmcerror.GetYaxis().SetTitle(y_label)
+            hmcerror.GetXaxis().SetTitleSize(label_size)
+            hmcerror.GetYaxis().SetTitleSize(label_size)
+    ###
+
     h_stack.Draw("hist same")
-    if systdir != "":
+    if systdir != "" or profit:
         hmcerror.Draw("same E2")
     
     h_stack.GetXaxis().SetTitle(x_label)
@@ -4508,7 +4583,7 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     leg.SetHeader('#bf{MicroBooNE Preliminary}              '+str(POT)+' POT',"C")
     for h,l in zip(root_hists, mc_labels):
         leg.AddEntry(h,l)
-    if systdir != "":
+    if systdir != "" or profit:
         leg.AddEntry(hmcerror, "Pred. uncertainty", "lf")
     leg.Draw()
 
@@ -6010,7 +6085,7 @@ def MakePROfitXML(all_df, files, selname, var, var_label, nbins, bin_min, bin_ma
     
     # Cross Section Systematics
     xs_systematics = [
-        {"type": "spline_to_covariance", "binning": "var0", "plotname": "MACCQE", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "MaCCQE_UBGenie"},
+        {"type": "spline", "binning": "var0", "plotname": "MACCQE", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "MaCCQE_UBGenie"},
         {"type": "spline_to_covariance", "binning": "var0", "plotname": "AxFFCCQEshape", "knobvals": "0, 1", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "AxFFCCQEshape_UBGenie"},
         {"type": "spline_to_covariance", "binning": "var0", "plotname": "VecFFCCQEshape", "knobvals": "0, 1", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "VecFFCCQEshape_UBGenie"},
         {"type": "spline_to_covariance", "binning": "var0", "plotname": "RPA_CCQE", "tag": "QE", "force_0_cv": "true", "include_only_weights": "1", "text": "RPA_CCQE_UBGenie"},
@@ -6213,6 +6288,41 @@ def MakePROfitXML(all_df, files, selname, var, var_label, nbins, bin_min, bin_ma
         f.write(xml_str)
     
     print(f"PROfit XML file created: {output_filename}")
+
+    return output_filename
+
+
+##
+def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbins, bin_min, bin_max, pot, subchannel_map=None, include_detvar=True):
+        #get the current directory
+        current_dir = os.getcwd()
+        print(f"Current directory: {current_dir}")
+        # Create root directory if it doesn't exist
+        os.makedirs("../xml", exist_ok=True)
+        profit_dir = f"{plot_folder}/profit"
+        os.makedirs(profit_dir, exist_ok=True)
+        xml_name = MakePROfitXML(all_df, files, selname, var, var_label, nbins, bin_min, bin_max, pot, subchannel_map=subchannel_map, include_detvar=include_detvar)
+        # Build and run PROfit command with xml path and -t tag taken from variables
+        xml_abs = current_dir + "/../xml/" + xml_name
+        #os.path.abspath(xml_name)
+        os.chdir(profit_dir)
+        processcmd = f"PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f"{selname}_{var}")} -o v001 -v3 --log process.log process 2>&1"
+        plotcmd = f"PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o v001 -v3 --seed 404 --log plot.log --plot-bounds ratmin 0 ratmax 2 --use-fake-data plot --with-splines 2>&1;"
+        print(f"Running: {processcmd}")
+        os.system(processcmd)
+        print(f"Running: {plotcmd}")
+        os.system(plotcmd)
+        # Read the ROOT file and extract the TH2D
+        root_filename = f"{selname}_{var}_v001_PROplot.root"
+        with ROOT.TFile(root_filename, "READ") as root_file:
+            #covariance_dir = root_file.GetDirectory("covariance")
+            collapsed_total_cor = root_file.Get("covariance/collapsed_total_cor")
+        
+        os.chdir(current_dir)  # Return to original directory after running PROfit
+
+        return collapsed_total_cor
+
+
 
 
 
