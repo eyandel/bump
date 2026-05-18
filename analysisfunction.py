@@ -3823,7 +3823,7 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
                    selection, POT, plot_folder, array_sig = [0,1,2,3,111], ignore_cat = [], 
                    plotlog = False, changey = False, y_lim = 0, legx1 = 0.4, legy1 = 0.55, 
                    legx2 = 0.87, legy2 = 0.85, systdir="", gausfit = False, cat5 = False, 
-                   profit=False, include_detvar=False, files=default_file_dicts):
+                   profit=False, include_detvar=False, files=default_file_dicts, remake_profit=False):
     #function to make a mc plot for a variable, will use whatever cut value and part of chain comes before
         #the call to the function
     #inputs:
@@ -4491,13 +4491,13 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
         temp_sumtotalcov = 0
         for i in range(h1.GetNbinsX() + 1):
             index = i #obsch_bin_index[(obsch, i+1)]
-            total_uncertainty = matrix_absolute_cov[index][index]  # only diagonal term
+            total_uncertainty = matrix_absolute_cov.GetBinContent(index, index)#[index][index]  # only diagonal term
             # summation of total cov
             if i != h1.GetNbinsX():  # no overflow bin in this calculation
                 for j in range(h1.GetNbinsX()):
                     jndex = j #obsch_bin_index[(obsch, j+1)]
-                    temp_sumtotalcov += matrix_absolute_cov[index][jndex]
-            detector_uncertainty = matrix_absolute_detector_cov[index][index]  # only diagonal term
+                    temp_sumtotalcov += matrix_absolute_cov.GetBinContent(index, jndex)#[index][jndex]
+            detector_uncertainty = matrix_absolute_detector_cov.GetBinContent(index, index)#[index][index]  # only diagonal term
             if h1.GetBinContent(i+1) > 0:
                 print(f"{i} {h1.GetBinContent(i+1)} {total_uncertainty} {ROOT.TMath.Sqrt(total_uncertainty)/h1.GetBinContent(i+1)} {h2.GetBinContent(i+1)} {detector_uncertainty}")
             h1.SetBinError(i+1, ROOT.TMath.Sqrt(total_uncertainty))
@@ -4529,7 +4529,7 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
         print(f"Getting total uncertainty from PROfit covariance matrix")
 
         # absolute cov matrix
-        matrix_absolute_cov = MakePROfitCovMatrix(plot_folder, all_df, files, selection, var, x_label, num_bins, start_edge, end_edge, str(POT), subchannel_map=None, include_detvar=include_detvar)
+        matrix_absolute_cov = MakePROfitCovMatrix(plot_folder, all_df, files, selection, var, x_label, num_bins, start_edge, end_edge, str(POT), subchannel_map=None, include_detvar=include_detvar, remake=remake_profit)
 
         # construct a map from (obsch, bin) to cov index
         obsch_bin_index = {}
@@ -4542,14 +4542,14 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
         htemp_data.Reset()
         htemp_pred.Reset()
         temp_sumtotalcov = 0
-        for i in range(h1.GetNbinsX() + 1):
+        for i in range(h1.GetNbinsX()):
             index = i #obsch_bin_index[(obsch, i+1)]
-            total_uncertainty = matrix_absolute_cov[index][index]  # only diagonal term
+            total_uncertainty = matrix_absolute_cov.GetBinContent(index, index) * #[index][index]  # only diagonal term
             # summation of total cov
             if i != h1.GetNbinsX():  # no overflow bin in this calculation
                 for j in range(h1.GetNbinsX()):
                     jndex = j #obsch_bin_index[(obsch, j+1)]
-                    temp_sumtotalcov += matrix_absolute_cov[index][jndex]
+                    temp_sumtotalcov += matrix_absolute_cov.GetBinContent(index, jndex)#[index][jndex]
             #detector_uncertainty = matrix_absolute_detector_cov[index][index]  # only diagonal term
             if h1.GetBinContent(i+1) > 0:
                 print(f"{i} {h1.GetBinContent(i+1)} {total_uncertainty} {ROOT.TMath.Sqrt(total_uncertainty)/h1.GetBinContent(i+1)}")
@@ -6293,7 +6293,7 @@ def MakePROfitXML(all_df, files, selname, var, var_label, nbins, bin_min, bin_ma
 
 
 ##
-def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbins, bin_min, bin_max, pot, subchannel_map=None, include_detvar=True):
+def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbins, bin_min, bin_max, pot, subchannel_map=None, include_detvar=True, remake=False):
         #get the current directory
         current_dir = os.getcwd()
         print(f"Current directory: {current_dir}")
@@ -6301,26 +6301,48 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
         os.makedirs("../xml", exist_ok=True)
         profit_dir = f"{plot_folder}/profit"
         os.makedirs(profit_dir, exist_ok=True)
-        xml_name = MakePROfitXML(all_df, files, selname, var, var_label, nbins, bin_min, bin_max, pot, subchannel_map=subchannel_map, include_detvar=include_detvar)
-        # Build and run PROfit command with xml path and -t tag taken from variables
-        xml_abs = current_dir + "/../xml/" + xml_name
-        #os.path.abspath(xml_name)
-        os.chdir(profit_dir)
-        processcmd = f"PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f"{selname}_{var}")} -o v001 -v3 --log process.log process 2>&1"
-        plotcmd = f"PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o v001 -v3 --seed 404 --log plot.log --plot-bounds ratmin 0 ratmax 2 --use-fake-data plot --with-splines 2>&1;"
-        print(f"Running: {processcmd}")
-        os.system(processcmd)
-        print(f"Running: {plotcmd}")
-        os.system(plotcmd)
         # Read the ROOT file and extract the TH2D
         root_filename = f"{selname}_{var}_v001_PROplot.root"
+        already_made = False
+        if os.path.isfile(root_filename):
+            already_made = True
+        if already_made:
+            print("PROfit file already exists")
+        else:
+            print("Making new PROfit file")
+        if remake:
+            print("Remaking PROfit file")
+        if remake or not already_made:
+            xml_name = MakePROfitXML(all_df, files, selname, var, var_label, nbins, bin_min, bin_max, pot, subchannel_map=subchannel_map, include_detvar=include_detvar)
+            # Build and run PROfit command with xml path and -t tag taken from variables
+            xml_abs = current_dir + "/../xml/" + xml_name
+            #os.path.abspath(xml_name)
+            os.chdir(profit_dir)
+            processcmd = f"PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f"{selname}_{var}")} -o v001 -v3 --log process.log process 2>&1"
+            plotcmd = f"PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o v001 -v3 --seed 404 --log plot.log --plot-bounds ratmin 0 ratmax 2 --use-fake-data plot --with-splines 2>&1;"
+            print(f"Running: {processcmd}")
+            os.system(processcmd)
+            print(f"Running: {plotcmd}")
+            os.system(plotcmd)
+        collapsed_total_frac_cov = ROOT.TH2D()
+        #collapsed_total_cor.SetName()
         with ROOT.TFile(root_filename, "READ") as root_file:
             #covariance_dir = root_file.GetDirectory("covariance")
-            collapsed_total_cor = root_file.Get("covariance/collapsed_total_cor")
+            cov_in = root_file.Get("Covariance/collapsed_total_frac_cov")
+            #collapsed_total_cor = cov_in.Copy()
+            x_bins = cov_in.GetNbinsX()
+            y_bins = cov_in.GetNbinsY()
+            collapsed_total_frac_cov.SetBins(x_bins, 0, x_bins, y_bins, 0, y_bins)
+            for i in range(cov_in.GetNbinsX()):
+                for j in range(cov_in.GetNbinsY()):
+                    #print(str(i) + " " + str(j) + " " + str(cov_in.GetBinContent(i+1,j+1)))
+                    collapsed_total_frac_cov.SetBinContent(i+1, j+1, cov_in.GetBinContent(i+1,j+1))
+                    #print(collapsed_total_cor.GetBinContent(i+1,j+1))
         
+        collapsed_total_cov = collapsed_total_frac_cov
         os.chdir(current_dir)  # Return to original directory after running PROfit
 
-        return collapsed_total_cor
+        return collapsed_total_cov
 
 
 
