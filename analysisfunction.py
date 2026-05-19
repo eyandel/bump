@@ -3566,6 +3566,7 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
     h_stack.Draw()
 
     ##fits and errors
+    stackHists = h_stack.GetHists()
     hmc = stackHists[0].Clone()
     hmc.Reset()
     for hist in stackHists:
@@ -3754,7 +3755,7 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
             hmcerror.GetXaxis().SetTitleSize(label_size)
             hmcerror.GetYaxis().SetTitleSize(label_size)
     ###
-    
+    h_stack.Draw()
     
     h_data.SetFillColor(kWhite)
     h_data.SetLineColor(kBlack)
@@ -3768,6 +3769,8 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
     tmpHist.Reset()
     for hist in stackHists:
           tmpHist.Add(hist)
+    if systdir != "" or profit:
+        tmpHist = hmcerror.Clone()
     tmpHist.SetLineColor(kWhite)
     tmpHist.SetFillColor(kWhite)
     tmpHist.SetMarkerColor(kWhite)
