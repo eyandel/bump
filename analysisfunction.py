@@ -2928,7 +2928,9 @@ def GetSelectionROOTExpression(selection):
 ###
 def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_label, 
                    selection, POT, plot_folder, array_sig = [0,1,2,3,111], ignore_cat = [], showeffpur = False, 
-                   plotlog = False, changey = False, y_lim = 0, legx1 = 0.45, legy1 = 0.55, legx2 = 0.85, legy2 = 0.85, cat5 = False):
+                   plotlog = False, changey = False, y_lim = 0, legx1 = 0.45, legy1 = 0.55, legx2 = 0.85, legy2 = 0.85, 
+                   systdir="", gausfit = False, cat5 = False, 
+                   profit=False, include_detvar=False, files=default_file_dicts, remake_profit=False):
     #function to make a data mc plot for a variable, will use whatever cut value and part of chain comes before
         #the call to the function
     #inputs:
@@ -3562,6 +3564,197 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
         h_stack.Add(h_new[i])
 
     h_stack.Draw()
+
+    ##fits and errors
+    hmc = stackHists[0].Clone()
+    hmc.Reset()
+    for hist in stackHists:
+        hmc.Add(hist)
+
+    if gausfit:
+        hmc.SetFillStyle(0)
+        #hmc.SetLineStyle(0)
+        hmc.Draw("hist same")
+        ROOT.gStyle.SetOptFit(1011)
+        # Create the fit function
+        fitFunc = ROOT.TF1("fitFunc", "[0] * exp(-0.5 * ((x - [1]) / [2])**2) + [3]", start_edge, end_edge)
+
+        # Set initial parameter values
+        fitFunc.SetParameters(100, 0, 1, 10)
+
+        # Set parameter names
+        fitFunc.SetParNames("Amplitude", "Mean", "Sigma", "Offset")
+
+        # Fit the histogram
+        #hmc.Fit("fitFunc", "M")
+        hmc.Fit("gaus", "M")
+        #hmc.Draw("E0 same")
+
+    #make syst errors from existing TLEE file
+    if systdir != "":
+        hmcerror = hmc.Clone("hmcerror")
+        hmcerror.Sumw2()
+        #hmcerror.Scale(scalePOT)
+        hmcerror.Draw("same E2")
+        hmcerror.SetFillColor(kGray+2)
+        hmcerror.SetFillStyle(3002)
+        hmcerror.SetLineWidth(0)
+        hmcerror.SetLineColor(12)
+        hmcerror.SetMarkerColor(0)
+        hmcerror.SetMarkerSize(0)
+        #make syst errors from existing TLEE file
+        GOF = {}
+        sumtotalcov = 0.0
+        print(f"Total uncertainty from external covariance matrix: {systdir}")
+        f_cov = ROOT.TFile(systdir, "READ")
+
+        flag_syst_flux_Xs = array('i', [0])
+        flag_syst_detector = array('i', [0])
+        flag_syst_additional = array('i', [0])
+        flag_syst_mc_stat = array('i', [0])
+        cov_lee_strength = array('d', [0])
+        vc_val_GOF = ROOT.std.vector('double')()
+        vc_val_GOF_NDF = ROOT.std.vector('int')()
+
+        t_covconfig = f_cov.Get("tree")
+        t_covconfig.SetBranchAddress("flag_syst_flux_Xs", flag_syst_flux_Xs)
+        t_covconfig.SetBranchAddress("flag_syst_detector", flag_syst_detector)
+        t_covconfig.SetBranchAddress("flag_syst_additional", flag_syst_additional)
+        t_covconfig.SetBranchAddress("flag_syst_mc_stat", flag_syst_mc_stat)
+        t_covconfig.SetBranchAddress("user_Lee_strength_for_output_covariance_matrix", cov_lee_strength)
+        t_covconfig.SetBranchAddress("vc_val_GOF", vc_val_GOF)
+        t_covconfig.SetBranchAddress("vc_val_GOF_NDF", vc_val_GOF_NDF)
+        t_covconfig.GetEntry(0)
+
+        # fill GOF map
+        for vv in range(vc_val_GOF.size()):
+            GOF[vv] = (vc_val_GOF[vv], vc_val_GOF_NDF[vv])
+
+        # absolute cov matrix
+        matrix_absolute_cov = f_cov.Get("matrix_absolute_cov_newworld")
+        matrix_absolute_detector_cov = f_cov.Get("matrix_absolute_detector_cov_newworld")
+
+        print(f"Cov matrix config: \n"
+            f"\t syst_flux_Xs: {flag_syst_flux_Xs[0]}\n"
+            f"\t syst_detector: {flag_syst_detector[0]}\n"
+            f"\t syst_additional: {flag_syst_additional[0]}\n"
+            f"\t syst_mc_stat: {flag_syst_mc_stat[0]}\n"
+            f"\t LEE_strength: {cov_lee_strength[0]}")
+
+        # construct a map from (obsch, bin) to cov index
+        obsch_bin_index = {}
+        index = 0
+        #for i in range(len(map_obsch_histos)):
+            # + overflow bin
+            #for j in range(1, map_obsch_histos[i+1][1].GetNbinsX() + 2):
+                #index += 1
+                # cov index starts from 0
+                #obsch_bin_index[(i+1, j)] = index - 1
+
+        matrix_pred = f_cov.Get("matrix_pred_newworld")
+        matrix_data = f_cov.Get("matrix_data_newworld")
+        #for obsch, histos in map_obsch_histos.items():
+        h1 = hmcerror.Clone("h1")  # error --> total uncertainty
+        h2 = hmcerror.Clone("h2")  # bonus: error --> detector systematic uncertainty
+
+        htemp_data = h1.Clone("htemp_data")
+        htemp_pred = h1.Clone("htemp_pred")
+        htemp_data.Reset()
+        htemp_pred.Reset()
+        temp_sumtotalcov = 0
+        for i in range(h1.GetNbinsX() + 1):
+            index = i #obsch_bin_index[(obsch, i+1)]
+            total_uncertainty = matrix_absolute_cov[index][index]  # only diagonal term
+            # summation of total cov
+            if i != h1.GetNbinsX():  # no overflow bin in this calculation
+                for j in range(h1.GetNbinsX()):
+                    jndex = j #obsch_bin_index[(obsch, j+1)]
+                    temp_sumtotalcov += matrix_absolute_cov[index][jndex]
+            detector_uncertainty = matrix_absolute_detector_cov[index][index]  # only diagonal term
+            if h1.GetBinContent(i+1) > 0:
+                print(f"{i} {h1.GetBinContent(i+1)} {total_uncertainty} {ROOT.TMath.Sqrt(total_uncertainty)/h1.GetBinContent(i+1)} {h2.GetBinContent(i+1)} {detector_uncertainty}")
+            h1.SetBinError(i+1, ROOT.TMath.Sqrt(total_uncertainty))
+            h2.SetBinError(i+1, ROOT.TMath.Sqrt(detector_uncertainty))
+
+            sumtotalcov = temp_sumtotalcov
+            hmcerror.SetBinError(i+1, ROOT.TMath.Sqrt(total_uncertainty))
+            hmcerror.Draw("E2")
+            hmcerror.GetXaxis().SetTitle(x_label)
+            hmcerror.GetYaxis().SetTitle(y_label)
+            hmcerror.GetXaxis().SetTitleSize(label_size)
+            hmcerror.GetYaxis().SetTitleSize(label_size)
+
+    #make syst errors using profit
+    if profit:
+        hmcerror = hmc.Clone("hmcerror")
+        hmcerror.Sumw2()
+        #hmcerror.Scale(scalePOT)
+        hmcerror.Draw("same E2")
+        hmcerror.SetFillColor(kGray+2)
+        hmcerror.SetFillStyle(3002)
+        hmcerror.SetLineWidth(0)
+        hmcerror.SetLineColor(12)
+        hmcerror.SetMarkerColor(0)
+        hmcerror.SetMarkerSize(0)
+        #make syst errors using profit
+        GOF = {}
+        sumtotalcov = 0.0
+        print(f"Getting total uncertainty from PROfit covariance matrix")
+
+        # absolute cov matrix
+        matrix_frac_cov_TH2D = MakePROfitCovMatrix(plot_folder, all_df, files, selection, var, x_label, num_bins, start_edge, end_edge, str(POT), subchannel_map=None, include_detvar=include_detvar, remake=remake_profit)
+        matrix_absolute_cov = np.array([[]])#matrix_frac_cov.Clone("matrix_absolute_cov")
+
+        vec_pred = np.array([])
+        matrix_frac_cov = []
+        for i in range(hmc.GetNbinsX()):
+            vec_pred = np.append(vec_pred,[hmc.GetBinContent(i+1)])
+            matrix_frac_cov_row = np.array([])
+            for j in range(hmc.GetNbinsX()):
+                matrix_frac_cov_row = np.append(matrix_frac_cov_row, [matrix_frac_cov_TH2D.GetBinContent(i+1,j+1)])
+            matrix_frac_cov.append(matrix_frac_cov_row)
+
+        matrix_absolute_cov = np.array(matrix_absolute_cov)
+        pred_outer = np.outer(vec_pred, vec_pred)
+        #print(matrix_frac_cov)
+        #print(pred_outer)
+        matrix_absolute_cov = matrix_frac_cov * pred_outer
+            
+
+        # construct a map from (obsch, bin) to cov index
+        obsch_bin_index = {}
+        index = 0
+        h1 = hmcerror.Clone("h1")  # error --> total uncertainty
+        #h2 = hmcerror.Clone("h2")  # bonus: error --> detector systematic uncertainty
+
+        htemp_data = h1.Clone("htemp_data")
+        htemp_pred = h1.Clone("htemp_pred")
+        htemp_data.Reset()
+        htemp_pred.Reset()
+        temp_sumtotalcov = 0
+        for i in range(h1.GetNbinsX()):
+            index = i #obsch_bin_index[(obsch, i+1)]
+            total_uncertainty = matrix_absolute_cov[index][index]  # only diagonal term
+            # summation of total cov
+            if i != h1.GetNbinsX():  # no overflow bin in this calculation
+                for j in range(h1.GetNbinsX()):
+                    jndex = j #obsch_bin_index[(obsch, j+1)]
+                    temp_sumtotalcov += matrix_absolute_cov[index][jndex]
+            #detector_uncertainty = matrix_absolute_detector_cov[index][index]  # only diagonal term
+            if h1.GetBinContent(i+1) > 0:
+                print(f"{i} {h1.GetBinContent(i+1)} {total_uncertainty} {ROOT.TMath.Sqrt(total_uncertainty)/h1.GetBinContent(i+1)}")
+            h1.SetBinError(i+1, ROOT.TMath.Sqrt(total_uncertainty))
+            #h2.SetBinError(i+1, ROOT.TMath.Sqrt(detector_uncertainty))
+
+            sumtotalcov = temp_sumtotalcov
+            hmcerror.SetBinError(i+1, ROOT.TMath.Sqrt(total_uncertainty))
+            hmcerror.Draw("E2")
+            hmcerror.GetXaxis().SetTitle(x_label)
+            hmcerror.GetYaxis().SetTitle(y_label)
+            hmcerror.GetXaxis().SetTitleSize(label_size)
+            hmcerror.GetYaxis().SetTitleSize(label_size)
+    ###
+    
     
     h_data.SetFillColor(kWhite)
     h_data.SetLineColor(kBlack)
@@ -3613,6 +3806,10 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
     #pvalue = h_data.Chi2Test(tmpHist)
     #print(pvalue)
     #chi2 = round(h_data.Chi2Test(tmpHist,"CHI2/NDF"),2)
+
+    if gausfit:
+        legy1 -= 0.2
+        legy2 -= 0.2
     
     leg = ROOT.TLegend(legx1,legy1,legx2,legy2)
     leg.SetNColumns(2)
@@ -3623,6 +3820,8 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
     mc_labels.insert(0,'BNB Data ({})'.format(int(sum(selected_data_w))))
     for h,l in zip(root_hists, mc_labels):
         leg.AddEntry(h,l)  
+    if systdir != "" or profit:
+        leg.AddEntry(hmcerror, "Pred. uncertainty", "lf")
     header = leg.GetListOfPrimitives().First()
     header.SetTextAlign(22)
     #header.SetTextColor(2)
@@ -3630,8 +3829,13 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
     
     h_data.Draw("AE")
     h_stack.Draw("hist same")
+    if systdir != "" or profit:
+        hmcerror.Draw("same E2")
     h_data.Draw("AE same")
     leg.Draw()
+    if gausfit:
+        hmc.Draw("sames")
+        c.Update()
     if plotlog:
         p.SetLogy()
     p.Modified() 
@@ -4491,13 +4695,13 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
         temp_sumtotalcov = 0
         for i in range(h1.GetNbinsX() + 1):
             index = i #obsch_bin_index[(obsch, i+1)]
-            total_uncertainty = matrix_absolute_cov.GetBinContent(index, index)#[index][index]  # only diagonal term
+            total_uncertainty = matrix_absolute_cov[index][index]  # only diagonal term
             # summation of total cov
             if i != h1.GetNbinsX():  # no overflow bin in this calculation
                 for j in range(h1.GetNbinsX()):
                     jndex = j #obsch_bin_index[(obsch, j+1)]
-                    temp_sumtotalcov += matrix_absolute_cov.GetBinContent(index, jndex)#[index][jndex]
-            detector_uncertainty = matrix_absolute_detector_cov.GetBinContent(index, index)#[index][index]  # only diagonal term
+                    temp_sumtotalcov += matrix_absolute_cov[index][jndex]
+            detector_uncertainty = matrix_absolute_detector_cov[index][index]  # only diagonal term
             if h1.GetBinContent(i+1) > 0:
                 print(f"{i} {h1.GetBinContent(i+1)} {total_uncertainty} {ROOT.TMath.Sqrt(total_uncertainty)/h1.GetBinContent(i+1)} {h2.GetBinContent(i+1)} {detector_uncertainty}")
             h1.SetBinError(i+1, ROOT.TMath.Sqrt(total_uncertainty))
@@ -4529,7 +4733,24 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
         print(f"Getting total uncertainty from PROfit covariance matrix")
 
         # absolute cov matrix
-        matrix_absolute_cov = MakePROfitCovMatrix(plot_folder, all_df, files, selection, var, x_label, num_bins, start_edge, end_edge, str(POT), subchannel_map=None, include_detvar=include_detvar, remake=remake_profit)
+        matrix_frac_cov_TH2D = MakePROfitCovMatrix(plot_folder, all_df, files, selection, var, x_label, num_bins, start_edge, end_edge, str(POT), subchannel_map=None, include_detvar=include_detvar, remake=remake_profit)
+        matrix_absolute_cov = np.array([[]])#matrix_frac_cov.Clone("matrix_absolute_cov")
+
+        vec_pred = np.array([])
+        matrix_frac_cov = []
+        for i in range(hmc.GetNbinsX()):
+            vec_pred = np.append(vec_pred,[hmc.GetBinContent(i+1)])
+            matrix_frac_cov_row = np.array([])
+            for j in range(hmc.GetNbinsX()):
+                matrix_frac_cov_row = np.append(matrix_frac_cov_row, [matrix_frac_cov_TH2D.GetBinContent(i+1,j+1)])
+            matrix_frac_cov.append(matrix_frac_cov_row)
+
+        matrix_absolute_cov = np.array(matrix_absolute_cov)
+        pred_outer = np.outer(vec_pred, vec_pred)
+        #print(matrix_frac_cov)
+        #print(pred_outer)
+        matrix_absolute_cov = matrix_frac_cov * pred_outer
+            
 
         # construct a map from (obsch, bin) to cov index
         obsch_bin_index = {}
@@ -4544,12 +4765,12 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
         temp_sumtotalcov = 0
         for i in range(h1.GetNbinsX()):
             index = i #obsch_bin_index[(obsch, i+1)]
-            total_uncertainty = matrix_absolute_cov.GetBinContent(index, index) * #[index][index]  # only diagonal term
+            total_uncertainty = matrix_absolute_cov[index][index]  # only diagonal term
             # summation of total cov
             if i != h1.GetNbinsX():  # no overflow bin in this calculation
                 for j in range(h1.GetNbinsX()):
                     jndex = j #obsch_bin_index[(obsch, j+1)]
-                    temp_sumtotalcov += matrix_absolute_cov.GetBinContent(index, jndex)#[index][jndex]
+                    temp_sumtotalcov += matrix_absolute_cov[index][jndex]
             #detector_uncertainty = matrix_absolute_detector_cov[index][index]  # only diagonal term
             if h1.GetBinContent(i+1) > 0:
                 print(f"{i} {h1.GetBinContent(i+1)} {total_uncertainty} {ROOT.TMath.Sqrt(total_uncertainty)/h1.GetBinContent(i+1)}")
@@ -6304,7 +6525,7 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
         # Read the ROOT file and extract the TH2D
         root_filename = f"{selname}_{var}_v001_PROplot.root"
         already_made = False
-        if os.path.isfile(root_filename):
+        if os.path.isfile(profit_dir+"/"+root_filename):
             already_made = True
         if already_made:
             print("PROfit file already exists")
@@ -6326,7 +6547,7 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
             os.system(plotcmd)
         collapsed_total_frac_cov = ROOT.TH2D()
         #collapsed_total_cor.SetName()
-        with ROOT.TFile(root_filename, "READ") as root_file:
+        with ROOT.TFile(profit_dir+"/"+root_filename, "READ") as root_file:
             #covariance_dir = root_file.GetDirectory("covariance")
             cov_in = root_file.Get("Covariance/collapsed_total_frac_cov")
             #collapsed_total_cor = cov_in.Copy()
