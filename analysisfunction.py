@@ -3824,7 +3824,10 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
     for h,l in zip(root_hists, mc_labels):
         leg.AddEntry(h,l)  
     if systdir != "" or profit:
-        leg.AddEntry(hmcerror, "Pred. uncertainty", "lf")
+        if include_detvar or not profit:
+            leg.AddEntry(hmcerror, "Pred. uncertainty", "lf")
+        else:
+            leg.AddEntry(hmcerror, "Pred. uncertainty (no det)", "lf")
     header = leg.GetListOfPrimitives().First()
     header.SetTextAlign(22)
     #header.SetTextColor(2)
@@ -4808,7 +4811,10 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     for h,l in zip(root_hists, mc_labels):
         leg.AddEntry(h,l)
     if systdir != "" or profit:
-        leg.AddEntry(hmcerror, "Pred. uncertainty", "lf")
+        if include_detvar or not profit:
+            leg.AddEntry(hmcerror, "Pred. uncertainty", "lf")
+        else:
+            leg.AddEntry(hmcerror, "Pred. uncertainty (no det)", "lf")
     leg.Draw()
 
     if gausfit:
@@ -5604,7 +5610,7 @@ def Get2Photons(all_df, reco):
     true_event_types = all_df["true_event_type"].to_numpy(zero_copy_only=False)
     default_list = [-9999., -9999., -9999., -9999.]
     if reco == "wc":
-        em_charge_scale = 0.95
+        #em_charge_scale = 0.95
         reco_Ntrack = all_df["wc_reco_Ntrack"].to_numpy(zero_copy_only=False)
         reco_startXYZT = all_df["wc_reco_startXYZT"].to_numpy(zero_copy_only=False)
         reco_startMomentum = all_df["wc_reco_startMomentum"].to_numpy(zero_copy_only=False)
