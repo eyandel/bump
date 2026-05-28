@@ -2765,7 +2765,7 @@ def PassSelection(selection, all_df, i):
                         elif "_NC" in selection and not (nmuon_lantern[j] > 0 or nmuon_pandora[j] > 0 or nmuon_wc[j] > 0):
                             p[j] = True
                 #2 photons
-                elif "2photon" in selection:
+                elif "2photon" in selection or "6photon" in selection:
                     if selection=="2photon_wc" and enu[j]>0.0 and nphotons_wc[j]==2:
                         p[j] = True
                     elif selection=="2photon_pandora" and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2):
@@ -2794,6 +2794,9 @@ def PassSelection(selection, all_df, i):
                         p[j] = True
                     elif selection=="2photon_any_dist" and enu[j]>0.0 and wc_pandora_dist[j] < 5 and wc_lantern_dist[j] < 5 and lantern_pandora_dist[j] < 5 and (nphotons_wc[j]==2 or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) or (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2)):
                         p[j] = True
+                    elif selection=="6photon_all" and enu[j]>0.0 and nphotons_wc[j]==6:# and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==6) and pelee_showers[j]==6 and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==6):
+                        p[j] = True
+
 
     else:
         pass_vec = PassSelection(selection, all_df, -1)
