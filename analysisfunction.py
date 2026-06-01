@@ -2541,7 +2541,7 @@ def PassSelection(selection, all_df, i):
             nphotons_wc = []
             nphotons_lantern = []
             nphotons_pandora = []
-            if "2photon" in selection:
+            if "photon" in selection:
                 if "nphotons_wc" not in all_df.columns:
                     all_df = Get2Photons(all_df, "wc")
                     all_df = Get2Photons(all_df, "lantern")
@@ -2776,11 +2776,11 @@ def PassSelection(selection, all_df, i):
                         p[j] = True
                     elif selection=="2photon_wclantern_wpdist" and wc_pandora_dist[j] < 5 and enu[j]>0.0 and nphotons_wc[j]==2 and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2):
                         p[j] = True
-                    elif selection=="2photon_all" and enu[j]>0.0 and nphotons_wc[j]==2 and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) and pelee_showers[j]==2 and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2):
+                    elif selection=="2photon_all" and enu[j]>0.0 and nphotons_wc[j]==2 and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2):
                         p[j] = True
                     elif selection=="2photon_all_noglee" and enu[j]>0.0 and nphotons_wc[j]==2 and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2):
                         p[j] = True
-                    elif selection=="2photon_any" and ((enu[j]>0.0 and nphotons_wc[j]==2) or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) or pelee_showers[j]==2 or (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2)):
+                    elif selection=="2photon_any" and ((enu[j]>0.0 and nphotons_wc[j]==2) or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) or (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2)):
                         p[j] = True
                     elif selection=="2photon_any_noglee" and ((enu[j]>0.0 and nphotons_wc[j]==2) or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) or (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2)):
                         p[j] = True
@@ -2794,7 +2794,9 @@ def PassSelection(selection, all_df, i):
                         p[j] = True
                     elif selection=="2photon_any_dist" and enu[j]>0.0 and wc_pandora_dist[j] < 5 and wc_lantern_dist[j] < 5 and lantern_pandora_dist[j] < 5 and (nphotons_wc[j]==2 or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) or (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2)):
                         p[j] = True
-                    elif selection=="6photon_all" and enu[j]>0.0 and nphotons_wc[j]==6:# and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==6) and pelee_showers[j]==6 and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==6):
+                    elif selection=="6photon_all" and enu[j]>0.0 and nphotons_wc[j]==6 and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==6) and pelee_showers[j]==6 and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==6):
+                        p[j] = True
+                    elif selection=="6photon_any" and ( (enu[j]>0.0 and nphotons_wc[j]==6) or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==6) or (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==6)):
                         p[j] = True
 
 
