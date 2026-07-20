@@ -2415,7 +2415,10 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
 
     POT_factor = []
     for i in range(len(is_ext)):
-        dataPOT = dataPOTvec[np.argmax(runs == run_number[i])]
+        if isinstance(dataPOTvec, (list, np.ndarray)):
+            dataPOT = dataPOTvec[np.argmax(runs == run_number[i])]
+        else:
+            dataPOT = dataPOTvec
         ExtBnbPOT = ExtBnbPOTvec[np.argmax(runs == run_number[i])]
         num = 1.0
         denom = 1.0
