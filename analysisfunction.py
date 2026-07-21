@@ -2349,7 +2349,53 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
     #returns w: array filled with weights
     
     if runs==0:
-        runs = [1,2,3,41,4,5]
+        runs = [1,2,3,41,42,43,44,4,5]
+
+    run1BnbPOT = 1.0
+    run2BnbPOT = 1.0
+    run3BnbPOT = 1.0
+    run4aBnbPOT = 1.0
+    run4bBnbPOT = 1.0
+    run4cBnbPOT = 1.0
+    run4dBnbPOT = 1.0
+    run4BnbPOT = 1.0
+    run5BnbPOT = 1.0
+    run1DirtPOT = 1.0
+    run2DirtPOT = 1.0
+    run3DirtPOT = 1.0
+    run4aDirtPOT = 1.0
+    run4bDirtPOT = 1.0
+    run4cDirtPOT = 1.0
+    run4dDirtPOT = 1.0
+    run4DirtPOT = 1.0
+    run5DirtPOT = 1.0
+    run1SPPOT = 1.0
+    run2SPPOT = 1.0
+    run3SPPOT = 1.0
+    run4aSPPOT = 1.0
+    run4bSPPOT = 1.0
+    run4cSPPOT = 1.0
+    run4dSPPOT = 1.0
+    run4SPPOT = 1.0
+    run5SPPOT = 1.0
+    run1NCPi0POT = 1.0
+    run2NCPi0POT = 1.0
+    run3NCPi0POT = 1.0
+    run4aNCPi0POT = 1.0
+    run4bNCPi0POT = 1.0
+    run4cNCPi0POT = 1.0
+    run4dNCPi0POT = 1.0
+    run4NCPi0POT = 1.0
+    run5NCPi0POT = 1.0
+    run1modpi0POT = 1.0
+    run2modpi0POT = 1.0
+    run3modpi0POT = 1.0
+    run4amodpi0POT = 1.0
+    run4bmodpi0POT = 1.0
+    run4cmodpi0POT = 1.0
+    run4dmodpi0POT = 1.0
+    run4modpi0POT = 1.0
+    run5modpi0POT = 1.0
 
     for var_name, file_name in pot_vars:
         globals()[var_name] = GetPOT(file_name)
@@ -2369,7 +2415,10 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
 
     POT_factor = []
     for i in range(len(is_ext)):
-        dataPOT = dataPOTvec[np.argmax(runs == run_number[i])]
+        if isinstance(dataPOTvec, (list, np.ndarray)):
+            dataPOT = dataPOTvec[np.argmax(runs == run_number[i])]
+        else:
+            dataPOT = dataPOTvec
         ExtBnbPOT = ExtBnbPOTvec[np.argmax(runs == run_number[i])]
         num = 1.0
         denom = 1.0
@@ -2380,44 +2429,89 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
             num = dataPOT
             if run_number[i] == 1:
                 denom = run1DirtPOT
+                num = 0.0 if run1DirtPOT == 1.0 else num
             elif run_number[i] == 2:
                 denom = run2DirtPOT
+                num = 0.0 if run2DirtPOT == 1.0 else num
             elif run_number[i] == 3:
                 denom = run3DirtPOT
+                num = 0.0 if run3DirtPOT == 1.0 else num
             elif run_number[i] == 41:
                 denom = run4aDirtPOT
+                num = 0.0 if run4aDirtPOT == 1.0 else num
+            elif run_number[i] == 42:
+                denom = run4bDirtPOT
+                num = 0.0 if run4bDirtPOT == 1.0 else num
+            elif run_number[i] == 43:
+                denom = run4cDirtPOT
+                num = 0.0 if run4cDirtPOT == 1.0 else num
+            elif run_number[i] == 44:
+                denom = run4dDirtPOT
+                num = 0.0 if run4dDirtPOT == 1.0 else num
             elif run_number[i] == 4:
                 denom = run4DirtPOT
+                num = 0.0 if run4DirtPOT == 1.0 else num
             elif run_number[i] == 5:
                 denom = run5DirtPOT
+                num = 0.0 if run5DirtPOT == 1.0 else num
         elif is_sigoverlay[i]:
             num = dataPOT
             if run_number[i] == 1:
                 denom = run1SPPOT
+                num = 0.0 if run1SPPOT == 1.0 else num
             elif run_number[i] == 2:
                 denom = run2SPPOT
+                num = 0.0 if run2SPPOT == 1.0 else num
             elif run_number[i] == 3:
                 denom = run3SPPOT
+                num = 0.0 if run3SPPOT == 1.0 else num
             elif run_number[i] == 41:
                 denom = run4aSPPOT
+                num = 0.0 if run4aSPPOT == 1.0 else num
+            elif run_number[i] == 42:
+                denom = run4bSPPOT
+                num = 0.0 if run4bSPPOT == 1.0 else num
+            elif run_number[i] == 43:
+                denom = run4cSPPOT
+                num = 0.0 if run4cSPPOT == 1.0 else num
+            elif run_number[i] == 44:
+                denom = run4dSPPOT
+                num = 0.0 if run4dSPPOT == 1.0 else num
             elif run_number[i] == 4:
                 denom = run4SPPOT
+                num = 0.0 if run4SPPOT == 1.0 else num
             elif run_number[i] == 5:
                 denom = run5SPPOT
+                num = 0.0 if run5SPPOT == 1.0 else num
         elif is_modpi0[i]:
             num = dataPOT
             if run_number[i] == 1:
                 denom = run1modpi0POT
+                num = 0.0 if run1modpi0POT == 1.0 else num
             elif run_number[i] == 2:
                 denom = run2modpi0POT
+                num = 0.0 if run2modpi0POT == 1.0 else num
             elif run_number[i] == 3:
                 denom = run3modpi0POT
+                num = 0.0 if run3modpi0POT == 1.0 else num
             elif run_number[i] == 41:
                 denom = run4amodpi0POT
+                num = 0.0 if run4amodpi0POT == 1.0 else num
+            elif run_number[i] == 42:
+                denom = run4bmodpi0POT
+                num = 0.0 if run4bmodpi0POT == 1.0 else num
+            elif run_number[i] == 43:
+                denom = run4cmodpi0POT
+                num = 0.0 if run4cmodpi0POT == 1.0 else num
+            elif run_number[i] == 44:
+                denom = run4dmodpi0POT
+                num = 0.0 if run4dmodpi0POT == 1.0 else num
             elif run_number[i] == 4:
                 denom = run4modpi0POT
+                num = 0.0 if run4modpi0POT == 1.0 else num
             elif run_number[i] == 5:
                 denom = run5modpi0POT
+                num = 0.0 if run5modpi0POT == 1.0 else num
         elif is_data[i] or is_lee[i] or is_ncpi0overlay[i]:
             num = 1.0
             denom = 1.0
@@ -2431,6 +2525,12 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
                 denom = run3BnbPOT
             elif run_number[i] == 41:
                 denom = run4aBnbPOT
+            elif run_number[i] == 42:
+                denom = run4bBnbPOT
+            elif run_number[i] == 43:
+                denom = run4cBnbPOT
+            elif run_number[i] == 44:
+                denom = run4dBnbPOT
             elif run_number[i] == 4:
                 denom = run4BnbPOT
             elif run_number[i] == 5:
