@@ -479,6 +479,9 @@ def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
         pl.Series("true_event_type_fill", newcatfill)
     )
     if catname == "2 true photons":
+        # Ensure all entries are numpy arrays with correct dtype
+        photon1_mom = [np.array(p, dtype='float64') if not isinstance(p, np.ndarray) else p.astype('float64') for p in photon1_mom]
+        
         all_df = all_df.with_columns(
             pl.Series("truth_photon1_mom", photon1_mom),
             pl.Series("truth_photon2_mom", photon2_mom),
