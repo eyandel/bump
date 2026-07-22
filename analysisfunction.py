@@ -3099,9 +3099,9 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
     h_numuCC1g = ROOT.gROOT.FindObject("h_numuCC1g")
     h_out1g = ROOT.gROOT.FindObject("h_out1g")
     h_1g = ROOT.gROOT.FindObject("h_1g")
-    if h_data != None:
+    if h_data:
         h_data.Delete()
-    if h_numuCC1g != None:
+    if h_numuCC1g:
         h_ext.Delete()
         h_dirt.Delete()
         h_cos.Delete()
@@ -3111,13 +3111,13 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
         h_NCpi0.Delete()
         h_NC.Delete()
         h_nueCC.Delete()
-    if h_NCpi1g != None:
+    if h_NCpi1g:
         h_NCpi1g.Delete()
         h_NCdel.Delete()
         h_NCother.Delete()
         h_numuCC1g.Delete()
         h_out1g.Delete()
-    if h_1g != None:
+    if h_1g:
         h_1g.Delete()
     
     h_data = ROOT.TH1F('h_data', title, bin_num, start_edge, end_edge)
@@ -3288,7 +3288,7 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
                     seen_new_color.append(int(selected_true_event_type_color_bkg[i]))
                     seen_new_fill.append(int(selected_true_event_type_fill_bkg[i]))
                     h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}")
-                    if h_tmp != None:
+                    if h_tmp:
                         h_tmp.Delete()
                     h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
                     new_var = []
@@ -3374,7 +3374,7 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
                     seen_new_color.append(int(selected_true_event_type_color_sig[i]))
                     seen_new_fill.append(int(selected_true_event_type_fill_sig[i]))
                     h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}")
-                    if h_tmp != None:
+                    if h_tmp:
                         h_tmp.Delete()
                     h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
                     new_var = []
@@ -3999,7 +3999,7 @@ def MakeDataPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y
     num_bins = len(bin_edges) - 1
     
     h_data = ROOT.gROOT.FindObject("h_data")
-    if h_data != None:
+    if h_data:
         h_data.Delete()
     
     h_data = ROOT.TH1F('h_data', title, bin_num, start_edge, end_edge)
@@ -4176,7 +4176,7 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     h_out1g = ROOT.gROOT.FindObject("h_out1g")
     h_sig = ROOT.gROOT.FindObject("h_sig")
     h_bkg = ROOT.gROOT.FindObject("h_bkg")
-    if h_ext != None:
+    if h_ext:
         h_ext.Delete()
         h_dirt.Delete()
         h_cos.Delete()
@@ -4186,15 +4186,15 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
         h_NCpi0.Delete()
         h_NC.Delete()
         h_nuepi0.Delete()
-    if h_NCpi1g != None:
+    if h_NCpi1g:
         h_NCpi1g.Delete()
         h_NCdel.Delete()
         h_NCother.Delete()
         h_numuCC1g.Delete()
         h_out1g.Delete()
-    if h_1g != None:
+    if h_1g:
         h_1g.Delete()
-    if h_sig != None:
+    if h_sig:
         h_sig.Delete()
         h_bkg.Delete()
     
@@ -4372,7 +4372,7 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
                     seen_new_color.append(int(selected_true_event_type_color_bkg[i]))
                     seen_new_fill.append(int(selected_true_event_type_fill_bkg[i]))
                     h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}")
-                    if h_tmp != None:
+                    if h_tmp:
                         h_tmp.Delete()
                     h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
                     new_var = []
@@ -4458,7 +4458,7 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
                     seen_new_color.append(int(selected_true_event_type_color_sig[i]))
                     seen_new_fill.append(int(selected_true_event_type_fill_sig[i]))
                     h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}")
-                    if h_tmp != None:
+                    if h_tmp:
                         h_tmp.Delete()
                     h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
                     new_var = []
@@ -5231,7 +5231,7 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     num_binsy = len(bin_edgesy) - 1
     
     h_data = ROOT.gROOT.FindObject("h_data")
-    if h_data != None:
+    if h_data:
         h_data.Delete()
     
     h_ext = ROOT.gROOT.FindObject("h_ext")
@@ -5248,33 +5248,33 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     h_NCother = ROOT.gROOT.FindObject("h_NCother")
     h_numuCC1g = ROOT.gROOT.FindObject("h_numuCC1g")
     h_out1g = ROOT.gROOT.FindObject("h_out1g")
-    if h_ext != None:
+    if h_ext:
         h_ext.Delete()
-    if h_dirt != None:
+    if h_dirt:
         h_dirt.Delete()
-    if h_cos != None:
+    if h_cos:
         h_cos.Delete()
-    if h_outFV != None:
+    if h_outFV:
         h_outFV.Delete()
-    if h_numuCCpi0 != None:
+    if h_numuCCpi0:
         h_numuCCpi0.Delete()
-    if h_numuCC != None:
+    if h_numuCC:
         h_numuCC.Delete()
-    if h_NCpi0 != None:
+    if h_NCpi0:
         h_NCpi0.Delete()
-    if h_NC != None:
+    if h_NC:
         h_NC.Delete()
-    if h_nuepi0 != None:
+    if h_nuepi0:
         h_nuepi0.Delete()
-    if h_NCpi1g != None:
+    if h_NCpi1g:
         h_NCpi1g.Delete()
-    if h_NCdel != None:
+    if h_NCdel:
         h_NCdel.Delete()
-    if h_NCother != None:
+    if h_NCother:
         h_NCother.Delete()
-    if h_numuCC1g != None:
+    if h_numuCC1g:
         h_numuCC1g.Delete()
-    if h_out1g != None:
+    if h_out1g:
         h_out1g.Delete()
     
     h_data = ROOT.TH2F('h_data', title, bin_numx, start_edgex, end_edgex, bin_numy, start_edgey, end_edgey)
@@ -5552,7 +5552,7 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     #c.cd()
     
     h_stack = ROOT.gROOT.FindObject("h_stack")
-    if h_stack != None:
+    if h_stack:
         h_stack.Delete()
         
     h_stack = ROOT.TH2F("h_stack",title, bin_numx, start_edgex, end_edgex, bin_numy, start_edgey, end_edgey)
