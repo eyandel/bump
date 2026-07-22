@@ -611,6 +611,17 @@ def LoadTreesTruth(files, su = False):
 
 ###
 def LoadTreesTruth1(file1, su = False):
+    import os
+    import subprocess
+    is_gpvm = False
+    rundir = os.getcwd()
+    cmd = ["hostname"]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    if "/exp/uboone" in rundir:
+        is_gpvm = True
+    elif "jupyter" in result.stdout:
+        is_gpvm = True
+
     with uproot.open(file1)["wcpselection/T_BDTvars"] as f_in_bdt_over:
         all_df_in_bdt_over = pl.from_pandas(f_in_bdt_over.arrays(bdt_variables, library="pd"))
 
@@ -624,21 +635,41 @@ def LoadTreesTruth1(file1, su = False):
         all_df_in_eval_over = pl.from_pandas(f_in_eval_over.arrays(eval_variables + eval_truth_variables, library="pd"))
 
     run_number = []
-    if "run1" in file1 or "Run1" in file1 or "run_1" in file1.lower():
-        run_number = [1 for i in range(len(all_df_in_bdt_over))]
-    elif "run2" in file1 or "Run2" in file1 or "run_2" in file1.lower():
-        run_number = [2 for i in range(len(all_df_in_bdt_over))]
-    elif "run3" in file1 or "Run3" in file1 or "run_3" in file1.lower():
-        run_number = [3 for i in range(len(all_df_in_bdt_over))]
-    elif "run4a" in file1 or "Run4a" in file1 or "run_4a" in file1.lower():
-        run_number = [41 for i in range(len(all_df_in_bdt_over))]
-    elif "run4" in file1 or "Run4" in file1 or "run_4" in file1.lower():
-        run_number = [4 for i in range(len(all_df_in_bdt_over))]
-    elif "run5" in file1 or "Run5" in file1 or "run_5" in file1.lower():
-        run_number = [5 for i in range(len(all_df_in_bdt_over))]
-    else:  
-        print("Error: run number not found in file name")
-        run_number = [-999 for i in range(len(all_df_in_bdt_over))]
+    if is_gpvm:
+        if "run1_full_samples" in file1:
+            run_number = [1 for i in range(len(all_df_in_bdt_over))]
+        elif "run2_full_samples" in file1:
+            run_number = [2 for i in range(len(all_df_in_bdt_over))]
+        elif "run3_full_samples" in file1:
+            run_number = [3 for i in range(len(all_df_in_bdt_over))]
+        elif "run4a_full_samples" in file1:
+            run_number = [41 for i in range(len(all_df_in_bdt_over))]
+        elif "run4b_full_samples" in file1:
+            run_number = [42 for i in range(len(all_df_in_bdt_over))]
+        elif "run4c_full_samples" in file1:
+            run_number = [43 for i in range(len(all_df_in_bdt_over))]
+        elif "run4d_full_samples" in file1:
+            run_number = [44 for i in range(len(all_df_in_bdt_over))]
+        elif "run4_full_samples" in file1:
+            run_number = [4 for i in range(len(all_df_in_bdt_over))]
+        elif "run5_full_samples" in file1:
+            run_number = [5 for i in range(len(all_df_in_bdt_over))]
+    else: 
+        if "run1" in file1 or "Run1" in file1 or "run_1" in file1.lower():
+            run_number = [1 for i in range(len(all_df_in_bdt_over))]
+        elif "run2" in file1 or "Run2" in file1 or "run_2" in file1.lower():
+            run_number = [2 for i in range(len(all_df_in_bdt_over))]
+        elif "run3" in file1 or "Run3" in file1 or "run_3" in file1.lower():
+            run_number = [3 for i in range(len(all_df_in_bdt_over))]
+        elif "run4a" in file1 or "Run4a" in file1 or "run_4a" in file1.lower():
+            run_number = [41 for i in range(len(all_df_in_bdt_over))]
+        elif "run4" in file1 or "Run4" in file1 or "run_4" in file1.lower():
+            run_number = [4 for i in range(len(all_df_in_bdt_over))]
+        elif "run5" in file1 or "Run5" in file1 or "run_5" in file1.lower():
+            run_number = [5 for i in range(len(all_df_in_bdt_over))]
+        else:  
+            print("Error: run number not found in file name")
+            run_number = [-999 for i in range(len(all_df_in_bdt_over))]
 
     file_path = [file1 for i in range(len(all_df_in_bdt_over))]
 
@@ -6210,7 +6241,7 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
 
     
 
-def MakePROfitXML(all_df, files, selname, var, var_label, nbins, bin_min, bin_max, pot, subchannel_map=None, include_detvar=True):
+def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bin_min, bin_max, pot, subchannel_map=None, include_detvar=True):
     """
     Generate a PRofit XML file from input files, selection, variable, and binning.
     
@@ -6622,7 +6653,7 @@ def MakePROfitXML(all_df, files, selname, var, var_label, nbins, bin_min, bin_ma
     
     # Write to file
     output_filename = f"{selname}_{var}.xml"
-    with open("../xml/" + output_filename, 'w') as f:
+    with open(plot_folder+"/xml/" + output_filename, 'w') as f:
         f.write(xml_str)
     
     print(f"PROfit XML file created: {output_filename}")
@@ -6636,7 +6667,7 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
         current_dir = os.getcwd()
         print(f"Current directory: {current_dir}")
         # Create root directory if it doesn't exist
-        os.makedirs("../xml", exist_ok=True)
+        os.makedirs(plot_folder+"/xml", exist_ok=True)
         profit_dir = f"{plot_folder}/profit"
         os.makedirs(profit_dir, exist_ok=True)
         # Read the ROOT file and extract the TH2D
@@ -6651,9 +6682,9 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
         if remake:
             print("Remaking PROfit file")
         if remake or not already_made:
-            xml_name = MakePROfitXML(all_df, files, selname, var, var_label, nbins, bin_min, bin_max, pot, subchannel_map=subchannel_map, include_detvar=include_detvar)
+            xml_name = MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bin_min, bin_max, pot, subchannel_map=subchannel_map, include_detvar=include_detvar)
             # Build and run PROfit command with xml path and -t tag taken from variables
-            xml_abs = current_dir + "/../xml/" + xml_name
+            xml_abs = plot_folder + "/xml/" + xml_name
             #os.path.abspath(xml_name)
             os.chdir(profit_dir)
             processcmd = f"PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f"{selname}_{var}")} -o v001 -v3 --log process.log process 2>&1"
