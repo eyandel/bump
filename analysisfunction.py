@@ -654,6 +654,9 @@ def LoadTreesTruth1(file1, su = False):
             run_number = [4 for i in range(len(all_df_in_bdt_over))]
         elif "run5_full_samples" in file1:
             run_number = [5 for i in range(len(all_df_in_bdt_over))]
+        else:  
+            print("Error: run number not found in file name")
+            run_number = [-999 for i in range(len(all_df_in_bdt_over))]
     else: 
         if "run1" in file1 or "Run1" in file1 or "run_1" in file1.lower():
             run_number = [1 for i in range(len(all_df_in_bdt_over))]
@@ -663,7 +666,13 @@ def LoadTreesTruth1(file1, su = False):
             run_number = [3 for i in range(len(all_df_in_bdt_over))]
         elif "run4a" in file1 or "Run4a" in file1 or "run_4a" in file1.lower():
             run_number = [41 for i in range(len(all_df_in_bdt_over))]
-        elif "run4" in file1 or "Run4" in file1 or "run_4" in file1.lower():
+        elif "run4b" in file1 or "Run4b" in file1 or "run_4b" in file1.lower():
+            run_number = [42 for i in range(len(all_df_in_bdt_over))]
+        elif "run4c" in file1 or "Run4c" in file1 or "run_4c" in file1.lower():
+            run_number = [43 for i in range(len(all_df_in_bdt_over))]
+        elif "run4d" in file1 or "Run4d" in file1 or "run_4d" in file1.lower():
+            run_number = [44 for i in range(len(all_df_in_bdt_over))]
+        elif "run4_" in file1 or "Run4_" in file1 or "run_4_" in file1.lower():
             run_number = [4 for i in range(len(all_df_in_bdt_over))]
         elif "run5" in file1 or "Run5" in file1 or "run_5" in file1.lower():
             run_number = [5 for i in range(len(all_df_in_bdt_over))]
@@ -768,6 +777,17 @@ def LoadTreesData(files, su = False):
 
 ###
 def LoadTreesData1(file1, su = False):
+    import os
+    import subprocess
+    is_gpvm = False
+    rundir = os.getcwd()
+    cmd = ["hostname"]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    if "/exp/uboone" in rundir:
+        is_gpvm = True
+    elif "jupyter" in result.stdout:
+        is_gpvm = True
+
     with uproot.open(file1)["wcpselection/T_BDTvars"] as f_in_bdt_over:
         all_df_in_bdt_over = pl.from_pandas(f_in_bdt_over.arrays(bdt_variables, library="pd"))
 
@@ -781,21 +801,50 @@ def LoadTreesData1(file1, su = False):
         all_df_in_eval_over = pl.from_pandas(f_in_eval_over.arrays(eval_variables, library="pd"))
 
     run_number = []
-    if "run1" in file1 or "Run1" in file1:
-        run_number = [1 for i in range(len(all_df_in_bdt_over))]
-    elif "run2" in file1 or "Run2" in file1:
-        run_number = [2 for i in range(len(all_df_in_bdt_over))]
-    elif "run3" in file1 or "Run3" in file1:
-        run_number = [3 for i in range(len(all_df_in_bdt_over))]
-    elif "run4a" in file1 or "Run4a" in file1:
-        run_number = [41 for i in range(len(all_df_in_bdt_over))]
-    elif "run4" in file1 or "Run4" in file1:
-        run_number = [4 for i in range(len(all_df_in_bdt_over))]
-    elif "run5" in file1 or "Run5" in file1:
-        run_number = [5 for i in range(len(all_df_in_bdt_over))]
-    else:  
-        print("Error: run number not found in file name")
-        run_number = [-999 for i in range(len(all_df_in_bdt_over))]
+    if is_gpvm:
+        if "run1_full_samples" in file1:
+            run_number = [1 for i in range(len(all_df_in_bdt_over))]
+        elif "run2_full_samples" in file1:
+            run_number = [2 for i in range(len(all_df_in_bdt_over))]
+        elif "run3_full_samples" in file1:
+            run_number = [3 for i in range(len(all_df_in_bdt_over))]
+        elif "run4a_full_samples" in file1:
+            run_number = [41 for i in range(len(all_df_in_bdt_over))]
+        elif "run4b_full_samples" in file1:
+            run_number = [42 for i in range(len(all_df_in_bdt_over))]
+        elif "run4c_full_samples" in file1:
+            run_number = [43 for i in range(len(all_df_in_bdt_over))]
+        elif "run4d_full_samples" in file1:
+            run_number = [44 for i in range(len(all_df_in_bdt_over))]
+        elif "run4_full_samples" in file1:
+            run_number = [4 for i in range(len(all_df_in_bdt_over))]
+        elif "run5_full_samples" in file1:
+            run_number = [5 for i in range(len(all_df_in_bdt_over))]
+        else:  
+            print("Error: run number not found in file name")
+            run_number = [-999 for i in range(len(all_df_in_bdt_over))]
+    else: 
+        if "run1" in file1 or "Run1" in file1:
+            run_number = [1 for i in range(len(all_df_in_bdt_over))]
+        elif "run2" in file1 or "Run2" in file1:
+            run_number = [2 for i in range(len(all_df_in_bdt_over))]
+        elif "run3" in file1 or "Run3" in file1:
+            run_number = [3 for i in range(len(all_df_in_bdt_over))]
+        elif "run4a" in file1 or "Run4a" in file1:
+            run_number = [41 for i in range(len(all_df_in_bdt_over))]
+        elif "run4b" in file1 or "Run4b" in file1 or "run_4b" in file1.lower():
+            run_number = [42 for i in range(len(all_df_in_bdt_over))]
+        elif "run4c" in file1 or "Run4c" in file1 or "run_4c" in file1.lower():
+            run_number = [43 for i in range(len(all_df_in_bdt_over))]
+        elif "run4d" in file1 or "Run4d" in file1 or "run_4d" in file1.lower():
+            run_number = [44 for i in range(len(all_df_in_bdt_over))]
+        elif "run4_" in file1 or "Run4_" in file1 or "run_4_" in file1.lower():
+            run_number = [4 for i in range(len(all_df_in_bdt_over))]
+        elif "run5" in file1 or "Run5" in file1:
+            run_number = [5 for i in range(len(all_df_in_bdt_over))]
+        else:  
+            print("Error: run number not found in file name")
+            run_number = [-999 for i in range(len(all_df_in_bdt_over))]
 
     file_path = []
     file_path = [file1 for i in range(len(all_df_in_bdt_over))]
