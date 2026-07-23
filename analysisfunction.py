@@ -2385,6 +2385,8 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
     if runs==0:
         runs = [1,2,3,41,42,43,44,4,5]
 
+    print("Calculating weights for runs: " + str(runs))
+
     run1BnbPOT = 1.0
     run2BnbPOT = 1.0
     run3BnbPOT = 1.0
@@ -2432,6 +2434,7 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
     run5modpi0POT = 1.0
 
     for var_name, file_name in pot_vars:
+        print(file_name)
         globals()[var_name] = GetPOT(file_name)
     
     weight_cv = all_df["wc_weight_cv"].to_numpy(zero_copy_only=False)
@@ -2553,23 +2556,33 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
             num = dataPOT
             if run_number[i] == 1:
                 denom = run1BnbPOT
+                num = 0.0 if run1BnbPOT == 1.0 else num
             elif run_number[i] == 2:
                 denom = run2BnbPOT
+                num = 0.0 if run2BnbPOT == 1.0 else num
             elif run_number[i] == 3:
                 denom = run3BnbPOT
+                num = 0.0 if run3BnbPOT == 1.0 else num
             elif run_number[i] == 41:
                 denom = run4aBnbPOT
+                num = 0.0 if run4aBnbPOT == 1.0 else num
             elif run_number[i] == 42:
                 denom = run4bBnbPOT
+                num = 0.0 if run4bBnbPOT == 1.0 else num
             elif run_number[i] == 43:
                 denom = run4cBnbPOT
+                num = 0.0 if run4cBnbPOT == 1.0 else num
             elif run_number[i] == 44:
                 denom = run4dBnbPOT
+                num = 0.0 if run4dBnbPOT == 1.0 else num
             elif run_number[i] == 4:
                 denom = run4BnbPOT
+                num = 0.0 if run4BnbPOT == 1.0 else num
             elif run_number[i] == 5:
                 denom = run5BnbPOT
+                num = 0.0 if run5BnbPOT == 1.0 else num
 
+        print("POT factor for event %d: %.3e / %.3e = %.3e" % (i, num, denom, num/denom))
         POT_factor.append(num/denom)
 
    #if allruns:
@@ -2635,6 +2648,7 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
             w.append(weight_cv[i]*weight_spline[i] * POT_factor[i] * nueff_nomu) #0.83 *     
         if w[i] <= 0. or w[i] > 30. or np.isnan(w[i]): # something went wrong with the saved weights.:
             w[i] =  POT_factor[i] * nueff_mu #0.83 * 
+        print("weight for event %d: %.3e" % (i, w[i]))
                 
     all_df = all_df.with_columns([pl.Series("weights", w)])
 
@@ -6097,7 +6111,25 @@ def MakeCovMatrix(all_df, selname, var, bin_width, start_edge, end_edge):
 
 
 def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
-    outFileName = file_path.removesuffix(".root") + "_" + selection + ".root"
+    import os
+    import subprocess
+    is_gpvm = False
+    rundir = os.getcwd()
+    cmd = ["hostname"]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    if "/exp/uboone" in rundir:
+        is_gpvm = True
+    elif "jupyter" in result.stdout:
+        is_gpvm = True
+
+    if is_gpvm:
+        outfile_path = "/exp/uboone/data/users/eyandel/bump/PROfit_input_files/"
+    else:
+        outfile_path = os.path.dirname(file_path)
+    outFileName = os.path.join(
+        outfile_path,
+        os.path.basename(file_path).removesuffix(".root") + "_" + selection + ".root",
+    )
     print("making file " + outFileName)
     print("opening " + file_path)
     ROOT.ROOT.EnableImplicitMT()
