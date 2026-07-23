@@ -2387,55 +2387,59 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
 
     print("Calculating weights for runs: " + str(runs))
 
-    run1BnbPOT = 1.0
-    run2BnbPOT = 1.0
-    run3BnbPOT = 1.0
-    run4aBnbPOT = 1.0
-    run4bBnbPOT = 1.0
-    run4cBnbPOT = 1.0
-    run4dBnbPOT = 1.0
-    run4BnbPOT = 1.0
-    run5BnbPOT = 1.0
-    run1DirtPOT = 1.0
-    run2DirtPOT = 1.0
-    run3DirtPOT = 1.0
-    run4aDirtPOT = 1.0
-    run4bDirtPOT = 1.0
-    run4cDirtPOT = 1.0
-    run4dDirtPOT = 1.0
-    run4DirtPOT = 1.0
-    run5DirtPOT = 1.0
-    run1SPPOT = 1.0
-    run2SPPOT = 1.0
-    run3SPPOT = 1.0
-    run4aSPPOT = 1.0
-    run4bSPPOT = 1.0
-    run4cSPPOT = 1.0
-    run4dSPPOT = 1.0
-    run4SPPOT = 1.0
-    run5SPPOT = 1.0
-    run1NCPi0POT = 1.0
-    run2NCPi0POT = 1.0
-    run3NCPi0POT = 1.0
-    run4aNCPi0POT = 1.0
-    run4bNCPi0POT = 1.0
-    run4cNCPi0POT = 1.0
-    run4dNCPi0POT = 1.0
-    run4NCPi0POT = 1.0
-    run5NCPi0POT = 1.0
-    run1modpi0POT = 1.0
-    run2modpi0POT = 1.0
-    run3modpi0POT = 1.0
-    run4amodpi0POT = 1.0
-    run4bmodpi0POT = 1.0
-    run4cmodpi0POT = 1.0
-    run4dmodpi0POT = 1.0
-    run4modpi0POT = 1.0
-    run5modpi0POT = 1.0
-
     for var_name, file_name in pot_vars:
-        print(file_name)
-        globals()[var_name] = GetPOT(file_name)
+        print(var_name)
+        var_name_local = "L" + var_name
+        globals()[var_name_local] = GetPOT(file_name)
+
+    #print("run4bBnbPOT: " + str(globals()["Lrun4bBnbPOT"]))
+    Lrun1BnbPOT = globals()["Lrun1BnbPOT"] if any(entry[0] == "run1BnbPOT" for entry in pot_vars) else 1.0
+    Lrun2BnbPOT = globals()["Lrun2BnbPOT"] if any(entry[0] == "run2BnbPOT" for entry in pot_vars) else 1.0
+    Lrun3BnbPOT = globals()["Lrun3BnbPOT"] if any(entry[0] == "run3BnbPOT" for entry in pot_vars) else 1.0
+    Lrun4aBnbPOT = globals()["Lrun4aBnbPOT"] if any(entry[0] == "run4aBnbPOT" for entry in pot_vars) else 1.0
+    Lrun4bBnbPOT = globals()["Lrun4bBnbPOT"] if any(entry[0] == "run4bBnbPOT" for entry in pot_vars) else 1.0
+    Lrun4cBnbPOT = globals()["Lrun4cBnbPOT"] if any(entry[0] == "run4cBnbPOT" for entry in pot_vars) else 1.0
+    Lrun4dBnbPOT = globals()["Lrun4dBnbPOT"] if any(entry[0] == "run4dBnbPOT" for entry in pot_vars) else 1.0
+    Lrun4BnbPOT = globals()["Lrun4BnbPOT"] if any(entry[0] == "run4BnbPOT" for entry in pot_vars) else 1.0
+    Lrun5BnbPOT = globals()["Lrun5BnbPOT"] if any(entry[0] == "run5BnbPOT" for entry in pot_vars) else 1.0
+    Lrun1DirtPOT = globals()["Lrun1DirtPOT"] if any(entry[0] == "run1DirtPOT" for entry in pot_vars) else 1.0
+    Lrun2DirtPOT = globals()["Lrun2DirtPOT"] if any(entry[0] == "run2DirtPOT" for entry in pot_vars) else 1.0
+    Lrun3DirtPOT = globals()["Lrun3DirtPOT"] if any(entry[0] == "run3DirtPOT" for entry in pot_vars) else 1.0
+    Lrun4aDirtPOT = globals()["Lrun4aDirtPOT"] if any(entry[0] == "run4aDirtPOT" for entry in pot_vars) else 1.0
+    Lrun4bDirtPOT = globals()["Lrun4bDirtPOT"] if any(entry[0] == "run4bDirtPOT" for entry in pot_vars) else 1.0
+    Lrun4cDirtPOT = globals()["Lrun4cDirtPOT"] if any(entry[0] == "run4cDirtPOT" for entry in pot_vars) else 1.0
+    Lrun4dDirtPOT = globals()["Lrun4dDirtPOT"] if any(entry[0] == "run4dDirtPOT" for entry in pot_vars) else 1.0
+    Lrun4DirtPOT = globals()["Lrun4DirtPOT"] if any(entry[0] == "run4DirtPOT" for entry in pot_vars) else 1.0
+    Lrun5DirtPOT = globals()["Lrun5DirtPOT"] if any(entry[0] == "run5DirtPOT" for entry in pot_vars) else 1.0
+    Lrun1SPPOT = globals()["Lrun1SPPOT"] if any(entry[0] == "run1SPPOT" for entry in pot_vars) else 1.0
+    Lrun2SPPOT = globals()["Lrun2SPPOT"] if any(entry[0] == "run2SPPOT" for entry in pot_vars) else 1.0
+    Lrun3SPPOT = globals()["Lrun3SPPOT"] if any(entry[0] == "run3SPPOT" for entry in pot_vars) else 1.0
+    Lrun4aSPPOT = globals()["Lrun4aSPPOT"] if any(entry[0] == "run4aSPPOT" for entry in pot_vars) else 1.0
+    Lrun4bSPPOT = globals()["Lrun4bSPPOT"] if any(entry[0] == "run4bSPPOT" for entry in pot_vars) else 1.0
+    Lrun4cSPPOT = globals()["Lrun4cSPPOT"] if any(entry[0] == "run4cSPPOT" for entry in pot_vars) else 1.0
+    Lrun4dSPPOT = globals()["Lrun4dSPPOT"] if any(entry[0] == "run4dSPPOT" for entry in pot_vars) else 1.0
+    Lrun4SPPOT = globals()["Lrun4SPPOT"] if any(entry[0] == "run4SPPOT" for entry in pot_vars) else 1.0
+    Lrun5SPPOT = globals()["Lrun5SPPOT"] if any(entry[0] == "run5SPPOT" for entry in pot_vars) else 1.0
+    Lrun1NCPi0POT = globals()["Lrun1NCPi0POT"] if any(entry[0] == "run1NCPi0POT" for entry in pot_vars) else 1.0
+    Lrun2NCPi0POT = globals()["Lrun2NCPi0POT"] if any(entry[0] == "run2NCPi0POT" for entry in pot_vars) else 1.0
+    Lrun3NCPi0POT = globals()["Lrun3NCPi0POT"] if any(entry[0] == "run3NCPi0POT" for entry in pot_vars) else 1.0
+    Lrun4aNCPi0POT = globals()["Lrun4aNCPi0POT"] if any(entry[0] == "run4aNCPi0POT" for entry in pot_vars) else 1.0
+    Lrun4bNCPi0POT = globals()["Lrun4bNCPi0POT"] if any(entry[0] == "run4bNCPi0POT" for entry in pot_vars) else 1.0
+    Lrun4cNCPi0POT = globals()["Lrun4cNCPi0POT"] if any(entry[0] == "run4cNCPi0POT" for entry in pot_vars) else 1.0
+    Lrun4dNCPi0POT = globals()["Lrun4dNCPi0POT"] if any(entry[0] == "run4dNCPi0POT" for entry in pot_vars) else 1.0
+    Lrun4NCPi0POT = globals()["Lrun4NCPi0POT"] if any(entry[0] == "run4NCPi0POT" for entry in pot_vars) else 1.0
+    Lrun5NCPi0POT = globals()["Lrun5NCPi0POT"] if any(entry[0] == "run5NCPi0POT" for entry in pot_vars) else 1.0
+    Lrun1modpi0POT = globals()["Lrun1modpi0POT"] if any(entry[0] == "run1modpi0POT" for entry in pot_vars) else 1.0
+    Lrun2modpi0POT = globals()["Lrun2modpi0POT"] if any(entry[0] == "run2modpi0POT" for entry in pot_vars) else 1.0
+    Lrun3modpi0POT = globals()["Lrun3modpi0POT"] if any(entry[0] == "run3modpi0POT" for entry in pot_vars) else 1.0
+    Lrun4amodpi0POT = globals()["Lrun4amodpi0POT"] if any(entry[0] == "run4amodpi0POT" for entry in pot_vars) else 1.0
+    Lrun4bmodpi0POT = globals()["Lrun4bmodpi0POT"] if any(entry[0] == "run4bmodpi0POT" for entry in pot_vars) else 1.0
+    Lrun4cmodpi0POT = globals()["Lrun4cmodpi0POT"] if any(entry[0] == "run4cmodpi0POT" for entry in pot_vars) else 1.0
+    Lrun4dmodpi0POT = globals()["Lrun4dmodpi0POT"] if any(entry[0] == "run4dmodpi0POT" for entry in pot_vars) else 1.0
+    Lrun4modpi0POT = globals()["Lrun4modpi0POT"] if any(entry[0] == "run4modpi0POT" for entry in pot_vars) else 1.0
+    Lrun5modpi0POT = globals()["Lrun5modpi0POT"] if any(entry[0] == "run5modpi0POT" for entry in pot_vars) else 1.0
+
+    #print(f"Lrun4bBnbPOT: {Lrun4bBnbPOT}")
     
     weight_cv = all_df["wc_weight_cv"].to_numpy(zero_copy_only=False)
     weight_spline = all_df["wc_weight_spline"].to_numpy(zero_copy_only=False)
@@ -2457,132 +2461,133 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
         else:
             dataPOT = dataPOTvec
         ExtBnbPOT = ExtBnbPOTvec[np.argmax(runs == run_number[i])]
-        num = 1.0
+        num = 0.0
         denom = 1.0
-        if is_ext[i]:
+        if is_ext[i] and run_number[i] in runs:
             num = dataPOT
             denom = ExtBnbPOT
         elif is_dirt[i]:
-            num = dataPOT
-            if run_number[i] == 1:
-                denom = run1DirtPOT
-                num = 0.0 if run1DirtPOT == 1.0 else num
-            elif run_number[i] == 2:
-                denom = run2DirtPOT
-                num = 0.0 if run2DirtPOT == 1.0 else num
-            elif run_number[i] == 3:
-                denom = run3DirtPOT
-                num = 0.0 if run3DirtPOT == 1.0 else num
-            elif run_number[i] == 41:
-                denom = run4aDirtPOT
-                num = 0.0 if run4aDirtPOT == 1.0 else num
-            elif run_number[i] == 42:
-                denom = run4bDirtPOT
-                num = 0.0 if run4bDirtPOT == 1.0 else num
-            elif run_number[i] == 43:
-                denom = run4cDirtPOT
-                num = 0.0 if run4cDirtPOT == 1.0 else num
-            elif run_number[i] == 44:
-                denom = run4dDirtPOT
-                num = 0.0 if run4dDirtPOT == 1.0 else num
-            elif run_number[i] == 4:
-                denom = run4DirtPOT
-                num = 0.0 if run4DirtPOT == 1.0 else num
-            elif run_number[i] == 5:
-                denom = run5DirtPOT
-                num = 0.0 if run5DirtPOT == 1.0 else num
+            #num = dataPOT
+            if run_number[i] == 1 and 1 in runs:
+                denom = Lrun1DirtPOT
+                num = dataPOT
+            elif run_number[i] == 2 and 2 in runs:
+                denom = Lrun2DirtPOT
+                num = dataPOT
+            elif run_number[i] == 3 and 3 in runs:
+                denom = Lrun3DirtPOT
+                num = dataPOT
+            elif run_number[i] == 41 and 41 in runs:
+                denom = Lrun4aDirtPOT
+                num = dataPOT
+            elif run_number[i] == 42 and 42 in runs:
+                denom = Lrun4bDirtPOT
+                num = dataPOT
+            elif run_number[i] == 43 and 43 in runs:
+                denom = Lrun4cDirtPOT
+                num = dataPOT
+            elif run_number[i] == 44 and 44 in runs:
+                denom = Lrun4dDirtPOT
+                num = dataPOT
+            elif run_number[i] == 4 and 4 in runs and (Lrun4DirtPOT > 1.0):
+                denom = Lrun4DirtPOT
+                num = dataPOT
+            elif run_number[i] == 5 and 5 in runs:
+                denom = Lrun5DirtPOT
+                num = dataPOT
         elif is_sigoverlay[i]:
-            num = dataPOT
-            if run_number[i] == 1:
-                denom = run1SPPOT
-                num = 0.0 if run1SPPOT == 1.0 else num
-            elif run_number[i] == 2:
-                denom = run2SPPOT
-                num = 0.0 if run2SPPOT == 1.0 else num
-            elif run_number[i] == 3:
-                denom = run3SPPOT
-                num = 0.0 if run3SPPOT == 1.0 else num
-            elif run_number[i] == 41:
-                denom = run4aSPPOT
-                num = 0.0 if run4aSPPOT == 1.0 else num
-            elif run_number[i] == 42:
-                denom = run4bSPPOT
-                num = 0.0 if run4bSPPOT == 1.0 else num
-            elif run_number[i] == 43:
-                denom = run4cSPPOT
-                num = 0.0 if run4cSPPOT == 1.0 else num
-            elif run_number[i] == 44:
-                denom = run4dSPPOT
-                num = 0.0 if run4dSPPOT == 1.0 else num
-            elif run_number[i] == 4:
-                denom = run4SPPOT
-                num = 0.0 if run4SPPOT == 1.0 else num
-            elif run_number[i] == 5:
-                denom = run5SPPOT
-                num = 0.0 if run5SPPOT == 1.0 else num
+            #num = dataPOT
+            if run_number[i] == 1 and 1 in runs:
+                denom = Lrun1SPPOT
+                num = dataPOT
+            elif run_number[i] == 2 and 2 in runs:
+                denom = Lrun2SPPOT
+                num = dataPOT
+            elif run_number[i] == 3 and 3 in runs:
+                denom = Lrun3SPPOT
+                num = dataPOT
+            elif run_number[i] == 41 and 41 in runs:
+                denom = Lrun4aSPPOT
+                num = dataPOT
+            elif run_number[i] == 42 and 42 in runs:
+                denom = Lrun4bSPPOT
+                num = dataPOT
+            elif run_number[i] == 43 and 43 in runs:
+                denom = Lrun4cSPPOT
+                num = dataPOT
+            elif run_number[i] == 44 and 44 in runs:
+                denom = Lrun4dSPPOT
+                num = dataPOT
+            elif run_number[i] == 4 and 4 in runs and (Lrun4SPPOT > 1.0):
+                denom = Lrun4SPPOT
+                num = dataPOT
+            elif run_number[i] == 5 and 5 in runs:
+                denom = Lrun5SPPOT
+                num = dataPOT
         elif is_modpi0[i]:
-            num = dataPOT
-            if run_number[i] == 1:
-                denom = run1modpi0POT
-                num = 0.0 if run1modpi0POT == 1.0 else num
-            elif run_number[i] == 2:
-                denom = run2modpi0POT
-                num = 0.0 if run2modpi0POT == 1.0 else num
-            elif run_number[i] == 3:
-                denom = run3modpi0POT
-                num = 0.0 if run3modpi0POT == 1.0 else num
-            elif run_number[i] == 41:
-                denom = run4amodpi0POT
-                num = 0.0 if run4amodpi0POT == 1.0 else num
-            elif run_number[i] == 42:
-                denom = run4bmodpi0POT
-                num = 0.0 if run4bmodpi0POT == 1.0 else num
-            elif run_number[i] == 43:
-                denom = run4cmodpi0POT
-                num = 0.0 if run4cmodpi0POT == 1.0 else num
-            elif run_number[i] == 44:
-                denom = run4dmodpi0POT
-                num = 0.0 if run4dmodpi0POT == 1.0 else num
-            elif run_number[i] == 4:
-                denom = run4modpi0POT
-                num = 0.0 if run4modpi0POT == 1.0 else num
-            elif run_number[i] == 5:
-                denom = run5modpi0POT
-                num = 0.0 if run5modpi0POT == 1.0 else num
+            #num = dataPOT
+            if run_number[i] == 1 and 1 in runs:
+                denom = Lrun1modpi0POT
+                num = dataPOT
+            elif run_number[i] == 2 and 2 in runs:
+                denom = Lrun2modpi0POT
+                num = dataPOT
+            elif run_number[i] == 3 and 3 in runs:
+                denom = Lrun3modpi0POT
+                num = dataPOT
+            elif run_number[i] == 41 and 41 in runs:
+                denom = Lrun4amodpi0POT
+                num = dataPOT
+            elif run_number[i] == 42 and 42 in runs:
+                denom = Lrun4bmodpi0POT
+                num = dataPOT
+            elif run_number[i] == 43 and 43 in runs:
+                denom = Lrun4cmodpi0POT
+                num = dataPOT
+            elif run_number[i] == 44 and 44 in runs:
+                denom = Lrun4dmodpi0POT
+                num = dataPOT
+            elif run_number[i] == 4 and 4 in runs and (Lrun4modpi0POT > 1.0):
+                denom = Lrun4modpi0POT
+                num = dataPOT
+            elif run_number[i] == 5 and 5 in runs:
+                denom = Lrun5modpi0POT
+                num = dataPOT
         elif is_data[i] or is_lee[i] or is_ncpi0overlay[i]:
             num = 1.0
             denom = 1.0
         else:
-            num = dataPOT
-            if run_number[i] == 1:
-                denom = run1BnbPOT
-                num = 0.0 if run1BnbPOT == 1.0 else num
-            elif run_number[i] == 2:
-                denom = run2BnbPOT
-                num = 0.0 if run2BnbPOT == 1.0 else num
-            elif run_number[i] == 3:
-                denom = run3BnbPOT
-                num = 0.0 if run3BnbPOT == 1.0 else num
-            elif run_number[i] == 41:
-                denom = run4aBnbPOT
-                num = 0.0 if run4aBnbPOT == 1.0 else num
-            elif run_number[i] == 42:
-                denom = run4bBnbPOT
-                num = 0.0 if run4bBnbPOT == 1.0 else num
-            elif run_number[i] == 43:
-                denom = run4cBnbPOT
-                num = 0.0 if run4cBnbPOT == 1.0 else num
-            elif run_number[i] == 44:
-                denom = run4dBnbPOT
-                num = 0.0 if run4dBnbPOT == 1.0 else num
-            elif run_number[i] == 4:
-                denom = run4BnbPOT
-                num = 0.0 if run4BnbPOT == 1.0 else num
-            elif run_number[i] == 5:
-                denom = run5BnbPOT
-                num = 0.0 if run5BnbPOT == 1.0 else num
+            #num = dataPOT
+            if run_number[i] == 1 and 1 in runs:
+                denom = Lrun1BnbPOT
+                num = dataPOT
+            elif run_number[i] == 2 and 2 in runs:
+                denom = Lrun2BnbPOT
+                num = dataPOT
+            elif run_number[i] == 3 and 3 in runs:
+                denom = Lrun3BnbPOT
+                num = dataPOT
+            elif run_number[i] == 41 and 41 in runs:
+                denom = Lrun4aBnbPOT
+                num = dataPOT
+            elif run_number[i] == 42 and 42 in runs:
+                denom = Lrun4bBnbPOT
+                num = dataPOT
+            elif run_number[i] == 43 and 43 in runs:
+                denom = Lrun4cBnbPOT
+                num = dataPOT
+            elif run_number[i] == 44 and 44 in runs:
+                denom = Lrun4dBnbPOT
+                num = dataPOT
+            elif run_number[i] == 4 and 4 in runs and (Lrun4BnbPOT > 1.0):
+                denom = Lrun4BnbPOT
+                num = dataPOT
+            elif run_number[i] == 5 and 5 in runs:
+                denom = Lrun5BnbPOT
+                num = dataPOT
 
-        print("POT factor for event %d: %.3e / %.3e = %.3e" % (i, num, denom, num/denom))
+        #if i % 10000 == 0:
+        #    print("POT factor for event %d: is_data=%s, is_dirt=%s, is_ext=%s, num=%.3e, denom=%.3e, ratio=%.3e" % (i, is_data[i], is_dirt[i], is_ext[i], num, denom, num/denom))
         POT_factor.append(num/denom)
 
    #if allruns:
@@ -2648,7 +2653,8 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
             w.append(weight_cv[i]*weight_spline[i] * POT_factor[i] * nueff_nomu) #0.83 *     
         if w[i] <= 0. or w[i] > 30. or np.isnan(w[i]): # something went wrong with the saved weights.:
             w[i] =  POT_factor[i] * nueff_mu #0.83 * 
-        print("weight for event %d: %.3e" % (i, w[i]))
+        #if i % 10000 == 0:
+            print("weight for event %d: %.3e" % (i, w[i]))
                 
     all_df = all_df.with_columns([pl.Series("weights", w)])
 
