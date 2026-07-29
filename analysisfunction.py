@@ -6750,55 +6750,69 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
 
 ##
 def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbins, bin_min, bin_max, pot, subchannel_map=None, include_detvar=True, remake=False):
-        #get the current directory
-        current_dir = os.getcwd()
-        print(f"Current directory: {current_dir}")
-        # Create root directory if it doesn't exist
-        os.makedirs(plot_folder+"/xml", exist_ok=True)
-        profit_dir = f"{plot_folder}/profit"
-        os.makedirs(profit_dir, exist_ok=True)
-        # Read the ROOT file and extract the TH2D
-        root_filename = f"{selname}_{var}_v001_PROplot.root"
-        already_made = False
-        if os.path.isfile(profit_dir+"/"+root_filename):
-            already_made = True
-        if already_made:
-            print("PROfit file already exists")
+    import os
+    import subprocess
+    is_gpvm = False
+    rundir = os.getcwd()
+    cmd = ["hostname"]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    if "/exp/uboone" in rundir:
+        is_gpvm = True
+    elif "jupyter" in result.stdout:
+        is_gpvm = True
+    #get the current directory
+    current_dir = os.getcwd()
+    print(f"Current directory: {current_dir}")
+    # Create root directory if it doesn't exist
+    os.makedirs(plot_folder+"/xml", exist_ok=True)
+    profit_dir = f"{plot_folder}/profit"
+    os.makedirs(profit_dir, exist_ok=True)
+    # Read the ROOT file and extract the TH2D
+    root_filename = f"{selname}_{var}_v001_PROplot.root"
+    already_made = False
+    if os.path.isfile(profit_dir+"/"+root_filename):
+        already_made = True
+    if already_made:
+        print("PROfit file already exists")
+    else:
+        print("Making new PROfit file")
+    if remake:
+        print("Remaking PROfit file")
+    if remake or not already_made:
+        xml_name = MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bin_min, bin_max, pot, subchannel_map=subchannel_map, include_detvar=include_detvar)
+        # Build and run PROfit command with xml path and -t tag taken from variables
+        xml_abs = plot_folder + "/xml/" + xml_name
+        #os.path.abspath(xml_name)
+        os.chdir(profit_dir)
+        if is_gpvm:
+            processcmd = f"source ~/profit_setup.sh; PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o v001 -v3 --log process.log process 2>&1"
+            plotcmd = f"source ~/profit_setup.sh; PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o v001 -v3 --seed 404 --log plot.log --plot-bounds ratmin 0 ratmax 2 --use-fake-data plot --with-splines 2>&1;"
         else:
-            print("Making new PROfit file")
-        if remake:
-            print("Remaking PROfit file")
-        if remake or not already_made:
-            xml_name = MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bin_min, bin_max, pot, subchannel_map=subchannel_map, include_detvar=include_detvar)
-            # Build and run PROfit command with xml path and -t tag taken from variables
-            xml_abs = plot_folder + "/xml/" + xml_name
-            #os.path.abspath(xml_name)
-            os.chdir(profit_dir)
-            processcmd = f"PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f"{selname}_{var}")} -o v001 -v3 --log process.log process 2>&1"
+            processcmd = f"PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o v001 -v3 --log process.log process 2>&1"
             plotcmd = f"PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o v001 -v3 --seed 404 --log plot.log --plot-bounds ratmin 0 ratmax 2 --use-fake-data plot --with-splines 2>&1;"
-            print(f"Running: {processcmd}")
-            os.system(processcmd)
-            print(f"Running: {plotcmd}")
-            os.system(plotcmd)
-        collapsed_total_frac_cov = ROOT.TH2D()
-        #collapsed_total_cor.SetName()
-        with ROOT.TFile(profit_dir+"/"+root_filename, "READ") as root_file:
-            #covariance_dir = root_file.GetDirectory("covariance")
-            cov_in = root_file.Get("Covariance/collapsed_total_frac_cov")
-            #collapsed_total_cor = cov_in.Copy()
-            x_bins = cov_in.GetNbinsX()
-            y_bins = cov_in.GetNbinsY()
-            collapsed_total_frac_cov.SetBins(x_bins, 0, x_bins, y_bins, 0, y_bins)
-            for i in range(cov_in.GetNbinsX()):
-                for j in range(cov_in.GetNbinsY()):
-                    #print(str(i) + " " + str(j) + " " + str(cov_in.GetBinContent(i+1,j+1)))
-                    collapsed_total_frac_cov.SetBinContent(i+1, j+1, cov_in.GetBinContent(i+1,j+1))
-                    #print(collapsed_total_cor.GetBinContent(i+1,j+1))
-        
-        collapsed_total_cov = collapsed_total_frac_cov
-        os.chdir(current_dir)  # Return to original directory after running PROfit
+        print(f"Running: {processcmd}")
+        os.system(processcmd)
+        print(f"Running: {plotcmd}")
+        os.system(plotcmd)
+    collapsed_total_frac_cov = ROOT.TH2D()
+    #collapsed_total_cor.SetName()
+    with ROOT.TFile(profit_dir+"/"+root_filename, "READ") as root_file:
+        #covariance_dir = root_file.GetDirectory("covariance")
+        cov_in = root_file.Get("Covariance/collapsed_total_frac_cov")
+        #collapsed_total_cor = cov_in.Copy()
+        x_bins = cov_in.GetNbinsX()
+        y_bins = cov_in.GetNbinsY()
+        collapsed_total_frac_cov.SetBins(x_bins, 0, x_bins, y_bins, 0, y_bins)
+        for i in range(cov_in.GetNbinsX()):
+            for j in range(cov_in.GetNbinsY()):
+                #print(str(i) + " " + str(j) + " " + str(cov_in.GetBinContent(i+1,j+1)))
+                collapsed_total_frac_cov.SetBinContent(i+1, j+1, cov_in.GetBinContent(i+1,j+1))
+                #print(collapsed_total_cor.GetBinContent(i+1,j+1))
+    
+    collapsed_total_cov = collapsed_total_frac_cov
+    os.chdir(current_dir)  # Return to original directory after running PROfit
 
-        return collapsed_total_cov
+    return collapsed_total_cov
 
 
 
