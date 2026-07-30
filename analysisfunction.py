@@ -549,7 +549,10 @@ def LoadTreesTruth(files, su = False):
     all_df_in_lantern_vec = []
     for file in files:
         i_run += 1
-        print("Loading file" + str(i_run) + "/" + str(len(files)) + ": " + file)
+        if not file:
+            print("Skipping file " + str(i_run) + "/" + str(len(files)) + " because it is empty")
+            continue
+        print("Loading file " + str(i_run) + "/" + str(len(files)) + ": " + file)
         all_df_in_bdt_temp, all_df_in_pfeval_temp, all_df_in_kine_temp, all_df_in_eval_temp, all_df_in_time_temp, all_df_in_pelee_temp, all_df_in_glee_temp, all_df_in_lantern_temp = LoadTreesTruth1(file, su=su)
         all_df_in_bdt_vec.append(all_df_in_bdt_temp)
         all_df_in_pfeval_vec.append(all_df_in_pfeval_temp)
@@ -715,6 +718,9 @@ def LoadTreesData(files, su = False):
     all_df_in_lantern_vec = []
     for file in files:
         i_run += 1
+        if not file:
+            print("Skipping file " + str(i_run) + "/" + str(len(files)) + " because it is empty")
+            continue
         print("Loading file" + str(i_run) + "/" + str(len(files)) + ": " + file)
         all_df_in_bdt_temp, all_df_in_pfeval_temp, all_df_in_kine_temp, all_df_in_eval_temp, all_df_in_time_temp, all_df_in_pelee_temp, all_df_in_glee_temp, all_df_in_lantern_temp = LoadTreesData1(file, su=su)
         all_df_in_bdt_vec.append(all_df_in_bdt_temp)
