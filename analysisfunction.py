@@ -877,6 +877,7 @@ def LoadTreesData1(file1, su = False):
 
 ###
 def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_over = [], all_df_in_pelee_over = [], all_df_in_glee_over = [], all_df_in_lantern_over = []):
+    print("Loading BNB Overlay")
     #bnb overlay
     true_event_types = []
     filetypes = []
@@ -950,7 +951,7 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
     time = []
     #evtTimeNS_vec = all_df_in_time_over["evtTimeNS_cor"].to_numpy(zero_copy_only=False)
 
-    for i in range(len(kine_reco_Enu_vec)):
+    for i in tqdm(range(len(kine_reco_Enu_vec))):
         #if (e[i] != pnd_evt[i]):
         #    print("Event number mismatch between wc and pelee: ", i, e[i], pnd_evt[i])
         filetypes.append("nu_overlay")
@@ -1095,12 +1096,8 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
             single_photon_nue_score.append(np.float32(-99999.0))
             #N_protons.append(-1)
 
-        
-        
-    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_pfeval_over)
-    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_kine_over)
-    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_eval_over)
 
+    print("adding calculated variables")
     #all_df_in_bdt_over["true_event_type"] = true_event_types
     all_df_in_bdt_over = all_df_in_bdt_over.with_columns(
         pl.Series("shw_sp_energy", shw_sp_energy),
@@ -1139,9 +1136,90 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
         pl.Series("time", time)
     )
 
+    del true_event_types
+    del filetypes
+    del shw_sp_energy
+    del single_photon_numu_score
+    del single_photon_other_score
+    del single_photon_ncpi0_score
+    del single_photon_nue_score
+    del weight_cv
+    del weight_spline 
+    del is_sigoverlay_vec 
+
+    del kine_reco_Enu_vec 
+    del shw_sp_n_20mev_showers_vec 
+    del reco_nuvtxX_vec 
+    del truth_muonMomentum
+
+    del reco_nuvtxY_vec
+    del reco_nuvtxZ_vec
+    del reco_showervtxX_vec
+    del reco_showervtxY_vec
+    del reco_showervtxZ_vec
+    del reco_showerMomentum_vec 
+    del reco_showerMomentum0_vec
+    del reco_showerMomentum1_vec
+    del reco_showerMomentum2_vec
+    del reco_showerMomentum3_vec
+    del truth_showerMomentum_vec 
+    del truth_showerMomentum0_vec 
+    del truth_showerMomentum1_vec 
+    del truth_showerMomentum2_vec 
+    del truth_showerMomentum3_vec
+    #del reco_muonMomentum3_vec 
+    del reco_muonMomentum_vec
+    del match_energy_vec 
+    del truth_nuEnergy_vec 
+    del truth_energyInside_vec 
+    del truth_showerKE_vec 
+
+    del match_completeness_energys 
+    del truth_energyInsides 
+    del truthSinglePhotons 
+    del truthisCCs 
+    del truth_NCDeltas 
+    del truth_showerMothers 
+    del truth_nuPdgs 
+    del truth_vtxInsides 
+    del truth_Npi0s 
+
+    del shw_sp_energies 
+    del single_photon_numu_scores 
+    del single_photon_other_scores 
+    del single_photon_ncpi0_scores 
+    del single_photon_nue_scores 
+    
+    del N_protons
+    del true_N_protons
+    del kine_energy_particle_vec
+    del kine_particle_type_vec
+    del truth_Ntrack
+    del truth_pdg
+    del truth_startMomentum
+    del truth_process
+    del truth_mother
+    del truth_endXYZT
+
+    del r
+    del s
+    del e
+
+    print("adding pfeval")
+    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_pfeval_over)
+    del all_df_in_pfeval_over
+    print("adding kine")
+    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_kine_over)
+    del all_df_in_kine_over
+    print("adding eval")
+    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_eval_over)
+    del all_df_in_eval_over
+
     #all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_kine_over)
     if (len(all_df_in_time_over) > 0):
+        print("adding time")
         all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_time_over)
+        del all_df_in_time_over
     
     all_df_in_bdt_over = all_df_in_bdt_over.rename(lambda col: f'wc_{col}')
     all_df_in_bdt_over = all_df_in_bdt_over.with_columns(
@@ -1150,11 +1228,17 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
     )
 
     if (len(all_df_in_pelee_over) > 0):
+        print("adding pelee")
         all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_pelee_over, lsuffix='_pelee')
+        del all_df_in_pelee_over
     if (len(all_df_in_glee_over) > 0):
+        print("adding glee")
         all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_glee_over, lsuffix='_glee')
+        del all_df_in_glee_over
     if (len(all_df_in_lantern_over) > 0):
+        print("adding lantern")
         all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_lantern_over, lsuffix='_lantern')
+        del all_df_in_lantern_over
 
     return all_df_in_bdt_over
 
