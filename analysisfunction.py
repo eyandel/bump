@@ -562,50 +562,68 @@ def LoadTreesTruth(files, su = False):
         all_df_in_pelee_vec.append(all_df_in_pelee_temp)
         all_df_in_glee_vec.append(all_df_in_glee_temp)
         all_df_in_lantern_vec.append(all_df_in_lantern_temp)
+        print("Finished loading file " + str(i_run) + "/" + str(len(files)) + ": " + file)
       
 
+    print("Concatenating all dataframes...")
+    print("BDT: " + str(len(all_df_in_bdt_vec)))
     all_df_in_bdt_over = pl.concat(all_df_in_bdt_vec, how="vertical")
 
     for df in all_df_in_bdt_vec:
         del df
+    del all_df_in_bdt_vec
 
+    print("PFeval: " + str(len(all_df_in_pfeval_vec)))
     all_df_in_pfeval_over = pl.concat(all_df_in_pfeval_vec, how="vertical")
 
     for df in all_df_in_pfeval_vec:
         del df
+    del all_df_in_pfeval_vec
 
+    print("Kine: " + str(len(all_df_in_kine_vec)))
     all_df_in_kine_over = pl.concat(all_df_in_kine_vec, how="vertical")
 
     for df in all_df_in_kine_vec:
         del df
+    del all_df_in_kine_vec
 
+    print("Eval: " + str(len(all_df_in_eval_vec)))
     all_df_in_eval_over = pl.concat(all_df_in_eval_vec, how="vertical")
 
     for df in all_df_in_eval_vec:
         del df
+    del all_df_in_eval_vec
 
+    print("Time: " + str(len(all_df_in_time_vec)))
     all_df_in_time_data = pl.concat(all_df_in_time_vec, how="vertical") if su else None
 
     for df in all_df_in_time_vec:
         del df
+    del all_df_in_time_vec
 
+    print("Pelee: " + str(len(all_df_in_pelee_vec)))
     all_df_in_pelee_data = pl.concat(all_df_in_pelee_vec, how="vertical") if su else None
     #all_df_in_pelee_data = all_df_in_pelee_data.rename(lambda col: f'pelee_{col}')
 
     for df in all_df_in_pelee_vec:
         del df
+    del all_df_in_pelee_vec
 
+    print("Glee: " + str(len(all_df_in_glee_vec)))
     all_df_in_glee_data = pl.concat(all_df_in_glee_vec, how="vertical") if su else None
     #all_df_in_glee_data = all_df_in_glee_data.rename(lambda col: f'glee_{col}')
 
     for df in all_df_in_glee_vec:
         del df
+    del all_df_in_glee_vec
 
+    print("Lantern: " + str(len(all_df_in_lantern_vec)))
     all_df_in_lantern_data = pl.concat(all_df_in_lantern_vec, how="vertical") if su else None
     #all_df_in_lantern_data = all_df_in_lantern_data.rename(lambda col: f'lantern_{col}')
 
     for df in all_df_in_lantern_vec:
         del df
+    del all_df_in_lantern_vec
 
     if su:
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, all_df_in_glee_data, all_df_in_lantern_data
@@ -876,8 +894,19 @@ def LoadTreesData1(file1, su = False):
 
 
 ###
-def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_over = [], all_df_in_pelee_over = [], all_df_in_glee_over = [], all_df_in_lantern_over = []):
+def LoadBNBOverlay(files, su = False):
+    #all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_over = [], all_df_in_pelee_over = [], all_df_in_glee_over = [], all_df_in_lantern_over = []):
     print("Loading BNB Overlay")
+    if su:
+        all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_over, all_df_in_pelee_over, all_df_in_glee_over, all_df_in_lantern_over = LoadTreesTruth(files, su = su)
+    else:
+        all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over = LoadTreesTruth(files, su = su)
+        all_df_in_time_over = []
+        all_df_in_pelee_over = []
+        all_df_in_glee_over = []
+        all_df_in_lantern_over = []
+
+    print("Loading into one df")
     #bnb overlay
     true_event_types = []
     filetypes = []
