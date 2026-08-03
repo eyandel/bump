@@ -1240,6 +1240,8 @@ def LoadBNBOverlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_ove
         all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_lantern_over, lsuffix='_lantern')
         del all_df_in_lantern_over
 
+    print("done loading BNB Overlay")
+
     return all_df_in_bdt_over
 
 ###
