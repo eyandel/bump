@@ -982,7 +982,7 @@ def LoadBNBOverlay(files, su = False):
     truth_energyInside_vec = all_df_in_eval_over["truth_energyInside"].to_numpy(zero_copy_only=False)
     truth_showerKE_vec = all_df_in_pfeval_over["truth_showerKE"].to_numpy(zero_copy_only=False)
 
-    match_completeness_energys = (all_df_in_eval_over["match_completeness_energy"].to_numpy(zero_copy_only=False))
+    match_completeness_energies = (all_df_in_eval_over["match_completeness_energy"].to_numpy(zero_copy_only=False))
     truth_energyInsides = (all_df_in_eval_over["truth_energyInside"].to_numpy(zero_copy_only=False))
     truthSinglePhotons = (all_df_in_pfeval_over["truth_single_photon"].to_numpy(zero_copy_only=False))
     truthisCCs = (all_df_in_pfeval_over["truth_isCC"].to_numpy(zero_copy_only=False))
@@ -1027,7 +1027,7 @@ def LoadBNBOverlay(files, su = False):
         isNC1g = False
         isCC1g = False
         truth_muonEnergy = truth_muonMomentum[i][3] - 0.105658
-        match_completeness_energy = match_completeness_energys[i]
+        match_completeness_energy = match_completeness_energies[i]
         truth_energyInside        = truth_energyInsides[i]
         truthSinglePhoton         = truthSinglePhotons[i]
         truthisCC                 = truthisCCs[i]
@@ -1237,7 +1237,7 @@ def LoadBNBOverlay(files, su = False):
     del truth_energyInside_vec 
     del truth_showerKE_vec 
 
-    del match_completeness_energys 
+    del match_completeness_energies 
     del truth_energyInsides 
     del truthSinglePhotons 
     del truthisCCs 
@@ -1581,15 +1581,15 @@ def LoadDirt(files, su = False):
     del truth_energyInside_vec 
     del truth_showerKE_vec 
 
-    del match_completeness_energys 
+    del match_completeness_energies 
     del truth_energyInsides 
     del truthSinglePhotons 
     del truthisCCs 
-    del truth_NCDeltas 
-    del truth_showerMothers 
-    del truth_nuPdgs 
+    #del truth_NCDeltas 
+    #del truth_showerMothers 
+    #del truth_nuPdgs 
     del truth_vtxInsides 
-    del truth_Npi0s 
+    #del truth_Npi0s 
 
     del shw_sp_energies 
     del single_photon_numu_scores 
@@ -1894,15 +1894,15 @@ def LoadExtBnb(files, su = False):
     del truth_energyInside_vec 
     del truth_showerKE_vec 
 
-    del match_completeness_energys 
+    del match_completeness_energies 
     del truth_energyInsides 
     del truthSinglePhotons 
     del truthisCCs 
-    del truth_NCDeltas 
-    del truth_showerMothers 
-    del truth_nuPdgs 
-    del truth_vtxInsides 
-    del truth_Npi0s 
+    #del truth_NCDeltas 
+    #del truth_showerMothers 
+    #del truth_nuPdgs 
+    #del truth_vtxInsides 
+    #del truth_Npi0s 
 
     del shw_sp_energies 
     del single_photon_numu_scores 
@@ -2218,15 +2218,15 @@ def LoadBnb(files, su = False):
     del truth_energyInside_vec 
     del truth_showerKE_vec 
 
-    del match_completeness_energys 
+    del match_completeness_energies 
     del truth_energyInsides 
     del truthSinglePhotons 
     del truthisCCs 
-    del truth_NCDeltas 
-    del truth_showerMothers 
-    del truth_nuPdgs 
-    del truth_vtxInsides 
-    del truth_Npi0s 
+    #del truth_NCDeltas 
+    #del truth_showerMothers 
+    #del truth_nuPdgs 
+    #del truth_vtxInsides 
+    #del truth_Npi0s 
 
     del shw_sp_energies 
     del single_photon_numu_scores 
@@ -2594,7 +2594,7 @@ def LoadNCPi0Overlay(files, su = False):
     del truth_energyInside_vec 
     del truth_showerKE_vec 
 
-    del match_completeness_energys 
+    del match_completeness_energies 
     del truth_energyInsides 
     del truthSinglePhotons 
     del truthisCCs 
