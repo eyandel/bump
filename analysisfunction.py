@@ -554,14 +554,23 @@ def LoadTreesTruth(files, su = False):
             continue
         print("Loading file " + str(i_run) + "/" + str(len(files)) + ": " + file)
         all_df_in_bdt_temp, all_df_in_pfeval_temp, all_df_in_kine_temp, all_df_in_eval_temp, all_df_in_time_temp, all_df_in_pelee_temp, all_df_in_glee_temp, all_df_in_lantern_temp = LoadTreesTruth1(file, su=su)
+        #print("Finished loading trees from file " + str(i_run) + "/" + str(len(files)) + ": " + file)
         all_df_in_bdt_vec.append(all_df_in_bdt_temp)
+        del all_df_in_bdt_temp
         all_df_in_pfeval_vec.append(all_df_in_pfeval_temp)
+        del all_df_in_pfeval_temp
         all_df_in_kine_vec.append(all_df_in_kine_temp)
+        del all_df_in_kine_temp
         all_df_in_eval_vec.append(all_df_in_eval_temp)
+        del all_df_in_eval_temp
         all_df_in_time_vec.append(all_df_in_time_temp)
+        del all_df_in_time_temp
         all_df_in_pelee_vec.append(all_df_in_pelee_temp)
+        del all_df_in_pelee_temp
         all_df_in_glee_vec.append(all_df_in_glee_temp)
+        del all_df_in_glee_temp
         all_df_in_lantern_vec.append(all_df_in_lantern_temp)
+        del all_df_in_lantern_temp
         print("Finished loading file " + str(i_run) + "/" + str(len(files)) + ": " + file)
       
 
@@ -739,60 +748,87 @@ def LoadTreesData(files, su = False):
         if not file:
             print("Skipping file " + str(i_run) + "/" + str(len(files)) + " because it is empty")
             continue
-        print("Loading file" + str(i_run) + "/" + str(len(files)) + ": " + file)
+        print("Loading file " + str(i_run) + "/" + str(len(files)) + ": " + file)
         all_df_in_bdt_temp, all_df_in_pfeval_temp, all_df_in_kine_temp, all_df_in_eval_temp, all_df_in_time_temp, all_df_in_pelee_temp, all_df_in_glee_temp, all_df_in_lantern_temp = LoadTreesData1(file, su=su)
+        #print("Finished loading trees from file " + str(i_run) + "/" + str(len(files)) + ": " + file)
         all_df_in_bdt_vec.append(all_df_in_bdt_temp)
+        del all_df_in_bdt_temp
         all_df_in_pfeval_vec.append(all_df_in_pfeval_temp)
+        del all_df_in_pfeval_temp
         all_df_in_kine_vec.append(all_df_in_kine_temp)
+        del all_df_in_kine_temp
         all_df_in_eval_vec.append(all_df_in_eval_temp)
+        del all_df_in_eval_temp
         all_df_in_time_vec.append(all_df_in_time_temp)
+        del all_df_in_time_temp
         all_df_in_pelee_vec.append(all_df_in_pelee_temp)
+        del all_df_in_pelee_temp
         all_df_in_glee_vec.append(all_df_in_glee_temp)
+        del all_df_in_glee_temp
         all_df_in_lantern_vec.append(all_df_in_lantern_temp)
+        del all_df_in_lantern_temp
+        print("Finished loading file " + str(i_run) + "/" + str(len(files)) + ": " + file)
       
 
+    print("Concatenating all dataframes...")
+    print("BDT: " + str(len(all_df_in_bdt_vec)))
     all_df_in_bdt_over = pl.concat(all_df_in_bdt_vec, how="vertical")
 
     for df in all_df_in_bdt_vec:
         del df
+    del all_df_in_bdt_vec
 
+    print("PFeval: " + str(len(all_df_in_pfeval_vec)))
     all_df_in_pfeval_over = pl.concat(all_df_in_pfeval_vec, how="vertical")
 
     for df in all_df_in_pfeval_vec:
         del df
+    del all_df_in_pfeval_vec
 
+    print("Kine: " + str(len(all_df_in_kine_vec)))
     all_df_in_kine_over = pl.concat(all_df_in_kine_vec, how="vertical")
 
     for df in all_df_in_kine_vec:
         del df
+    del all_df_in_kine_vec
 
+    print("Eval: " + str(len(all_df_in_eval_vec)))
     all_df_in_eval_over = pl.concat(all_df_in_eval_vec, how="vertical")
 
     for df in all_df_in_eval_vec:
         del df
+    del all_df_in_eval_vec
 
+    print("Time: " + str(len(all_df_in_time_vec)))
     all_df_in_time_data = pl.concat(all_df_in_time_vec, how="vertical") if su else None
 
     for df in all_df_in_time_vec:
         del df
+    del all_df_in_time_vec
 
+    print("Pelee: " + str(len(all_df_in_pelee_vec)))
     all_df_in_pelee_data = pl.concat(all_df_in_pelee_vec, how="vertical") if su else None
     #all_df_in_pelee_data = all_df_in_pelee_data.rename(lambda col: f'pelee_{col}')
 
     for df in all_df_in_pelee_vec:
         del df
+    del all_df_in_pelee_vec
 
+    print("Glee: " + str(len(all_df_in_glee_vec)))
     all_df_in_glee_data = pl.concat(all_df_in_glee_vec, how="vertical") if su else None
     #all_df_in_glee_data = all_df_in_glee_data.rename(lambda col: f'glee_{col}')
 
     for df in all_df_in_glee_vec:
         del df
+    del all_df_in_glee_vec
 
+    print("Lantern: " + str(len(all_df_in_lantern_vec)))
     all_df_in_lantern_data = pl.concat(all_df_in_lantern_vec, how="vertical") if su else None
     #all_df_in_lantern_data = all_df_in_lantern_data.rename(lambda col: f'lantern_{col}')
 
     for df in all_df_in_lantern_vec:
         del df
+    del all_df_in_lantern_vec
 
     if su:
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, all_df_in_glee_data, all_df_in_lantern_data
@@ -1165,8 +1201,6 @@ def LoadBNBOverlay(files, su = False):
         pl.Series("time", time)
     )
 
-    del true_event_types
-    del filetypes
     del shw_sp_energy
     del single_photon_numu_score
     del single_photon_other_score
@@ -1255,6 +1289,8 @@ def LoadBNBOverlay(files, su = False):
         pl.Series("true_event_type", true_event_types),
         pl.Series("filetype", filetypes)
     )
+    del true_event_types
+    del filetypes
 
     if (len(all_df_in_pelee_over) > 0):
         print("adding pelee")
@@ -1274,7 +1310,19 @@ def LoadBNBOverlay(files, su = False):
     return all_df_in_bdt_over
 
 ###
-def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all_df_in_eval_dirt, all_df_in_time_dirt = [], all_df_in_pelee_dirt = [], all_df_in_glee_dirt = [], all_df_in_lantern_dirt = []):
+def LoadDirt(files, su = False):
+    #all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all_df_in_eval_dirt, all_df_in_time_dirt = [], all_df_in_pelee_dirt = [], all_df_in_glee_dirt = [], all_df_in_lantern_dirt = []):
+    print("Loading Dirt Overlay")
+    if su:
+        all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all_df_in_eval_dirt, all_df_in_time_dirt, all_df_in_pelee_dirt, all_df_in_glee_dirt, all_df_in_lantern_dirt = LoadTreesTruth(files, su = su)
+    else:
+        all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all_df_in_eval_dirt = LoadTreesTruth(files, su = su)
+        all_df_in_time_dirt = []
+        all_df_in_pelee_dirt = []
+        all_df_in_glee_dirt = []
+        all_df_in_lantern_dirt = []
+
+    print("Loading into one df")
     #dirt
     true_event_types = []
     filetypes = []
@@ -1461,10 +1509,6 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
             #N_protons.append(-1)
 
     
-    all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_pfeval_dirt)
-    all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_kine_dirt)
-    all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_eval_dirt)
-
     #all_df_in_bdt_dirt["true_event_type"] = true_event_types
     all_df_in_bdt_dirt = all_df_in_bdt_dirt.with_columns(
         pl.Series("shw_sp_energy", shw_sp_energy),
@@ -1500,29 +1544,123 @@ def LoadDirt(all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all
         pl.Series("event", e),
         pl.Series("time", time)
     )
+    
+    del shw_sp_energy
+    del single_photon_numu_score
+    del single_photon_other_score
+    del single_photon_ncpi0_score
+    del single_photon_nue_score
+    del weight_cv
+    del weight_spline 
+    del is_sigoverlay_vec 
+
+    del kine_reco_Enu_vec 
+    del shw_sp_n_20mev_showers_vec 
+    del reco_nuvtxX_vec 
+    del truth_muonMomentum
+
+    del reco_nuvtxY_vec
+    del reco_nuvtxZ_vec
+    del reco_showervtxX_vec
+    del reco_showervtxY_vec
+    del reco_showervtxZ_vec
+    del reco_showerMomentum_vec 
+    del reco_showerMomentum0_vec
+    del reco_showerMomentum1_vec
+    del reco_showerMomentum2_vec
+    del reco_showerMomentum3_vec
+    del truth_showerMomentum_vec 
+    del truth_showerMomentum0_vec 
+    del truth_showerMomentum1_vec 
+    del truth_showerMomentum2_vec 
+    del truth_showerMomentum3_vec
+    #del reco_muonMomentum3_vec 
+    del reco_muonMomentum_vec
+    del match_energy_vec 
+    del truth_nuEnergy_vec 
+    del truth_energyInside_vec 
+    del truth_showerKE_vec 
+
+    del match_completeness_energys 
+    del truth_energyInsides 
+    del truthSinglePhotons 
+    del truthisCCs 
+    del truth_NCDeltas 
+    del truth_showerMothers 
+    del truth_nuPdgs 
+    del truth_vtxInsides 
+    del truth_Npi0s 
+
+    del shw_sp_energies 
+    del single_photon_numu_scores 
+    del single_photon_other_scores 
+    del single_photon_ncpi0_scores 
+    del single_photon_nue_scores 
+    
+    del N_protons
+    del true_N_protons
+    del kine_energy_particle_vec
+    del kine_particle_type_vec
+    del truth_Ntrack
+    del truth_pdg
+    del truth_startMomentum
+    del truth_process
+    del truth_mother
+    del truth_endXYZT
+
+    del r
+    del s
+    del e
+    
+    all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_pfeval_dirt)
+    del all_df_in_pfeval_dirt
+    all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_kine_dirt)
+    del all_df_in_kine_dirt
+    all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_eval_dirt)
+    del all_df_in_eval_dirt
 
     #all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_kine_dirt)
     #all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(all_df_in_time_dirt)
     if (len(all_df_in_time_dirt) > 0):
         all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_time_dirt)
+        del all_df_in_time_dirt
 
     all_df_in_bdt_dirt = all_df_in_bdt_dirt.rename(lambda col: f'wc_{col}')
     all_df_in_bdt_dirt = all_df_in_bdt_dirt.with_columns(
         pl.Series("true_event_type", true_event_types),
         pl.Series("filetype", filetypes)
     )
+    del true_event_types
+    del filetypes
 
     if (len(all_df_in_pelee_dirt) > 0):
         all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_pelee_dirt, lsuffix='_pelee')
+        del all_df_in_pelee_dirt
     if (len(all_df_in_glee_dirt) > 0):
         all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_glee_dirt, lsuffix='_glee')
+        del all_df_in_glee_dirt
     if (len(all_df_in_lantern_dirt) > 0):
         all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_lantern_dirt, lsuffix='_lantern')
+        del all_df_in_lantern_dirt
 
+    print("done loading Dirt Overlay")
     return all_df_in_bdt_dirt
 
 ###
-def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_df_in_eval_ext, all_df_in_time_ext = [], all_df_in_pelee_ext = [], all_df_in_glee_ext = [], all_df_in_lantern_ext = []):
+def LoadExtBnb(files, su = False):
+    #all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_df_in_eval_ext, all_df_in_time_ext = [], all_df_in_pelee_ext = [], all_df_in_glee_ext = [], all_df_in_lantern_ext = []):
+    print("Loading EXTBNB")
+    if su:
+        all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_df_in_eval_ext, all_df_in_time_ext, all_df_in_pelee_ext, all_df_in_glee_ext, all_df_in_lantern_ext = LoadTreesData(files, su = su)
+    else:
+        all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_df_in_eval_ext = LoadTreesData(files, su = su)
+        all_df_in_time_ext = []
+        all_df_in_pelee_ext = []
+        all_df_in_glee_ext = []
+        all_df_in_lantern_ext = []
+
+    print("Loading into one df")
+    
     #extbnb
     true_event_types = []
     filetypes = []
@@ -1684,10 +1822,6 @@ def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_
     
     #for t in eval_truth_variables:
     #    all_df_in_eval_ext[t] = [-9999] * len(true_event_types)
-    
-    all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_pfeval_ext)
-    all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_kine_ext)
-    all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_eval_ext)
 
     #all_df_in_bdt_ext["true_event_type"] = true_event_types
     all_df_in_bdt_ext = all_df_in_bdt_ext.with_columns(
@@ -1723,30 +1857,125 @@ def LoadExtBnb(all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_
         pl.Series("event", e),
         pl.Series("time", time)
     )
+
+    del shw_sp_energy
+    del single_photon_numu_score
+    del single_photon_other_score
+    del single_photon_ncpi0_score
+    del single_photon_nue_score
+    del weight_cv
+    del weight_spline 
+    del is_sigoverlay_vec 
+
+    del kine_reco_Enu_vec 
+    del shw_sp_n_20mev_showers_vec 
+    del reco_nuvtxX_vec 
+    del truth_muonMomentum
+
+    del reco_nuvtxY_vec
+    del reco_nuvtxZ_vec
+    del reco_showervtxX_vec
+    del reco_showervtxY_vec
+    del reco_showervtxZ_vec
+    del reco_showerMomentum_vec 
+    del reco_showerMomentum0_vec
+    del reco_showerMomentum1_vec
+    del reco_showerMomentum2_vec
+    del reco_showerMomentum3_vec
+    del truth_showerMomentum_vec 
+    del truth_showerMomentum0_vec 
+    del truth_showerMomentum1_vec 
+    del truth_showerMomentum2_vec 
+    del truth_showerMomentum3_vec
+    #del reco_muonMomentum3_vec 
+    del reco_muonMomentum_vec
+    del match_energy_vec 
+    del truth_nuEnergy_vec 
+    del truth_energyInside_vec 
+    del truth_showerKE_vec 
+
+    del match_completeness_energys 
+    del truth_energyInsides 
+    del truthSinglePhotons 
+    del truthisCCs 
+    del truth_NCDeltas 
+    del truth_showerMothers 
+    del truth_nuPdgs 
+    del truth_vtxInsides 
+    del truth_Npi0s 
+
+    del shw_sp_energies 
+    del single_photon_numu_scores 
+    del single_photon_other_scores 
+    del single_photon_ncpi0_scores 
+    del single_photon_nue_scores 
+    
+    del N_protons
+    del true_N_protons
+    del kine_energy_particle_vec
+    del kine_particle_type_vec
+    del truth_Ntrack
+    del truth_pdg
+    del truth_startMomentum
+    del truth_process
+    del truth_mother
+    del truth_endXYZT
+
+    del r
+    del s
+    del e
+    
+    all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_pfeval_ext)
+    del all_df_in_pfeval_ext
+    all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_kine_ext)
+    del all_df_in_kine_ext
+    all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_eval_ext)
+    del all_df_in_eval_ext
+
     #all_df_in_bdt_ext["pnd_time"] = pnd_time
 
     #all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_kine_ext)
     #all_df_in_bdt_ext = all_df_in_bdt_ext.join(all_df_in_time_ext)
     if (len(all_df_in_time_ext) > 0):
         all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_time_ext)
+        del all_df_in_time_ext
 
     all_df_in_bdt_ext = all_df_in_bdt_ext.rename(lambda col: f'wc_{col}')
     all_df_in_bdt_ext = all_df_in_bdt_ext.with_columns(
         pl.Series("true_event_type", true_event_types),
         pl.Series("filetype", filetypes)
     )
+    del true_event_types
+    del filetypes
 
     if (len(all_df_in_pelee_ext) > 0):
         all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_pelee_ext, lsuffix='_pelee')
+        del all_df_in_pelee_ext
     if (len(all_df_in_glee_ext) > 0):
         all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_glee_ext, lsuffix='_glee')
+        del all_df_in_glee_ext
     if (len(all_df_in_lantern_ext) > 0):
         all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_lantern_ext, lsuffix='_lantern')
+        del all_df_in_lantern_ext
 
+    print("done loading EXTBNB")
     return all_df_in_bdt_ext
 
 ###
-def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_df_in_eval_data, all_df_in_time_data = [], all_df_in_pelee_data = [], all_df_in_glee_data = [], all_df_in_lantern_data = []):
+def LoadBnb(files, su = False):
+    #all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_df_in_eval_data, all_df_in_time_data = [], all_df_in_pelee_data = [], all_df_in_glee_data = [], all_df_in_lantern_data = []):
+    print("Loading BNB Data")
+    if su:
+        all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_df_in_eval_data, all_df_in_time_data, all_df_in_pelee_data, all_df_in_glee_data, all_df_in_lantern_data = LoadTreesData(files, su = su)
+    else:
+        all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_df_in_eval_data = LoadTreesData(files, su = su)
+        all_df_in_time_data = []
+        all_df_in_pelee_data = []
+        all_df_in_glee_data = []
+        all_df_in_lantern_data = []
+
+    print("Loading into one df")
+    
     #bnb data
     true_event_types = []
     filetypes = []
@@ -1918,10 +2147,6 @@ def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_
     #for t in eval_truth_variables:
     #    all_df_in_eval_data[t] = [-9999] * len(true_event_types)
 
-    all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_pfeval_data)
-    all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_kine_data)
-    all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_eval_data)
-
     #all_df_in_bdt_data["true_event_type"] = true_event_types
     all_df_in_bdt_data = all_df_in_bdt_data.with_columns(
         pl.Series("shw_sp_energy", shw_sp_energy),
@@ -1956,30 +2181,125 @@ def LoadBnb(all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_
         pl.Series("event", e_data),
         pl.Series("time", time)
     )
+
+    del shw_sp_energy
+    del single_photon_numu_score
+    del single_photon_other_score
+    del single_photon_ncpi0_score
+    del single_photon_nue_score
+    del weight_cv
+    del weight_spline 
+    del is_sigoverlay_vec 
+
+    del kine_reco_Enu_vec 
+    del shw_sp_n_20mev_showers_vec 
+    del reco_nuvtxX_vec 
+    del truth_muonMomentum
+
+    del reco_nuvtxY_vec
+    del reco_nuvtxZ_vec
+    del reco_showervtxX_vec
+    del reco_showervtxY_vec
+    del reco_showervtxZ_vec
+    del reco_showerMomentum_vec 
+    del reco_showerMomentum0_vec
+    del reco_showerMomentum1_vec
+    del reco_showerMomentum2_vec
+    del reco_showerMomentum3_vec
+    del truth_showerMomentum_vec 
+    del truth_showerMomentum0_vec 
+    del truth_showerMomentum1_vec 
+    del truth_showerMomentum2_vec 
+    del truth_showerMomentum3_vec
+    #del reco_muonMomentum3_vec 
+    del reco_muonMomentum_vec
+    del match_energy_vec 
+    del truth_nuEnergy_vec 
+    del truth_energyInside_vec 
+    del truth_showerKE_vec 
+
+    del match_completeness_energys 
+    del truth_energyInsides 
+    del truthSinglePhotons 
+    del truthisCCs 
+    del truth_NCDeltas 
+    del truth_showerMothers 
+    del truth_nuPdgs 
+    del truth_vtxInsides 
+    del truth_Npi0s 
+
+    del shw_sp_energies 
+    del single_photon_numu_scores 
+    del single_photon_other_scores 
+    del single_photon_ncpi0_scores 
+    del single_photon_nue_scores 
+    
+    del N_protons
+    del true_N_protons
+    del kine_energy_particle_vec
+    del kine_particle_type_vec
+    del truth_Ntrack
+    del truth_pdg
+    del truth_startMomentum
+    del truth_process
+    del truth_mother
+    del truth_endXYZT
+
+    del r
+    del s
+    del e
+
+    all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_pfeval_data)
+    del all_df_in_pfeval_data
+    all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_kine_data)
+    del all_df_in_kine_data
+    all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_eval_data)
+    del all_df_in_eval_data
+
     #all_df_in_bdt_data["pnd_time"] = pnd_time
 
     #all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_kine_data)
     #all_df_in_bdt_data = all_df_in_bdt_data.join(all_df_in_time_data)
     if (len(all_df_in_time_data) > 0):
         all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_time_data)
+        del all_df_in_time_data
 
     all_df_in_bdt_data = all_df_in_bdt_data.rename(lambda col: f'wc_{col}')
     all_df_in_bdt_data = all_df_in_bdt_data.with_columns(
         pl.Series("true_event_type", true_event_types),
         pl.Series("filetype", filetypes)
     )
+    del true_event_types
+    del filetypes
 
     if (len(all_df_in_pelee_data) > 0):
         all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_pelee_data, lsuffix='_pelee')
+        del all_df_in_pelee_data
     if (len(all_df_in_glee_data) > 0):
         all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_glee_data, lsuffix='_glee')
+        del all_df_in_glee_data
     if (len(all_df_in_lantern_data) > 0):
         all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_lantern_data, lsuffix='_lantern')
+        del all_df_in_lantern_data
 
+    print("done loading BNB Data")
     return all_df_in_bdt_data
 
 ###
-def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_over = [], all_df_in_pelee_over = [], all_df_in_glee_over = [], all_df_in_lantern_over = []):
+def LoadNCPi0Overlay(files, su = False):
+    #all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_over = [], all_df_in_pelee_over = [], all_df_in_glee_over = [], all_df_in_lantern_over = []):
+    print("Loading NC Pi0 Overlay")
+    if su:
+        all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_over, all_df_in_pelee_over, all_df_in_glee_over, all_df_in_lantern_over = LoadTreesTruth(files, su = su)
+    else:
+        all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over = LoadTreesTruth(files, su = su)
+        all_df_in_time_over = []
+        all_df_in_pelee_over = []
+        all_df_in_glee_over = []
+        all_df_in_lantern_over = []
+
+    print("Loading into one df")
+    
     #ncpi0 overlay overlay
     true_event_types = []
     filetypes = []
@@ -2201,10 +2521,6 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
             #N_protons.append(-1)
 
         
-    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_pfeval_over)
-    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_kine_over)
-    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_eval_over)
-    
     #all_df_in_bdt_over["true_event_type"] = true_event_types
     #all_df_in_bdt_over["true_event_type_sub"] = true_event_types_sub
     all_df_in_bdt_over = all_df_in_bdt_over.with_columns(
@@ -2241,12 +2557,88 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
         pl.Series("event", e),
         pl.Series("time", time)
     )
+    
+    del shw_sp_energy
+    del single_photon_numu_score
+    del single_photon_other_score
+    del single_photon_ncpi0_score
+    del single_photon_nue_score
+    del weight_cv
+    del weight_spline 
+    del is_sigoverlay_vec 
+
+    del kine_reco_Enu_vec 
+    del shw_sp_n_20mev_showers_vec 
+    del reco_nuvtxX_vec 
+    del truth_muonMomentum
+
+    del reco_nuvtxY_vec
+    del reco_nuvtxZ_vec
+    del reco_showervtxX_vec
+    del reco_showervtxY_vec
+    del reco_showervtxZ_vec
+    del reco_showerMomentum_vec 
+    del reco_showerMomentum0_vec
+    del reco_showerMomentum1_vec
+    del reco_showerMomentum2_vec
+    del reco_showerMomentum3_vec
+    del truth_showerMomentum_vec 
+    del truth_showerMomentum0_vec 
+    del truth_showerMomentum1_vec 
+    del truth_showerMomentum2_vec 
+    del truth_showerMomentum3_vec
+    #del reco_muonMomentum3_vec 
+    del reco_muonMomentum_vec
+    del match_energy_vec 
+    del truth_nuEnergy_vec 
+    del truth_energyInside_vec 
+    del truth_showerKE_vec 
+
+    del match_completeness_energys 
+    del truth_energyInsides 
+    del truthSinglePhotons 
+    del truthisCCs 
+    del truth_NCDeltas 
+    del truth_showerMothers 
+    del truth_nuPdgs 
+    del truth_vtxInsides 
+    del truth_Npi0s 
+
+    del shw_sp_energies 
+    del single_photon_numu_scores 
+    del single_photon_other_scores 
+    del single_photon_ncpi0_scores 
+    del single_photon_nue_scores 
+    
+    del N_protons
+    del true_N_protons
+    del kine_energy_particle_vec
+    del kine_particle_type_vec
+    del truth_Ntrack
+    del truth_pdg
+    del truth_startMomentum
+    del truth_process
+    del truth_mother
+    del truth_endXYZT
+
+    del r
+    del s
+    del e
+    
+    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_pfeval_over)
+    del all_df_in_pfeval_over
+    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_kine_over)
+    del all_df_in_kine_over
+    all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_eval_over)
+    del all_df_in_eval_over
+    
     #all_df_in_bdt_over["pnd_time"] = pnd_time
 
     #all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_kine_over)
     #all_df_in_bdt_over = all_df_in_bdt_over.join(all_df_in_time_over)
     if (len(all_df_in_time_over) > 0):
         all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_time_over)
+        del all_df_in_time_over
 
     all_df_in_bdt_over = all_df_in_bdt_over.rename(lambda col: f'wc_{col}')
     all_df_in_bdt_over = all_df_in_bdt_over.with_columns(
@@ -2254,14 +2646,21 @@ def LoadNCPi0Overlay(all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_o
         pl.Series("true_event_type_sub", true_event_types_sub),
         pl.Series("filetype", filetypes)
     )
+    del true_event_types
+    del true_event_types_sub
+    del filetypes
 
     if (len(all_df_in_pelee_over) > 0):
         all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_pelee_over, lsuffix='_pelee')
+        del all_df_in_pelee_over
     if (len(all_df_in_glee_over) > 0):
         all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_glee_over, lsuffix='_glee')
+        del all_df_in_glee_over
     if (len(all_df_in_lantern_over) > 0):
         all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_lantern_over, lsuffix='_lantern')
+        del all_df_in_lantern_over
 
+    print("done loading NC Pi0 Overlay")
     return all_df_in_bdt_over
 
 ###
