@@ -1870,7 +1870,7 @@ def LoadExtBnb(files, su = False):
     del kine_reco_Enu_vec 
     del shw_sp_n_20mev_showers_vec 
     del reco_nuvtxX_vec 
-    del truth_muonMomentum
+    #del truth_muonMomentum
 
     del reco_nuvtxY_vec
     del reco_nuvtxZ_vec
@@ -1882,7 +1882,7 @@ def LoadExtBnb(files, su = False):
     del reco_showerMomentum1_vec
     del reco_showerMomentum2_vec
     del reco_showerMomentum3_vec
-    del truth_showerMomentum_vec 
+    #del truth_showerMomentum_vec 
     del truth_showerMomentum0_vec 
     del truth_showerMomentum1_vec 
     del truth_showerMomentum2_vec 
@@ -1894,10 +1894,10 @@ def LoadExtBnb(files, su = False):
     del truth_energyInside_vec 
     del truth_showerKE_vec 
 
-    del match_completeness_energies 
-    del truth_energyInsides 
-    del truthSinglePhotons 
-    del truthisCCs 
+    #del match_completeness_energies 
+    #del truth_energyInsides 
+    #del truthSinglePhotons 
+    #del truthisCCs 
     #del truth_NCDeltas 
     #del truth_showerMothers 
     #del truth_nuPdgs 
@@ -1911,15 +1911,15 @@ def LoadExtBnb(files, su = False):
     del single_photon_nue_scores 
     
     del N_protons
-    del true_N_protons
+    #del true_N_protons
     del kine_energy_particle_vec
     del kine_particle_type_vec
-    del truth_Ntrack
-    del truth_pdg
-    del truth_startMomentum
-    del truth_process
-    del truth_mother
-    del truth_endXYZT
+    #del truth_Ntrack
+    #del truth_pdg
+    #del truth_startMomentum
+    #del truth_process
+    #del truth_mother
+    #del truth_endXYZT
 
     del r
     del s
@@ -2194,7 +2194,7 @@ def LoadBnb(files, su = False):
     del kine_reco_Enu_vec 
     del shw_sp_n_20mev_showers_vec 
     del reco_nuvtxX_vec 
-    del truth_muonMomentum
+    #del truth_muonMomentum
 
     del reco_nuvtxY_vec
     del reco_nuvtxZ_vec
@@ -2206,7 +2206,7 @@ def LoadBnb(files, su = False):
     del reco_showerMomentum1_vec
     del reco_showerMomentum2_vec
     del reco_showerMomentum3_vec
-    del truth_showerMomentum_vec 
+    #del truth_showerMomentum_vec 
     del truth_showerMomentum0_vec 
     del truth_showerMomentum1_vec 
     del truth_showerMomentum2_vec 
@@ -2218,10 +2218,10 @@ def LoadBnb(files, su = False):
     del truth_energyInside_vec 
     del truth_showerKE_vec 
 
-    del match_completeness_energies 
-    del truth_energyInsides 
-    del truthSinglePhotons 
-    del truthisCCs 
+    #del match_completeness_energies 
+    #del truth_energyInsides 
+    #del truthSinglePhotons 
+   # del truthisCCs 
     #del truth_NCDeltas 
     #del truth_showerMothers 
     #del truth_nuPdgs 
@@ -2235,19 +2235,19 @@ def LoadBnb(files, su = False):
     del single_photon_nue_scores 
     
     del N_protons
-    del true_N_protons
+    #del true_N_protons
     del kine_energy_particle_vec
     del kine_particle_type_vec
-    del truth_Ntrack
-    del truth_pdg
-    del truth_startMomentum
-    del truth_process
-    del truth_mother
-    del truth_endXYZT
+    #del truth_Ntrack
+    #del truth_pdg
+    #del truth_startMomentum
+    #del truth_process
+    #del truth_mother
+    #del truth_endXYZT
 
-    del r
-    del s
-    del e
+    del r_data
+    del s_data
+    del e_data
 
     all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_pfeval_data)
     del all_df_in_pfeval_data
