@@ -14,6 +14,7 @@ import math
 from tqdm import tqdm
 import subprocess
 import shlex
+import gc
 
 plt.rcParams['figure.figsize'] = [16, 8]
 #import os
@@ -571,6 +572,7 @@ def LoadTreesTruth(files, su = False):
         del all_df_in_glee_temp
         all_df_in_lantern_vec.append(all_df_in_lantern_temp)
         del all_df_in_lantern_temp
+        gc.collect()
         print("Finished loading file " + str(i_run) + "/" + str(len(files)) + ": " + file)
       
 
@@ -633,6 +635,8 @@ def LoadTreesTruth(files, su = False):
     for df in all_df_in_lantern_vec:
         del df
     del all_df_in_lantern_vec
+
+    gc.collect()
 
     if su:
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, all_df_in_glee_data, all_df_in_lantern_data
@@ -767,6 +771,7 @@ def LoadTreesData(files, su = False):
         del all_df_in_glee_temp
         all_df_in_lantern_vec.append(all_df_in_lantern_temp)
         del all_df_in_lantern_temp
+        gc.collect()
         print("Finished loading file " + str(i_run) + "/" + str(len(files)) + ": " + file)
       
 
@@ -829,6 +834,8 @@ def LoadTreesData(files, su = False):
     for df in all_df_in_lantern_vec:
         del df
     del all_df_in_lantern_vec
+
+    gc.collect()
 
     if su:
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, all_df_in_glee_data, all_df_in_lantern_data
@@ -8524,13 +8531,13 @@ glee_reco_variables = [
  "reco_shower_reclustered_energy_plane1",
  "reco_shower_reclustered_energy_plane2",
  "reco_shower_reclustered_energy_max",
- "reco_shower_hit_tick",
- "reco_shower_hit_wire",
- "reco_shower_hit_plane",
- "reco_shower_hit_energy",
- "reco_shower_spacepoint_x",
- "reco_shower_spacepoint_y",
- "reco_shower_spacepoint_z",
+ #"reco_shower_hit_tick",
+ #"reco_shower_hit_wire",
+ #"reco_shower_hit_plane",
+ #"reco_shower_hit_energy",
+ #"reco_shower_spacepoint_x",
+ #"reco_shower_spacepoint_y",
+ #"reco_shower_spacepoint_z",
  "reco_shower_ordered_energy_index",
  "i_shr",
  "reco_shower_dQdx_plane0",
