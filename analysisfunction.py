@@ -537,6 +537,47 @@ def AddRecoVars(all_df):
     )
     return all_df
 
+def LoadFiles(files, filetype, su = False):
+    #files: list of files
+    #filetype: string of file type e.g. "ext", "data", "bnboverlay", "dirt", "ncpi0", "modpi0"
+    dfs = []
+    i_run = 0
+    for file in files:
+        i_run += 1
+        if not file:
+            print("Skipping file " + str(i_run) + "/" + str(len(files)) + " because it is empty")
+            continue
+        print("Loading " + filetype + " file " + str(i_run) + "/" + str(len(files)) + ": " + file)
+        df_temp = []
+        if filetype.lower() == "ext":
+            df_temp = LoadExtBnb([file], su = su)
+        elif filetype.lower() == "bnboverlay" or filetype.lower() == "overlay":
+            df_temp = LoadBNBOverlay([file], su = su)
+        elif filetype.lower() == "dirt":
+            df_temp = LoadDirt([file], su = su)
+        elif filetype.lower() == "data" or filetype.lower() == "bnb":
+            df_temp = LoadBnb([file], su = su)
+        elif filetype.lower() == "ncpi0":
+            df_temp = LoadNCPi0Overlay([file], su = su)
+        elif filetype.lower() == "modpi0":
+            df_temp = LoadBNBOverlay([file], su = su)
+        else:
+            print("NOT A SUPPORTED FILE TYPE")
+            break
+        df_temp = df_temp.with_columns([
+                                pl.col(pl.Float64).cast(pl.Float32),
+                                pl.col(pl.Int64).cast(pl.Int32),
+                                pl.col(pl.UInt64).cast(pl.UInt32),
+                            ]).rechunk()
+        dfs.append(df_temp)
+        gc.collect()
+    
+    return pl.concat(dfs, how="vertical")
+    
+
+            
+
+
 def LoadTreesTruth(files, su = False):
     #files = 1D array of files sorted by run
     i_run = 0
