@@ -175,24 +175,24 @@ def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
                 newcat.append(12)
                 newcatname.append("Extbnb")
                 newcatcolor.append(ROOT.kGray)
-                photon1_mom.append(np.array(default_list, dtype='float64'))
-                photon2_mom.append(np.array(default_list, dtype='float64'))
+                photon1_mom.append(np.array(default_list, dtype='float32'))
+                photon2_mom.append(np.array(default_list, dtype='float32'))
                 photon1_process.append("none")
                 photon2_process.append("none")
-                photon1_XYZT.append(np.array(default_list, dtype='float64'))
-                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_XYZT.append(np.array(default_list, dtype='float32'))
+                photon2_XYZT.append(np.array(default_list, dtype='float32'))
                 photon1_mother.append(np.int32(-999))
                 photon2_mother.append(np.int32(-999))
             elif true_event_types[i] == 13:
                 newcat.append(13)
                 newcatname.append("Data")
                 newcatcolor.append(ROOT.kBlack)
-                photon1_mom.append(np.array(default_list, dtype='float64'))
-                photon2_mom.append(np.array(default_list, dtype='float64'))
+                photon1_mom.append(np.array(default_list, dtype='float32'))
+                photon2_mom.append(np.array(default_list, dtype='float32'))
                 photon1_process.append("none")
                 photon2_process.append("none")
-                photon1_XYZT.append(np.array(default_list, dtype='float64'))
-                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_XYZT.append(np.array(default_list, dtype='float32'))
+                photon2_XYZT.append(np.array(default_list, dtype='float32'))
                 photon1_mother.append(np.int32(-999))
                 photon2_mother.append(np.int32(-999))
             else:
@@ -236,14 +236,14 @@ def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
                     newcatname.append("old cat")
                     newcatcolor.append(ROOT.kWhite)
                     if not photon1:
-                        photon1_mom.append(np.array(default_list, dtype='float64'))
+                        photon1_mom.append(np.array(default_list, dtype='float32'))
                         photon1_process.append("none")
-                        photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                        photon1_XYZT.append(np.array(default_list, dtype='float32'))
                         photon1_mother.append(np.int32(-999))
                     if not photon2:
-                        photon2_mom.append(np.array(default_list, dtype='float64'))
+                        photon2_mom.append(np.array(default_list, dtype='float32'))
                         photon2_process.append("none")
-                        photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                        photon2_XYZT.append(np.array(default_list, dtype='float32'))
                         photon2_mother.append(np.int32(-999))
 
     elif catname == "CC gg" or catname == "NC gg":
@@ -315,24 +315,24 @@ def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
                 newcat.append(12)
                 newcatname.append("Extbnb")
                 newcatcolor.append(ROOT.kGray)
-                photon1_mom.append(np.array(default_list, dtype='float64'))
-                photon2_mom.append(np.array(default_list, dtype='float64'))
+                photon1_mom.append(np.array(default_list, dtype='float32'))
+                photon2_mom.append(np.array(default_list, dtype='float32'))
                 photon1_process.append("none")
                 photon2_process.append("none")
-                photon1_XYZT.append(np.array(default_list, dtype='float64'))
-                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_XYZT.append(np.array(default_list, dtype='float32'))
+                photon2_XYZT.append(np.array(default_list, dtype='float32'))
                 photon1_mother.append(np.int32(-999))
                 photon2_mother.append(np.int32(-999))
             elif true_event_types[i] == 13:
                 newcat.append(13)
                 newcatname.append("Data")
                 newcatcolor.append(ROOT.kBlack)
-                photon1_mom.append(np.array(default_list, dtype='float64'))
-                photon2_mom.append(np.array(default_list, dtype='float64'))
+                photon1_mom.append(np.array(default_list, dtype='float32'))
+                photon2_mom.append(np.array(default_list, dtype='float32'))
                 photon1_process.append("none")
                 photon2_process.append("none")
-                photon1_XYZT.append(np.array(default_list, dtype='float64'))
-                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_XYZT.append(np.array(default_list, dtype='float32'))
+                photon2_XYZT.append(np.array(default_list, dtype='float32'))
                 photon1_mother.append(np.int32(-999))
                 photon2_mother.append(np.int32(-999))
             else:
@@ -376,14 +376,14 @@ def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
                     newcatname.append(true_event_type_name[i])
                     newcatcolor.append(true_event_type_color[i])
                     if not photon1:
-                        photon1_mom.append(np.array(default_list, dtype='float64'))
+                        photon1_mom.append(np.array(default_list, dtype='float32'))
                         photon1_process.append("none")
-                        photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                        photon1_XYZT.append(np.array(default_list, dtype='float32'))
                         photon1_mother.append(np.int32(-999))
                     if not photon2:
-                        photon2_mom.append(np.array(default_list, dtype='float64'))
+                        photon2_mom.append(np.array(default_list, dtype='float32'))
                         photon2_process.append("none")
-                        photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                        photon2_XYZT.append(np.array(default_list, dtype='float32'))
                         photon2_mother.append(np.int32(-999))
     elif catname == "2 true photons - no FV":
         newcatfill = all_df["true_event_type_fill"].to_numpy(zero_copy_only=False)
@@ -402,24 +402,24 @@ def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
                 newcat.append(12)
                 newcatname.append("Extbnb")
                 newcatcolor.append(ROOT.kGray)
-                photon1_mom.append(np.array(default_list, dtype='float64'))
-                photon2_mom.append(np.array(default_list, dtype='float64'))
+                photon1_mom.append(np.array(default_list, dtype='float32'))
+                photon2_mom.append(np.array(default_list, dtype='float32'))
                 photon1_process.append("none")
                 photon2_process.append("none")
-                photon1_XYZT.append(np.array(default_list, dtype='float64'))
-                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_XYZT.append(np.array(default_list, dtype='float32'))
+                photon2_XYZT.append(np.array(default_list, dtype='float32'))
                 photon1_mother.append(np.int32(-999))
                 photon2_mother.append(np.int32(-999))
             elif true_event_types[i] == 13:
                 newcat.append(13)
                 newcatname.append("Data")
                 newcatcolor.append(ROOT.kBlack)
-                photon1_mom.append(np.array(default_list, dtype='float64'))
-                photon2_mom.append(np.array(default_list, dtype='float64'))
+                photon1_mom.append(np.array(default_list, dtype='float32'))
+                photon2_mom.append(np.array(default_list, dtype='float32'))
                 photon1_process.append("none")
                 photon2_process.append("none")
-                photon1_XYZT.append(np.array(default_list, dtype='float64'))
-                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_XYZT.append(np.array(default_list, dtype='float32'))
+                photon2_XYZT.append(np.array(default_list, dtype='float32'))
                 photon1_mother.append(np.int32(-999))
                 photon2_mother.append(np.int32(-999))
             else:
@@ -463,14 +463,14 @@ def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
                     newcatname.append(true_event_type_name[i])
                     newcatcolor.append(true_event_type_color[i])
                     if not photon1:
-                        photon1_mom.append(np.array(default_list, dtype='float64'))
+                        photon1_mom.append(np.array(default_list, dtype='float32'))
                         photon1_process.append("none")
-                        photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                        photon1_XYZT.append(np.array(default_list, dtype='float32'))
                         photon1_mother.append(np.int32(-999))
                     if not photon2:
-                        photon2_mom.append(np.array(default_list, dtype='float64'))
+                        photon2_mom.append(np.array(default_list, dtype='float32'))
                         photon2_process.append("none")
-                        photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                        photon2_XYZT.append(np.array(default_list, dtype='float32'))
                         photon2_mother.append(np.int32(-999))
 
     all_df = all_df.with_columns(
@@ -481,7 +481,7 @@ def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
     )
     if catname == "2 true photons":
         # Ensure all entries are numpy arrays with correct dtype
-        photon1_mom = [np.array(p, dtype='float64') if not isinstance(p, np.ndarray) else p.astype('float64') for p in photon1_mom]
+        photon1_mom = [np.array(p, dtype='float32') if not isinstance(p, np.ndarray) else p.astype('float32') for p in photon1_mom]
         
         all_df = all_df.with_columns(
             pl.Series("truth_photon1_mom", photon1_mom),
@@ -6451,12 +6451,12 @@ def Get2Photons(all_df, reco):
                             photon2_XYZT.append(reco_startXYZT[i][j])
                             photon2_mother.append(reco_mother[i][j])
             if not photon1:
-                photon1_mom.append(np.array(default_list, dtype='float64'))
-                photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_mom.append(np.array(default_list, dtype='float32'))
+                photon1_XYZT.append(np.array(default_list, dtype='float32'))
                 photon1_mother.append(np.int32(-9999))
             if not photon2:
-                photon2_mom.append(np.array(default_list, dtype='float64'))
-                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon2_mom.append(np.array(default_list, dtype='float32'))
+                photon2_XYZT.append(np.array(default_list, dtype='float32'))
                 photon2_mother.append(np.int32(-9999))
             else:
                 mass = GetInvariantMass(photon1_mom[i], photon2_mom[i])
@@ -6512,12 +6512,12 @@ def Get2Photons(all_df, reco):
                         photon2_XYZT.append(pos)
                         photon2_mother.append(showerProcess[i][j])
             if not photon1:
-                photon1_mom.append(np.array(default_list, dtype='float64'))
-                photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_mom.append(np.array(default_list, dtype='float32'))
+                photon1_XYZT.append(np.array(default_list, dtype='float32'))
                 photon1_mother.append(np.int32(-9999))
             if not photon2:
-                photon2_mom.append(np.array(default_list, dtype='float64'))
-                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon2_mom.append(np.array(default_list, dtype='float32'))
+                photon2_XYZT.append(np.array(default_list, dtype='float32'))
                 photon2_mother.append(np.int32(-9999))
             else:
                 mass = GetInvariantMass(photon1_mom[i], photon2_mom[i])
@@ -6591,12 +6591,12 @@ def Get2Photons(all_df, reco):
                 photon2_XYZT.append(pos)
                 photon2_mother.append(np.int32(-9999))
             if not photon1:
-                photon1_mom.append(np.array(default_list, dtype='float64'))
-                photon1_XYZT.append(np.array(default_list, dtype='float64'))
+                photon1_mom.append(np.array(default_list, dtype='float32'))
+                photon1_XYZT.append(np.array(default_list, dtype='float32'))
                 photon1_mother.append(np.int32(-9999))
             if not photon2:
-                photon2_mom.append(np.array(default_list, dtype='float64'))
-                photon2_XYZT.append(np.array(default_list, dtype='float64'))
+                photon2_mom.append(np.array(default_list, dtype='float32'))
+                photon2_XYZT.append(np.array(default_list, dtype='float32'))
                 photon2_mother.append(np.int32(-9999))
             else:
                 mass = GetInvariantMass(photon1_mom[i], photon2_mom[i])
