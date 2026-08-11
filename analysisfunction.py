@@ -537,7 +537,7 @@ def AddRecoVars(all_df):
     )
     return all_df
 
-def LoadFiles(files, filetype, su = False):
+def LoadFiles(files, filetype, su = False, gennu_only = False):
     #files: list of files
     #filetype: string of file type e.g. "ext", "data", "bnboverlay", "dirt", "ncpi0", "modpi0"
     dfs = []
@@ -550,17 +550,17 @@ def LoadFiles(files, filetype, su = False):
         print("Loading " + filetype + " file " + str(i_run) + "/" + str(len(files)) + ": " + file)
         df_temp = []
         if filetype.lower() == "ext":
-            df_temp = LoadExtBnb([file], su = su)
+            df_temp = LoadExtBnb([file], su = su, gennu_only = gennu_only)
         elif filetype.lower() == "bnboverlay" or filetype.lower() == "overlay":
-            df_temp = LoadBNBOverlay([file], su = su)
+            df_temp = LoadBNBOverlay([file], su = su, gennu_only = gennu_only)
         elif filetype.lower() == "dirt":
-            df_temp = LoadDirt([file], su = su)
+            df_temp = LoadDirt([file], su = su, gennu_only = gennu_only)
         elif filetype.lower() == "data" or filetype.lower() == "bnb":
-            df_temp = LoadBnb([file], su = su)
+            df_temp = LoadBnb([file], su = su, gennu_only = gennu_only)
         elif filetype.lower() == "ncpi0":
             df_temp = LoadNCPi0Overlay([file], su = su)
         elif filetype.lower() == "modpi0":
-            df_temp = LoadBNBOverlay([file], su = su)
+            df_temp = LoadBNBOverlay([file], su = su, gennu_only = gennu_only)
         else:
             print("NOT A SUPPORTED FILE TYPE")
             break
@@ -978,7 +978,7 @@ def LoadTreesData1(file1, su = False):
 
 
 ###
-def LoadBNBOverlay(files, su = False):
+def LoadBNBOverlay(files, su = False, gennu_only = False):
     #all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_over = [], all_df_in_pelee_over = [], all_df_in_glee_over = [], all_df_in_lantern_over = []):
     print("Loading BNB Overlay")
     if su:
@@ -1353,12 +1353,16 @@ def LoadBNBOverlay(files, su = False):
         all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_lantern_over, lsuffix='_lantern')
         del all_df_in_lantern_over
 
+    if gennu_only:
+        print("Throwing away events that don't pass generic neutrino selection")
+        all_df_in_bdt_over = all_df_in_bdt_over.filter((pl.col("wc_kine_reco_Enu") >= 0))
+            
     print("done loading BNB Overlay")
 
     return all_df_in_bdt_over
 
 ###
-def LoadDirt(files, su = False):
+def LoadDirt(files, su = False, gennu_only = False):
     #all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt, all_df_in_eval_dirt, all_df_in_time_dirt = [], all_df_in_pelee_dirt = [], all_df_in_glee_dirt = [], all_df_in_lantern_dirt = []):
     print("Loading Dirt Overlay")
     if su:
@@ -1691,11 +1695,15 @@ def LoadDirt(files, su = False):
         all_df_in_bdt_dirt = join_index(all_df_in_bdt_dirt, all_df_in_lantern_dirt, lsuffix='_lantern')
         del all_df_in_lantern_dirt
 
+    if gennu_only:
+        print("Throwing away events that don't pass generic neutrino selection")
+        all_df_in_bdt_dirt = all_df_in_bdt_dirt.filter((pl.col("wc_kine_reco_Enu") >= 0))
+            
     print("done loading Dirt Overlay")
     return all_df_in_bdt_dirt
 
 ###
-def LoadExtBnb(files, su = False):
+def LoadExtBnb(files, su = False, gennu_only = False):
     #all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_df_in_eval_ext, all_df_in_time_ext = [], all_df_in_pelee_ext = [], all_df_in_glee_ext = [], all_df_in_lantern_ext = []):
     print("Loading EXTBNB")
     if su:
@@ -1705,7 +1713,7 @@ def LoadExtBnb(files, su = False):
         all_df_in_time_ext = []
         all_df_in_pelee_ext = []
         all_df_in_glee_ext = []
-        all_df_in_lantern_ext = []
+        all_df_in_lantern_ext = []   
 
     print("Loading into one df")
     
@@ -2006,11 +2014,15 @@ def LoadExtBnb(files, su = False):
         all_df_in_bdt_ext = join_index(all_df_in_bdt_ext, all_df_in_lantern_ext, lsuffix='_lantern')
         del all_df_in_lantern_ext
 
+    if gennu_only:
+        print("Throwing away events that don't pass generic neutrino selection")
+        all_df_in_bdt_ext = all_df_in_bdt_ext.filter((pl.col("wc_kine_reco_Enu") >= 0))
+
     print("done loading EXTBNB")
     return all_df_in_bdt_ext
 
 ###
-def LoadBnb(files, su = False):
+def LoadBnb(files, su = False, gennu_only = False):
     #all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data, all_df_in_eval_data, all_df_in_time_data = [], all_df_in_pelee_data = [], all_df_in_glee_data = [], all_df_in_lantern_data = []):
     print("Loading BNB Data")
     if su:
@@ -2330,11 +2342,15 @@ def LoadBnb(files, su = False):
         all_df_in_bdt_data = join_index(all_df_in_bdt_data, all_df_in_lantern_data, lsuffix='_lantern')
         del all_df_in_lantern_data
 
+    if gennu_only:
+        print("Throwing away events that don't pass generic neutrino selection")
+        all_df_in_bdt_data = all_df_in_bdt_data.filter((pl.col("wc_kine_reco_Enu") >= 0))
+
     print("done loading BNB Data")
     return all_df_in_bdt_data
 
 ###
-def LoadNCPi0Overlay(files, su = False):
+def LoadNCPi0Overlay(files, su = False, gennu_only = False):
     #all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_over = [], all_df_in_pelee_over = [], all_df_in_glee_over = [], all_df_in_lantern_over = []):
     print("Loading NC Pi0 Overlay")
     if su:
@@ -2708,6 +2724,10 @@ def LoadNCPi0Overlay(files, su = False):
         all_df_in_bdt_over = join_index(all_df_in_bdt_over, all_df_in_lantern_over, lsuffix='_lantern')
         del all_df_in_lantern_over
 
+    if gennu_only:
+        print("Throwing away events that don't pass generic neutrino selection")
+        all_df_in_bdt_over = all_df_in_bdt_over.filter((pl.col("wc_kine_reco_Enu") >= 0))
+    
     print("done loading NC Pi0 Overlay")
     return all_df_in_bdt_over
 
