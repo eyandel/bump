@@ -32,6 +32,8 @@ import warnings
 warnings.filterwarnings('ignore')
 import itertools
 
+wc_em_charge_scale = 1.0 #0.95
+
 def join_index(left, right, suffix=None, lsuffix=None, rsuffix=None, how='left'):
     idx_col = '__join_index_temp__'
     left = left.with_row_count(idx_col)
@@ -1355,7 +1357,9 @@ def LoadBNBOverlay(files, su = False, gennu_only = False):
 
     if gennu_only:
         print("Throwing away events that don't pass generic neutrino selection")
+        print("Before: ", len(all_df_in_bdt_over))
         all_df_in_bdt_over = all_df_in_bdt_over.filter((pl.col("wc_kine_reco_Enu") >= 0))
+        print("After: ", len(all_df_in_bdt_over))
             
     print("done loading BNB Overlay")
 
@@ -1697,7 +1701,9 @@ def LoadDirt(files, su = False, gennu_only = False):
 
     if gennu_only:
         print("Throwing away events that don't pass generic neutrino selection")
+        print("Before: ", len(all_df_in_bdt_dirt))
         all_df_in_bdt_dirt = all_df_in_bdt_dirt.filter((pl.col("wc_kine_reco_Enu") >= 0))
+        print("After: ", len(all_df_in_bdt_dirt))
             
     print("done loading Dirt Overlay")
     return all_df_in_bdt_dirt
@@ -1822,7 +1828,7 @@ def LoadExtBnb(files, su = False, gennu_only = False):
     # event_time_pnd = TT_merged_pnd
     # pnd_time.append(event_time_pnd)
 
-        shw_sp_energy.append(0.95*(shw_sp_energies[i]))
+        shw_sp_energy.append(wc_em_charge_scale*(shw_sp_energies[i]))
 
         num_protons = 0
         kine_energy_particle = np.array(kine_energy_particle_vec[i]) 
@@ -2016,7 +2022,9 @@ def LoadExtBnb(files, su = False, gennu_only = False):
 
     if gennu_only:
         print("Throwing away events that don't pass generic neutrino selection")
+        print("Before: ", len(all_df_in_bdt_ext))
         all_df_in_bdt_ext = all_df_in_bdt_ext.filter((pl.col("wc_kine_reco_Enu") >= 0))
+        print("After: ", len(all_df_in_bdt_ext))
 
     print("done loading EXTBNB")
     return all_df_in_bdt_ext
@@ -2151,7 +2159,7 @@ def LoadBnb(files, su = False, gennu_only = False):
         #event_time_pnd = TT_merged_pnd
         #pnd_time.append(event_time_pnd)
 
-        shw_sp_energy.append(0.95*(shw_sp_energies[i]))
+        shw_sp_energy.append(wc_em_charge_scale*(shw_sp_energies[i]))
 
         num_protons = 0
         kine_energy_particle = np.array(kine_energy_particle_vec[i]) 
@@ -2344,7 +2352,9 @@ def LoadBnb(files, su = False, gennu_only = False):
 
     if gennu_only:
         print("Throwing away events that don't pass generic neutrino selection")
+        print("Before: ", len(all_df_in_bdt_data))
         all_df_in_bdt_data = all_df_in_bdt_data.filter((pl.col("wc_kine_reco_Enu") >= 0))
+        print("After: ", len(all_df_in_bdt_data))
 
     print("done loading BNB Data")
     return all_df_in_bdt_data
@@ -2726,7 +2736,9 @@ def LoadNCPi0Overlay(files, su = False, gennu_only = False):
 
     if gennu_only:
         print("Throwing away events that don't pass generic neutrino selection")
+        print("Before: ", len(all_df_in_bdt_over))
         all_df_in_bdt_over = all_df_in_bdt_over.filter((pl.col("wc_kine_reco_Enu") >= 0))
+        print("After: ", len(all_df_in_bdt_over))
     
     print("done loading NC Pi0 Overlay")
     return all_df_in_bdt_over
@@ -3332,6 +3344,7 @@ def PassSelection(selection, all_df, i):
             nphotons_wc = []
             nphotons_lantern = []
             nphotons_pandora = []
+            nphotons_nugraph = []
             if "photon" in selection:
                 if "nphotons_wc" not in all_df.columns:
                     all_df = Get2Photons(all_df, "wc")
@@ -3340,6 +3353,7 @@ def PassSelection(selection, all_df, i):
                 nphotons_wc = all_df["nphotons_wc"].to_numpy(zero_copy_only=False)
                 nphotons_lantern = all_df["nphotons_lantern"].to_numpy(zero_copy_only=False)
                 nphotons_pandora = all_df["nphotons_pandora"].to_numpy(zero_copy_only=False)
+                nphotons_nugraph = all_df["nphotons_nugraph"].to_numpy(zero_copy_only=False)
             #get the vertex distance between reconstructions
             wc_pandora_dist = [-99999.0 for j in range(num_evts)]
             wc_lantern_dist = [-99999.0 for j in range(num_evts)]
@@ -3560,6 +3574,8 @@ def PassSelection(selection, all_df, i):
                     if selection=="2photon_wc" and enu[j]>0.0 and nphotons_wc[j]==2:
                         p[j] = True
                     elif selection=="2photon_pandora" and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2):
+                        p[j] = True
+                    elif selection=="2photon_nugraph" and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_nugraph[j]==2):
                         p[j] = True
                     elif selection=="2photon_lantern" and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2):
                         p[j] = True
@@ -6406,7 +6422,7 @@ def Get2Photons(all_df, reco):
     true_event_types = all_df["true_event_type"].to_numpy(zero_copy_only=False)
     default_list = [-9999., -9999., -9999., -9999.]
     if reco == "wc":
-        #em_charge_scale = 0.95
+        #em_charge_scale = wc_em_charge_scale
         reco_Ntrack = all_df["wc_reco_Ntrack"].to_numpy(zero_copy_only=False)
         reco_startXYZT = all_df["wc_reco_startXYZT"].to_numpy(zero_copy_only=False)
         reco_startMomentum = all_df["wc_reco_startMomentum"].to_numpy(zero_copy_only=False)
@@ -6550,16 +6566,23 @@ def Get2Photons(all_df, reco):
         pi0_rc_vtx_x = all_df["pelee_pi0_rc_vtx_x"].to_numpy(zero_copy_only=False)
         pi0_rc_vtx_y = all_df["pelee_pi0_rc_vtx_y"].to_numpy(zero_copy_only=False)
         pi0_rc_vtx_z = all_df["pelee_pi0_rc_vtx_z"].to_numpy(zero_copy_only=False) 
+        #for nugraph, semantcic labels: 0 = MIP track, 1 = HIP track, 2 = Shower, 3= Michel electrons, 4 = Diffuse activity
+        pfng2semlbl = all_df["pelee_pfng2semlbl"].to_numpy(zero_copy_only=False)
+        nphotons_nugraph_list = []
         for i in range(num_evts):
             if true_event_types[i]==12 or true_event_types[i]==13:
                 data = True
             else:
                 data = False
             nphotons_pandora = 0
+            nphotons_nugraph = 0
             photon1 = False
             photon2 = False
             mass = np.float32(-9999.)
             nphotons_pandora = n_showers_contained[i]
+            for pid in pfng2semlbl[i]:
+                if pid == 2:
+                    nphotons_nugraph += 1
             if pi0_energy1_Y[i] > 0.:
                 photon1 = True
                 mom = [pi0_energy1_Y[i]*pi0_dir1_x[i], pi0_energy1_Y[i]*pi0_dir1_y[i], pi0_energy1_Y[i]*pi0_dir1_z[i], pi0_energy1_Y[i]]
@@ -6601,10 +6624,12 @@ def Get2Photons(all_df, reco):
             else:
                 mass = GetInvariantMass(photon1_mom[i], photon2_mom[i])
             nphotons_list.append(nphotons_pandora)
+            nphotons_nugraph_list.append(nphotons_nugraph)
             inv_mass.append(mass)
 
         all_df = all_df.with_columns([
             pl.Series("nphotons_pandora", nphotons_list),
+            pl.Series("nphotons_nugraph", nphotons_nugraph_list),
             pl.Series("photon1_mom_pandora", photon1_mom),
             pl.Series("photon2_mom_pandora", photon2_mom),
             pl.Series("photon1_XYZT_pandora", photon1_XYZT),
@@ -6646,11 +6671,12 @@ def GetMuons(all_df, reco):
         all_df = all_df.with_columns(pl.Series("nmuons_lantern", nmuons_list))
 
     if reco == "pandora":
-        pfng2mipfrac = all_df["pelee_pfng2mipfrac"].to_numpy(zero_copy_only=False)
+        #pfng2mipfrac = all_df["pelee_pfng2mipfrac"].to_numpy(zero_copy_only=False)
+        pfng2semlbl = all_df["pelee_pfng2semlbl"].to_numpy(zero_copy_only=False)
         for i in range(num_evts):
             nmuon_pandora = 0
-            for pid in pfng2mipfrac[i]:
-                if pid >= 0.4:
+            for pid in pfng2semlbl[i]:
+                if pid == 0:
                     nmuon_pandora += 1
             nmuons_list.append(nmuon_pandora)
 
