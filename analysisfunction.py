@@ -32,6 +32,8 @@ import warnings
 warnings.filterwarnings('ignore')
 import itertools
 
+wc_em_charge_scale = 1.0 #0.95
+
 def join_index(left, right, suffix=None, lsuffix=None, rsuffix=None, how='left'):
     idx_col = '__join_index_temp__'
     left = left.with_row_count(idx_col)
@@ -1826,7 +1828,7 @@ def LoadExtBnb(files, su = False, gennu_only = False):
     # event_time_pnd = TT_merged_pnd
     # pnd_time.append(event_time_pnd)
 
-        shw_sp_energy.append(0.95*(shw_sp_energies[i]))
+        shw_sp_energy.append(wc_em_charge_scale*(shw_sp_energies[i]))
 
         num_protons = 0
         kine_energy_particle = np.array(kine_energy_particle_vec[i]) 
@@ -2157,7 +2159,7 @@ def LoadBnb(files, su = False, gennu_only = False):
         #event_time_pnd = TT_merged_pnd
         #pnd_time.append(event_time_pnd)
 
-        shw_sp_energy.append(0.95*(shw_sp_energies[i]))
+        shw_sp_energy.append(wc_em_charge_scale*(shw_sp_energies[i]))
 
         num_protons = 0
         kine_energy_particle = np.array(kine_energy_particle_vec[i]) 
@@ -6416,7 +6418,7 @@ def Get2Photons(all_df, reco):
     true_event_types = all_df["true_event_type"].to_numpy(zero_copy_only=False)
     default_list = [-9999., -9999., -9999., -9999.]
     if reco == "wc":
-        #em_charge_scale = 0.95
+        #em_charge_scale = wc_em_charge_scale
         reco_Ntrack = all_df["wc_reco_Ntrack"].to_numpy(zero_copy_only=False)
         reco_startXYZT = all_df["wc_reco_startXYZT"].to_numpy(zero_copy_only=False)
         reco_startMomentum = all_df["wc_reco_startMomentum"].to_numpy(zero_copy_only=False)
