@@ -145,6 +145,18 @@ default_file_dicts = [
     {"file_path": BNB_4b, "subchannel": "data", "pot": run4dataPOT}
 ]
 
+#DetVar Files
+nu_overlay_4_detvar_cv="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_cv_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_lya="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_lya_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_lyd="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_lyd_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_lyr="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_lyr_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_recomb2="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_recomb2_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_sce="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_sce_surprise_reco2_hist_4d.root "
+nu_overlay_4_detvar_wmx="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMX_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_wmyz="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMYZ_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_wmthxz="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMthetaXZ_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_wmthyz="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMthetaYZ_surprise_reco2_hist_4d.root"
+
 def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
     newcat = []
     newcatname = []
@@ -6567,7 +6579,7 @@ def Get2Photons(all_df, reco):
         pi0_rc_vtx_y = all_df["pelee_pi0_rc_vtx_y"].to_numpy(zero_copy_only=False)
         pi0_rc_vtx_z = all_df["pelee_pi0_rc_vtx_z"].to_numpy(zero_copy_only=False) 
         #for nugraph, semantcic labels: 0 = MIP track, 1 = HIP track, 2 = Shower, 3= Michel electrons, 4 = Diffuse activity
-        pfng2semlbl = all_df["pelee_pfng2semlbl"].to_numpy(zero_copy_only=False)
+        pfng2semlbl = all_df["pelee_pfng2semlabel"].to_numpy(zero_copy_only=False)
         nphotons_nugraph_list = []
         for i in range(num_evts):
             if true_event_types[i]==12 or true_event_types[i]==13:
@@ -6672,7 +6684,7 @@ def GetMuons(all_df, reco):
 
     if reco == "pandora":
         #pfng2mipfrac = all_df["pelee_pfng2mipfrac"].to_numpy(zero_copy_only=False)
-        pfng2semlbl = all_df["pelee_pfng2semlbl"].to_numpy(zero_copy_only=False)
+        pfng2semlbl = all_df["pelee_pfng2semlabel"].to_numpy(zero_copy_only=False)
         for i in range(num_evts):
             nmuon_pandora = 0
             for pid in pfng2semlbl[i]:
