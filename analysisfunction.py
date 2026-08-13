@@ -1355,7 +1355,9 @@ def LoadBNBOverlay(files, su = False, gennu_only = False):
 
     if gennu_only:
         print("Throwing away events that don't pass generic neutrino selection")
+        print("Before: ", len(all_df_in_bdt_over))
         all_df_in_bdt_over = all_df_in_bdt_over.filter((pl.col("wc_kine_reco_Enu") >= 0))
+        print("After: ", len(all_df_in_bdt_over))
             
     print("done loading BNB Overlay")
 
@@ -1697,7 +1699,9 @@ def LoadDirt(files, su = False, gennu_only = False):
 
     if gennu_only:
         print("Throwing away events that don't pass generic neutrino selection")
+        print("Before: ", len(all_df_in_bdt_dirt))
         all_df_in_bdt_dirt = all_df_in_bdt_dirt.filter((pl.col("wc_kine_reco_Enu") >= 0))
+        print("After: ", len(all_df_in_bdt_dirt))
             
     print("done loading Dirt Overlay")
     return all_df_in_bdt_dirt
@@ -2016,7 +2020,9 @@ def LoadExtBnb(files, su = False, gennu_only = False):
 
     if gennu_only:
         print("Throwing away events that don't pass generic neutrino selection")
+        print("Before: ", len(all_df_in_bdt_ext))
         all_df_in_bdt_ext = all_df_in_bdt_ext.filter((pl.col("wc_kine_reco_Enu") >= 0))
+        print("After: ", len(all_df_in_bdt_ext))
 
     print("done loading EXTBNB")
     return all_df_in_bdt_ext
@@ -2344,7 +2350,9 @@ def LoadBnb(files, su = False, gennu_only = False):
 
     if gennu_only:
         print("Throwing away events that don't pass generic neutrino selection")
+        print("Before: ", len(all_df_in_bdt_data))
         all_df_in_bdt_data = all_df_in_bdt_data.filter((pl.col("wc_kine_reco_Enu") >= 0))
+        print("After: ", len(all_df_in_bdt_data))
 
     print("done loading BNB Data")
     return all_df_in_bdt_data
@@ -2726,7 +2734,9 @@ def LoadNCPi0Overlay(files, su = False, gennu_only = False):
 
     if gennu_only:
         print("Throwing away events that don't pass generic neutrino selection")
+        print("Before: ", len(all_df_in_bdt_over))
         all_df_in_bdt_over = all_df_in_bdt_over.filter((pl.col("wc_kine_reco_Enu") >= 0))
+        print("After: ", len(all_df_in_bdt_over))
     
     print("done loading NC Pi0 Overlay")
     return all_df_in_bdt_over
