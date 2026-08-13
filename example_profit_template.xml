@@ -85,7 +85,7 @@
 	</branch>
 </MCFile>
 
-<!-- comment out the DetVar for now due to not having the DetVar files yet-->
+
 <!-- For DetVar, currently just using run 5 test samples.
 We use run, subrun, event to match events between CV and variation files. 
 We don't need to set POT for the variation files since they will RSE-match to the CV file. 
@@ -93,7 +93,7 @@ We don't need to set POT for the variation files since they will RSE-match to th
 These files also available at /pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run5/
 -->
 
-<!-- <DetVarFiles>
+<DetVarFiles>
 	<DetVarSection treename="wcpselection/T_KINEvars" scale="1.0" cv_variation_matching_vars="run,subrun,event">
 
 		<cv filename="/Users/eyandel/Documents/MicroBooNE/processed_checkout_rootfiles/splines/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_cv_surprise_reco2_hist_5.root" pot="6.9116e20" />
@@ -161,7 +161,7 @@ These files also available at /pnfs/uboone/persistent/users/uboonepro/surprise/d
 		<subchannel>nu_uBooNE_inc1g0p_1goverlay</subchannel>
 		
 	</DetVarSection>
-</DetVarFiles> -->
+</DetVarFiles>
 
 <!-- systematics block should always be the same-->
 <systematics>

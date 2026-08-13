@@ -15,6 +15,7 @@ from tqdm import tqdm
 import subprocess
 import shlex
 import gc
+import re
 
 plt.rcParams['figure.figsize'] = [16, 8]
 #import os
@@ -147,15 +148,21 @@ default_file_dicts = [
 
 #DetVar Files
 nu_overlay_4_detvar_cv="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_cv_surprise_reco2_hist_4d.root"
-nu_overlay_4_detvar_lya="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_lya_surprise_reco2_hist_4d.root"
-nu_overlay_4_detvar_lyd="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_lyd_surprise_reco2_hist_4d.root"
-nu_overlay_4_detvar_lyr="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_lyr_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_lyatt="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_lya_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_lydown="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_lyd_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_lyrayleigh="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_lyr_surprise_reco2_hist_4d.root"
 nu_overlay_4_detvar_recomb2="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_recomb2_surprise_reco2_hist_4d.root"
 nu_overlay_4_detvar_sce="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_sce_surprise_reco2_hist_4d.root "
-nu_overlay_4_detvar_wmx="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMX_surprise_reco2_hist_4d.root"
-nu_overlay_4_detvar_wmyz="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMYZ_surprise_reco2_hist_4d.root"
-nu_overlay_4_detvar_wmthxz="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMthetaXZ_surprise_reco2_hist_4d.root"
-nu_overlay_4_detvar_wmthyz="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMthetaYZ_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_wiremodx="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMX_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_wiremodyz="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMYZ_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_wiremodthetaxz="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMthetaXZ_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_wiremodthetayz="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMthetaYZ_surprise_reco2_hist_4d.root"
+
+detvars = ["LYAtt", "LYDown", "LYRayleigh", "Recomb2", "SCE", "WireModX", "WireModYZ", "WireModThetaXZ", "WireModThetaYZ"]
+detvar_file_dict = []
+
+for detvar in detvars:
+    detvar_file_dict.append({f"nu_overlay_4_detvar_{detvar}": eval(f"nu_overlay_4_detvar_{detvar.lower()}")})
 
 def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
     newcat = []
@@ -3595,11 +3602,15 @@ def PassSelection(selection, all_df, i):
                         p[j] = True
                     elif selection=="2photon_wclantern_wpdist" and wc_pandora_dist[j] < 5 and enu[j]>0.0 and nphotons_wc[j]==2 and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2):
                         p[j] = True
-                    elif selection=="2photon_all" and enu[j]>0.0 and nphotons_wc[j]==2 and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2):
+                    elif selection=="2photon_wcnugraph" and enu[j]>0.0 and nphotons_wc[j]==2 and nphotons_nugraph[j]==2:
                         p[j] = True
-                    elif selection=="2photon_all_noglee" and enu[j]>0.0 and nphotons_wc[j]==2 and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2):
+                    elif selection=="2photon_wclanternnugraph" and enu[j]>0.0 and nphotons_wc[j]==2 and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2) and nphotons_nugraph[j]==2:
                         p[j] = True
-                    elif selection=="2photon_any" and ((enu[j]>0.0 and nphotons_wc[j]==2) or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) or (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2)):
+                    elif selection=="2photon_all" and enu[j]>0.0 and nphotons_wc[j]==2 and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and (nphotons_pandora[j]==2 and nphotons_nugraph[j]==2)) and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2):
+                        p[j] = True
+                    elif selection=="2photon_all_noglee" and enu[j]>0.0 and nphotons_wc[j]==2 and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and (nphotons_pandora[j]==2 and nphotons_nugraph[j]==2)) and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2):
+                        p[j] = True
+                    elif selection=="2photon_any" and ((enu[j]>0.0 and nphotons_wc[j]==2) or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and (nphotons_pandora[j]==2 or nphotons_nugraph[j]==2)) or (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2)):
                         p[j] = True
                     elif selection=="2photon_any_noglee" and ((enu[j]>0.0 and nphotons_wc[j]==2) or ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and nphotons_pandora[j]==2) or (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2)):
                         p[j] = True
@@ -7051,7 +7062,7 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
     # Get unique subchannel names
     unique_subchannels = {}
     for entry in file_entries:
-        subchannel_name = str(entry["subchannel"])  # Ensure string
+        subchannel_name = str(entry["subchannel"]).rstrip("0123456789")  # Ensure string
         if subchannel_name not in unique_subchannels and subchannel_name != "data":
             if subchannel_name in color_map:
                 color = color_map[subchannel_name]
@@ -7076,8 +7087,8 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
     rule.set("name", "No Osc")
     
     # Add MCFile entries - separate data from MC
-    data_entries = [e for e in file_entries if str(e["subchannel"]) == "data"]
-    mc_entries = [e for e in file_entries if str(e["subchannel"]) != "data"]
+    data_entries = [e for e in file_entries if str(e["subchannel"]).rstrip("0123456789") == "data"]
+    mc_entries = [e for e in file_entries if str(e["subchannel"]).rstrip("0123456789") != "data"]
     
     # Get selection-based weight_1 expression
     #weight_1_expr = GetSelectionROOTExpression(selname)
@@ -7095,7 +7106,7 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
     for entry in mc_entries:
         file_path = entry["file_path"]
         is_data_file = False
-        if str(entry["subchannel"]) == "data" or str(entry["subchannel"]) == "ext":
+        if str(entry["subchannel"]).rstrip("0123456789") == "data" or str(entry["subchannel"]).rstrip("0123456789") == "ext":
             is_data_file = True
         new_file_path = MakePROfitInputFile(all_df, file_path, selname, var, data=is_data_file)
         subchannel_name = str(entry["subchannel"])  # Ensure string
@@ -7113,7 +7124,7 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
         mcfile.set("partial_load_frac", "1.0")
         
         # Add friends
-        if subchannel_name != "ext" and subchannel_name != "data":
+        if subchannel_name.rstrip("0123456789") != "ext" and subchannel_name.rstrip("0123456789") != "data":
             for friend_tree in mc_friends:
                 friend = ET.SubElement(mcfile, "friend")
                 friend.set("treename", friend_tree)
@@ -7125,7 +7136,7 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
         associated_subchannel = f"nu_uBooNE_{selname}_{subchannel_name}"
         branch.set("associated_subchannel", associated_subchannel)
         
-        if subchannel_name == "ext":
+        if subchannel_name.rstrip("0123456789") == "ext":
             branch.set("model_rule", "0")
             branch.set("incl_systematics", "false")
         else:
@@ -7135,7 +7146,7 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
         branch.set("weight_1", weight_1_expr)
         
         # Set weight_2 based on subchannel type
-        if subchannel_name not in ["ext", "data"]:
+        if subchannel_name.rstrip("0123456789") not in ["ext", "data"]:
             weight_2 = "(weight_cv * weight_spline * (weight_cv * weight_spline < 30) * (weight_cv * weight_spline > 0) + 1 * !((weight_cv * weight_spline < 30) * (weight_cv * weight_spline > 0)))"
             branch.set("weight_2", weight_2)
         
@@ -7145,6 +7156,37 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
 
         variable2 = ET.SubElement(branch, "variable")
         variable2.text = "0"
+
+    #add detvar files
+    if include_detvar:
+        detvarfiles = ET.SubElement(wrapper, "DetVarFiles")
+
+        detvarsec = ET.SubElement(detvarfiles, "DetVarSection")
+        detvarsec.set("treename", "sel_tree")
+        detvarsec.set("scale", "1.0")
+        detvarsec.set("cv_variation_matching_vars", "run,subrun,event")
+
+        if "overlay42" in [str(e["subchannel"]) for e in file_entries]:
+            detvarcvpot = GetPOT(nu_overlay_4_detvar_cv)
+            detvarcv = ET.SubElement(detvarsec, "cv")
+            detvarcv.set("filename", str(nu_overlay_4_detvar_cv))
+            detvarcv.set("pot", str(detvarcvpot))
+
+            for detvar in detvars:
+                detvarfile = ET.SubElement(detvarsec, "variation")
+                detvarfile.set("name", detvar)
+                detvar_filepath = detvar_file_dict.get(f"nu_overlay_4_detvar_{detvar}")
+                detvarfile.set("filename", str(detvar_filepath))
+                detvarfile.set("pot", "1")
+
+            for friend_tree in mc_friends:
+                friend = ET.SubElement(detvarsec, "friend")
+                friend.set("treename", friend_tree)
+
+            subchannel = ET.SubElement(detvarsec, "subchannel")
+            subchannel.text = f"nu_uBooNE_{selname}_overlay42"
+        
+
     
     # Add systematics
     systematics = ET.SubElement(wrapper, "systematics")
@@ -7156,13 +7198,15 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
     
     # DetVar systematics (optional)
     detvar_systematics = [
-        {"name": "Recomb2", "type": "spline_to_covariance", "plotname": "Recomb2", "tag": "DetVar"},
         {"name": "LYAtt", "type": "spline_to_covariance", "plotname": "LYAtt", "tag": "DetVar"},
         {"name": "LYDown", "type": "spline_to_covariance", "plotname": "LYDown", "tag": "DetVar"},
         {"name": "LYRayleigh", "type": "spline_to_covariance", "plotname": "LYRayleigh", "tag": "DetVar"},
+        {"name": "Recomb2", "type": "spline_to_covariance", "plotname": "Recomb2", "tag": "DetVar"},
         {"name": "SCE", "type": "spline_to_covariance", "plotname": "SCE", "tag": "DetVar"},
         {"name": "WireModX", "type": "spline_to_covariance", "plotname": "WireModX", "tag": "DetVar"},
         {"name": "WireModYZ", "type": "spline_to_covariance", "plotname": "WireModYZ", "tag": "DetVar"},
+        {"name": "WireModThetaXZ", "type": "spline_to_covariance", "plotname": "WireModThetaXZ", "tag": "DetVar"},
+        {"name": "WireModThetaYZ", "type": "spline_to_covariance", "plotname": "WireModYZ", "tag": "DetVar"},
     ]
     
     # Cross Section Systematics
