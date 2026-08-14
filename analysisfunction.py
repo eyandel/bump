@@ -7330,7 +7330,8 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
             file_path = entry["file_path"]
             is_data_file = True
             new_file_path = MakePROfitInputFile(all_df, file_path, selname, var, data=is_data_file)
-            subchannel_name = str(entry["subchannel"])  # Ensure string
+            subchannel_name = str(entry["subchannel"]).rstrip("0123456789")  #strip off the trailing numbers
+            subchannel_num = str(entry["subchannel"])[len(subchannel_name):]
             # Use POT from entry if provided, otherwise compute from file
             file_pot = entry.get("pot")
             if file_pot is None:
@@ -7350,7 +7351,7 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
             
             # Add branch for data (no systematics, model_rule 0)
             branch = ET.SubElement(mcfile, "branch")
-            associated_subchannel = f"nu_uBooNE_{selname}_{subchannel_name}"
+            associated_subchannel = f"nu_uBooNE_{selname}_{subchannel_num}_{subchannel_name}"
             branch.set("associated_subchannel", associated_subchannel)
             branch.set("incl_systematics", "false")
             branch.set("model_rule", "0")
