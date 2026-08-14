@@ -7272,7 +7272,7 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
     flux_systematics = [
         {"type": "spline_to_covariance", "binning": "var0", "plotname": "horncurrent", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "horncurrent_FluxUnisim"},
         {"type": "spline_to_covariance", "binning": "var0", "plotname": "expskin", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "expskin_FluxUnisim"},
-        {"type": "spline_to_covariance", "binning": "var0", "plotname": "kminus", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "kminus_PrimaryHadronNormalization"},
+        {"type": "spline_to_covariance", "binning": "var0", "plotname": "kminus", "knobvals": "-1, 0, 1, 2, 3", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "kminus_PrimaryHadronNormalization"},
         {"type": "spline_to_covariance", "binning": "var0", "plotname": "kplus", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "kplus_PrimaryHadronFeynmanScaling"},
         {"type": "spline_to_covariance", "binning": "var0", "plotname": "kzero", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "kzero_PrimaryHadronSanfordWang"},
         {"type": "spline_to_covariance", "binning": "var0", "plotname": "nucleoninexsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "nucleoninexsec_FluxUnisim"},
