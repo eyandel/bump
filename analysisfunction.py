@@ -7111,7 +7111,8 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
         if str(entry["subchannel"]).rstrip("0123456789") == "data" or str(entry["subchannel"]).rstrip("0123456789") == "ext":
             is_data_file = True
         new_file_path = MakePROfitInputFile(all_df, file_path, selname, var, data=is_data_file)
-        subchannel_name = str(entry["subchannel"])  # Ensure string
+        subchannel_name = str(entry["subchannel"]).rstrip("0123456789")  #strip off the trailing numbers
+        subchannel_num = str(entry["subchannel"])[len(subchannel_name):]  # Get the trailing numbers
         # Use POT from entry if provided, otherwise compute from file
         file_pot = entry.get("pot")
         if file_pot is None:
@@ -7126,7 +7127,7 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
         mcfile.set("partial_load_frac", "1.0")
         
         # Add friends
-        if subchannel_name.rstrip("0123456789") != "ext" and subchannel_name.rstrip("0123456789") != "data":
+        if subchannel_name != "ext" and subchannel_name != "data":
             for friend_tree in mc_friends:
                 friend = ET.SubElement(mcfile, "friend")
                 friend.set("treename", friend_tree)
@@ -7135,7 +7136,7 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
         # Add branch
         branch = ET.SubElement(mcfile, "branch")
         # Format: mode_detector_selection_subchannel
-        associated_subchannel = f"nu_uBooNE_{selname}_{subchannel_name}"
+        associated_subchannel = f"nu_uBooNE_{selname}_{subchannel_num}_{subchannel_name}"
         branch.set("associated_subchannel", associated_subchannel)
         
         if subchannel_name.rstrip("0123456789") == "ext":
@@ -7148,7 +7149,7 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
         branch.set("weight_1", weight_1_expr)
         
         # Set weight_2 based on subchannel type
-        if subchannel_name.rstrip("0123456789") not in ["ext", "data"]:
+        if subchannel_name not in ["ext", "data"]:
             weight_2 = "(weight_cv * weight_spline * (weight_cv * weight_spline < 30) * (weight_cv * weight_spline > 0) + 1 * !((weight_cv * weight_spline < 30) * (weight_cv * weight_spline > 0)))"
             branch.set("weight_2", weight_2)
         
@@ -7186,7 +7187,7 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
                 friend.set("treename", friend_tree)
 
             subchannel = ET.SubElement(detvarsec, "subchannel")
-            subchannel.text = f"nu_uBooNE_{selname}_overlay42"
+            subchannel.text = f"nu_uBooNE_{selname}_42_overlay"
         
 
     
