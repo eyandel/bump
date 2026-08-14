@@ -3606,6 +3606,8 @@ def PassSelection(selection, all_df, i):
                         p[j] = True
                     elif selection=="2photon_wclanternnugraph" and enu[j]>0.0 and nphotons_wc[j]==2 and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2) and nphotons_nugraph[j]==2:
                         p[j] = True
+                    elif selection=="2photon_lanternnugraph" and enu[j]>0.0 and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2) and nphotons_nugraph[j]==2:
+                        p[j] = True
                     elif selection=="2photon_all" and enu[j]>0.0 and nphotons_wc[j]==2 and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and (nphotons_pandora[j]==2 and nphotons_nugraph[j]==2)) and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2):
                         p[j] = True
                     elif selection=="2photon_all_noglee" and enu[j]>0.0 and nphotons_wc[j]==2 and ((pelee_flash_matched[j]==1 or (pelee_flash_matched[j]==0 and pelee_top_score[j] > 0.67)) and (nphotons_pandora[j]==2 and nphotons_nugraph[j]==2)) and (lantern_vtxfv[j]>-1 and nphotons_lantern[j]==2):
@@ -7273,14 +7275,14 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
         {"type": "spline_to_covariance", "binning": "var0", "plotname": "horncurrent", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "horncurrent_FluxUnisim"},
         {"type": "spline_to_covariance", "binning": "var0", "plotname": "expskin", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "expskin_FluxUnisim"},
         {"type": "spline_to_covariance", "binning": "var0", "plotname": "kminus", "knobvals": "-1, 0, 1, 2, 3", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "kminus_PrimaryHadronNormalization"},
-        {"type": "covariance", "plotname": "kplus", "tag": "Flux", "text": "kplus_PrimaryHadronFeynmanScaling"},
-        {"type": "covariance", "plotname": "kzero", "tag": "Flux", "text": "kzero_PrimaryHadronSanfordWang"},
         {"type": "spline_to_covariance", "binning": "var0", "plotname": "nucleoninexsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "nucleoninexsec_FluxUnisim"},
         {"type": "spline_to_covariance", "binning": "var0", "plotname": "nucleonqexsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "nucleonqexsec_FluxUnisim"},
         {"type": "spline_to_covariance", "binning": "var0", "plotname": "nucleontotxsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "nucleontotxsec_FluxUnisim"},
         {"type": "spline_to_covariance", "binning": "var0", "plotname": "pioninexsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "pioninexsec_FluxUnisim"},
         {"type": "spline_to_covariance", "binning": "var0", "plotname": "pionqexsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "pionqexsec_FluxUnisim"},
         {"type": "spline_to_covariance", "binning": "var0", "plotname": "piontotxsec", "knobvals": "-1, 0, 1", "tag": "Flux", "force_0_cv": "true", "include_only_weights": "1", "text": "piontotxsec_FluxUnisim"},
+        {"type": "covariance", "plotname": "kplus", "tag": "Flux", "text": "kplus_PrimaryHadronFeynmanScaling"},
+        {"type": "covariance", "plotname": "kzero", "tag": "Flux", "text": "kzero_PrimaryHadronSanfordWang"},
         {"type": "covariance", "plotname": "piplus_prod", "tag": "piprod", "text": "piplus_PrimaryHadronSWCentralSplineVariation"},
         {"type": "covariance", "plotname": "piminus_prod", "tag": "piprod", "text": "piminus_PrimaryHadronSWCentralSplineVariation"},
     ]
