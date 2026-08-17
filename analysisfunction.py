@@ -517,6 +517,256 @@ def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
 
     return all_df
 
+###
+def AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill=1001):
+    """
+    Add truth category using optimized Polars operations where possible.
+    For complex particle counting, uses efficient NumPy operations.
+    
+    This function works on regular DataFrames (not Lazy) because the particle
+    counting logic requires actual array access.
+    """
+    
+    # Simple categories can use pure Polars expressions
+    if catname in ["CC gg", "NC gg"]:
+        # Check if prerequisite category exists
+        if "true_event_type" not in all_df.columns:
+            print("Error: true_event_type column must exist")
+            return all_df
+            
+        # Collect to check for category 222
+        if 222 not in all_df.select(pl.col("true_event_type")).to_series():
+            print("Error: must add 2 photon truth category first")
+            return all_df
+        
+        # Use Polars expressions for CC/NC split
+        condition = (pl.col("true_event_type") == 222) & (
+            pl.col("wc_truth_isCC") if catname == "CC gg" else ~pl.col("wc_truth_isCC")
+        )
+        
+        all_df = all_df.with_columns([
+            pl.when(condition)
+              .then(pl.lit(catnum))
+              .otherwise(pl.col("true_event_type"))
+              .alias("true_event_type"),
+            
+            pl.when(condition)
+              .then(pl.lit(catname))
+              .otherwise(pl.col("true_event_type_name"))
+              .alias("true_event_type_name"),
+            
+            pl.when(condition)
+              .then(pl.lit(catcolor))
+              .otherwise(pl.col("true_event_type_color"))
+              .alias("true_event_type_color")
+        ])
+        
+        return all_df
+    
+    # "Mod" categories - use Polars expressions
+    elif "Mod" in catname:
+        condition = pl.col("filetype") == "modpi0_overlay"
+        
+        all_df = all_df.with_columns([
+            pl.when(condition)
+              .then(pl.lit(catnum))
+              .otherwise(pl.col("true_event_type"))
+              .alias("true_event_type"),
+            
+            pl.when(condition)
+              .then(pl.lit(catname))
+              .otherwise(pl.col("true_event_type_name"))
+              .alias("true_event_type_name"),
+            
+            pl.when(condition)
+              .then(pl.lit(catcolor))
+              .otherwise(pl.col("true_event_type_color"))
+              .alias("true_event_type_color"),
+            
+            pl.when(condition)
+              .then(pl.lit(Fill))
+              .otherwise(pl.col("true_event_type_fill"))
+              .alias("true_event_type_fill")
+        ])
+        
+        return all_df
+    
+    # Complex photon counting categories - need to work with arrays
+    # These require accessing nested arrays, so we use efficient NumPy operations
+    
+    # Initialize result arrays
+    num_evts = all_df.height
+    newcat = []
+    newcatname = []
+    newcatcolor = []
+    photon1_mom = []
+    photon2_mom = []
+    photon1_process = []
+    photon2_process = []
+    photon1_XYZT = []
+    photon2_XYZT = []
+    photon1_mother = []
+    photon2_mother = []
+    
+    # Get required columns as NumPy arrays for efficient access
+    true_event_types = all_df["true_event_type"].to_numpy(zero_copy_only=False)
+    truth_Ntrack = all_df["wc_truth_Ntrack"].to_numpy(zero_copy_only=False)
+    truth_pdg = all_df["wc_truth_pdg"].to_numpy(zero_copy_only=False)
+    truth_startMomentum = all_df["wc_truth_startMomentum"].to_numpy(zero_copy_only=False)
+    truth_process = all_df["wc_truth_process"].to_numpy(zero_copy_only=False)
+    truth_mother = all_df["wc_truth_mother"].to_numpy(zero_copy_only=False)
+    truth_endXYZT = all_df["wc_truth_endXYZT"].to_numpy(zero_copy_only=False)
+    
+    # For categories that need previous category info
+    if "true_event_type_name" in all_df.columns:
+        true_event_type_name = all_df["true_event_type_name"].to_numpy(zero_copy_only=False)
+        true_event_type_color = all_df["true_event_type_color"].to_numpy(zero_copy_only=False)
+        true_event_type_fill = all_df["true_event_type_fill"].to_numpy(zero_copy_only=False)
+    
+    default_list = np.array([-9999., -9999., -9999., -9999.], dtype='float32')
+    
+    # Determine energy threshold based on category name
+    energy_threshold = 0.02 if "all energies" not in catname else 0.0
+    # Determine if we apply FV cut
+    apply_fv = "no FV" not in catname
+    
+    # Process each event - this is the bottleneck, but necessary for nested array logic
+    for i in range(num_evts):
+        # Handle special cases (data/extbnb)
+        if true_event_types[i] == 12:
+            newcat.append(12)
+            newcatname.append("Extbnb")
+            newcatcolor.append(ROOT.kGray)
+            photon1_mom.append(default_list.copy())
+            photon2_mom.append(default_list.copy())
+            photon1_process.append("none")
+            photon2_process.append("none")
+            photon1_XYZT.append(default_list.copy())
+            photon2_XYZT.append(default_list.copy())
+            photon1_mother.append(np.int32(-9999))
+            photon2_mother.append(np.int32(-9999))
+            continue
+            
+        if true_event_types[i] == 13:
+            newcat.append(13)
+            newcatname.append("Data")
+            newcatcolor.append(ROOT.kBlack)
+            photon1_mom.append(default_list.copy())
+            photon2_mom.append(default_list.copy())
+            photon1_process.append("none")
+            photon2_process.append("none")
+            photon1_XYZT.append(default_list.copy())
+            photon2_XYZT.append(default_list.copy())
+            photon1_mother.append(np.int32(-9999))
+            photon2_mother.append(np.int32(-9999))
+            continue
+        
+        # Count photons for this event
+        nphotons = 0
+        photon1_found = False
+        photon2_found = False
+        
+        # Vectorized approach where possible - get masks for all tracks at once
+        n_tracks = int(truth_Ntrack[i])
+        
+        for j in range(n_tracks):
+            # Get position
+            ex, ey, ez = truth_endXYZT[i][j][:3]
+            
+            # Check if this is a photon
+            is_photon = (truth_pdg[i][j] == 22 and 
+                        truth_startMomentum[i][j][3] > energy_threshold)
+            
+            # Check process
+            process_ok = (truth_process[i][j] != "eBrem" and 
+                         truth_process[i][j] != "annihil")
+            
+            # Check fiducial volume if required
+            in_fv = True
+            if apply_fv:
+                in_fv = (ex > 3.0 and ex < 253.0 and 
+                        ey > -113.0 and ey < 114.0 and 
+                        ez > 3.0 and ez < 1034.0)
+            
+            if is_photon and process_ok and in_fv:
+                nphotons += 1
+                if not photon1_found:
+                    photon1_found = True
+                    photon1_mom.append(truth_startMomentum[i][j].copy())
+                    photon1_process.append(truth_process[i][j])
+                    photon1_XYZT.append(truth_endXYZT[i][j].copy())
+                    photon1_mother.append(truth_mother[i][j])
+                elif not photon2_found:
+                    photon2_found = True
+                    photon2_mom.append(truth_startMomentum[i][j].copy())
+                    photon2_process.append(truth_process[i][j])
+                    photon2_XYZT.append(truth_endXYZT[i][j].copy())
+                    photon2_mother.append(truth_mother[i][j])
+        
+        # Determine new category based on photon count and conditions
+        if "all energies" in catname or "no FV" in catname:
+            # For these variants, don't override existing 222/2220/2221 categories
+            if nphotons == 2 and true_event_types[i] not in [222, 2220, 2221]:
+                newcat.append(catnum)
+                newcatname.append(catname)
+                newcatcolor.append(catcolor)
+            else:
+                newcat.append(true_event_types[i])
+                newcatname.append(true_event_type_name[i])
+                newcatcolor.append(true_event_type_color[i])
+        else:
+            # Standard "2 true photons" category
+            if nphotons == 2:
+                newcat.append(catnum)
+                newcatname.append(catname)
+                newcatcolor.append(catcolor)
+            else:
+                newcat.append(true_event_types[i])
+                newcatname.append("old cat")
+                newcatcolor.append(ROOT.kWhite)
+        
+        # Fill in missing photons with defaults
+        if not photon1_found:
+            photon1_mom.append(default_list.copy())
+            photon1_process.append("none")
+            photon1_XYZT.append(default_list.copy())
+            photon1_mother.append(np.int32(-9999))
+        if not photon2_found:
+            photon2_mom.append(default_list.copy())
+            photon2_process.append("none")
+            photon2_XYZT.append(default_list.copy())
+            photon2_mother.append(np.int32(-9999))
+    
+    # Initialize fill style if needed
+    if "true_event_type_fill" not in all_df.columns:
+        newcatfill = [1001 for _ in range(num_evts)]
+    else:
+        newcatfill = all_df["true_event_type_fill"].to_list()
+    
+    # Update DataFrame with new columns
+    all_df = all_df.with_columns([
+        pl.Series("true_event_type", newcat),
+        pl.Series("true_event_type_name", newcatname),
+        pl.Series("true_event_type_color", newcatcolor),
+        pl.Series("true_event_type_fill", newcatfill)
+    ])
+    
+    # Add photon information for photon-counting categories
+    if any(x in catname for x in ["2 true photons", "6 true photons"]):
+        all_df = all_df.with_columns([
+            pl.Series("truth_photon1_mom", photon1_mom),
+            pl.Series("truth_photon2_mom", photon2_mom),
+            pl.Series("truth_photon1_process", photon1_process),
+            pl.Series("truth_photon2_process", photon2_process),
+            pl.Series("truth_photon1_XYZT", photon1_XYZT),
+            pl.Series("truth_photon2_XYZT", photon2_XYZT),
+            pl.Series("truth_photon1_mother", photon1_mother),
+            pl.Series("truth_photon2_mother", photon2_mother)
+        ])
+    
+    return all_df
+    
+
 def AddRecoVars(all_df):
     wc_pandora_dist = []
     wc_lantern_dist = []
@@ -594,9 +844,45 @@ def LoadFiles(files, filetype, su = False, gennu_only = False):
         gc.collect()
     
     return pl.concat(dfs, how="vertical")
-    
 
-            
+
+###
+def LoadFilesLazy(files, filetype, su = False, gennu_only = False):
+    #files: list of files
+    #filetype: string of file type e.g. "ext", "data", "bnboverlay", "dirt", "ncpi0", "modpi0"
+    dfs = []
+    i_run = 0
+    for file in files:
+        i_run += 1
+        if not file:
+            print("Skipping file " + str(i_run) + "/" + str(len(files)) + " because it is empty")
+            continue
+        print("Loading " + filetype + " file " + str(i_run) + "/" + str(len(files)) + ": " + file)
+        df_temp = []
+        if filetype.lower() == "ext":
+            df_temp = LoadExtBnbLazy([file], su = su, gennu_only = gennu_only)
+        elif filetype.lower() == "bnboverlay" or filetype.lower() == "overlay":
+            df_temp = LoadBNBOverlayLazy([file], su = su, gennu_only = gennu_only)
+        elif filetype.lower() == "dirt":
+            df_temp = LoadDirtLazy([file], su = su, gennu_only = gennu_only)
+        elif filetype.lower() == "data" or filetype.lower() == "bnb":
+            df_temp = LoadBnbLazy([file], su = su, gennu_only = gennu_only)
+        elif filetype.lower() == "ncpi0":
+            df_temp = LoadNCPi0OverlayLazy([file], su = su)
+        elif filetype.lower() == "modpi0":
+            df_temp = LoadBNBOverlayLazy([file], su = su, gennu_only = gennu_only)
+        else:
+            print("NOT A SUPPORTED FILE TYPE")
+            break
+        df_temp = df_temp.with_columns([
+                                pl.col(pl.Float64).cast(pl.Float32),
+                                pl.col(pl.Int64).cast(pl.Int32),
+                                pl.col(pl.UInt64).cast(pl.UInt32),
+                            ]).rechunk()
+        dfs.append(df_temp)
+        gc.collect()
+    
+    return pl.concat(dfs, how="vertical")            
 
 
 def LoadTreesTruth(files, su = False):
@@ -706,6 +992,84 @@ def LoadTreesTruth(files, su = False):
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
 
 ###
+def LoadTreesTruthLazy(files, su = False):
+    """Load and concatenate multiple files as LazyFrames"""
+    i_run = 0
+    all_df_in_bdt_vec = []
+    all_df_in_pfeval_vec = []
+    all_df_in_kine_vec = []
+    all_df_in_eval_vec = []
+    all_df_in_time_vec = []
+    all_df_in_pelee_vec = []
+    all_df_in_glee_vec = []
+    all_df_in_lantern_vec = []
+    
+    for file in files:
+        i_run += 1
+        if not file:
+            print(f"Skipping file {i_run}/{len(files)} because it is empty")
+            continue
+        
+        print(f"Loading file {i_run}/{len(files)}: {file}")
+        
+        if su:
+            (bdt_temp, pfeval_temp, kine_temp, eval_temp, 
+             time_temp, pelee_temp, glee_temp, lantern_temp) = LoadTreesTruth1Lazy(file, su=su)
+            
+            all_df_in_bdt_vec.append(bdt_temp)
+            all_df_in_pfeval_vec.append(pfeval_temp)
+            all_df_in_kine_vec.append(kine_temp)
+            all_df_in_eval_vec.append(eval_temp)
+            all_df_in_time_vec.append(time_temp)
+            all_df_in_pelee_vec.append(pelee_temp)
+            all_df_in_glee_vec.append(glee_temp)
+            all_df_in_lantern_vec.append(lantern_temp)
+        else:
+            (bdt_temp, pfeval_temp, kine_temp, eval_temp) = LoadTreesTruth1Lazy(file, su=su)
+            
+            all_df_in_bdt_vec.append(bdt_temp)
+            all_df_in_pfeval_vec.append(pfeval_temp)
+            all_df_in_kine_vec.append(kine_temp)
+            all_df_in_eval_vec.append(eval_temp)
+        
+        gc.collect()
+        print(f"Finished loading file {i_run}/{len(files)}: {file}")
+
+    print("Concatenating all dataframes (still lazy)...")
+    
+    # Concatenate LazyFrames - this is still lazy!
+    all_df_in_bdt_over = pl.concat(all_df_in_bdt_vec, how="vertical")
+    all_df_in_pfeval_over = pl.concat(all_df_in_pfeval_vec, how="vertical")
+    all_df_in_kine_over = pl.concat(all_df_in_kine_vec, how="vertical")
+    all_df_in_eval_over = pl.concat(all_df_in_eval_vec, how="vertical")
+    
+    # Clean up
+    del all_df_in_bdt_vec
+    del all_df_in_pfeval_vec
+    del all_df_in_kine_vec
+    del all_df_in_eval_vec
+    gc.collect()
+
+    if su:
+        all_df_in_time_data = pl.concat(all_df_in_time_vec, how="vertical")
+        all_df_in_pelee_data = pl.concat(all_df_in_pelee_vec, how="vertical")
+        all_df_in_glee_data = pl.concat(all_df_in_glee_vec, how="vertical")
+        all_df_in_lantern_data = pl.concat(all_df_in_lantern_vec, how="vertical")
+        
+        del all_df_in_time_vec
+        del all_df_in_pelee_vec
+        del all_df_in_glee_vec
+        del all_df_in_lantern_vec
+        gc.collect()
+        
+        return (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, 
+                all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, 
+                all_df_in_glee_data, all_df_in_lantern_data)
+    else:
+        return (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, 
+                all_df_in_eval_over)
+
+###
 def LoadTreesTruth1(file1, su = False):
     import os
     import subprocess
@@ -796,6 +1160,82 @@ def LoadTreesTruth1(file1, su = False):
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, all_df_in_glee_data, all_df_in_lantern_data
     else:
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
+
+def LoadTreesTruth1Lazy(file1, su = False):
+    import os
+    import subprocess
+    is_gpvm = False
+    rundir = os.getcwd()
+    cmd = ["hostname"]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    if "/exp/uboone" in rundir:
+        is_gpvm = True
+    elif "jupyter" in result.stdout:
+        is_gpvm = True
+
+    # Load as LazyFrames immediately
+    with uproot.open(file1)["wcpselection/T_BDTvars"] as f_in_bdt_over:
+        all_df_in_bdt_over = pl.from_pandas(f_in_bdt_over.arrays(bdt_variables, library="pd")).lazy()
+
+    with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_pfeval_over:
+        all_df_in_pfeval_over = pl.from_pandas(f_in_pfeval_over.arrays(pfeval_variables + truth_variables, library="pd")).lazy()
+
+    with uproot.open(file1)["wcpselection/T_KINEvars"] as f_in_kine_over:
+        all_df_in_kine_over = pl.from_pandas(f_in_kine_over.arrays(kine_variables, library="pd")).lazy()
+
+    with uproot.open(file1)["wcpselection/T_eval"] as f_in_eval_over:
+        all_df_in_eval_over = pl.from_pandas(f_in_eval_over.arrays(eval_variables + eval_truth_variables, library="pd")).lazy()
+
+    # Determine run number using Polars expressions (still lazy)
+    run_number_val = None
+    if is_gpvm:
+        if "run1_full_samples" in file1:
+            run_number_val = 1
+        elif "run2_full_samples" in file1:
+            run_number_val = 2
+        # ... etc
+    else:
+        if "run1" in file1 or "Run1" in file1 or "run_1" in file1.lower():
+            run_number_val = 1
+        # ... etc
+    
+    # Add columns using lazy operations
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns([
+        pl.lit(run_number_val).alias("run_period"),
+        pl.lit(file1).alias("file_name")
+    ])
+
+    if su:
+        with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
+            all_df_in_time_data = pl.from_pandas(f_in_time_data.arrays(
+                time_variables + time_truth_variables + larpid_reco_variables + larpid_truth_variables, 
+                library="pd"
+            )).lazy()
+        
+        with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
+            all_df_in_pelee_data = pl.from_pandas(f_in_pelee_data.arrays(
+                pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables + pelee_time_variables, 
+                library="pd"
+            )).lazy().select([pl.col("*").prefix("pelee_")])
+        
+        with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
+            all_df_in_glee_data = pl.from_pandas(f_in_glee_data.arrays(
+                glee_reco_variables, 
+                library="pd"
+            )).lazy().select([pl.col("*").prefix("glee_")])
+        
+        with uproot.open(file1)["lantern/EventTree"] as f_in_lantern_data:
+            all_df_in_lantern_data = pl.from_pandas(f_in_lantern_data.arrays(
+                lantern_reco_variables, 
+                library="pd"
+            )).lazy().select([pl.col("*").prefix("lantern_")])
+        
+        return (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, 
+                all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, 
+                all_df_in_glee_data, all_df_in_lantern_data)
+    else:
+        return (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, 
+                all_df_in_eval_over)
 
 ###
 def LoadTreesData(files, su = False):
@@ -1382,6 +1822,207 @@ def LoadBNBOverlay(files, su = False, gennu_only = False):
             
     print("done loading BNB Overlay")
 
+    return all_df_in_bdt_over
+
+###
+def LoadBNBOverlayLazy(files, su = False, gennu_only = False):
+    print("Loading BNB Overlay")
+    if su:
+        (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, 
+         all_df_in_eval_over, all_df_in_time_over, all_df_in_pelee_over, 
+         all_df_in_glee_over, all_df_in_lantern_over) = LoadTreesTruthLazy(files, su=su)
+    else:
+        (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, 
+         all_df_in_eval_over) = LoadTreesTruthLazy(files, su=su)
+        all_df_in_time_over = None
+        all_df_in_pelee_over = None
+        all_df_in_glee_over = None
+        all_df_in_lantern_over = None
+
+    print("Processing with lazy evaluation")
+    
+    # Add filetype column (still lazy)
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns([
+        pl.lit("nu_overlay").alias("filetype"),
+        pl.lit(0).cast(pl.Int32).alias("is_sigoverlay")
+    ])
+    
+    # Calculate derived columns using Polars expressions instead of loops
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns([
+        # Calculate shw_sp_energy
+        pl.col("shw_sp_energy").alias("shw_sp_energy"),
+        
+        # Calculate BDT scores with proper null handling
+        pl.when(pl.col("single_photon_numu_score").is_nan())
+          .then(pl.lit(-99999.0))
+          .otherwise(pl.col("single_photon_numu_score"))
+          .alias("single_photon_numu_score"),
+        
+        pl.when(pl.col("single_photon_other_score").is_nan())
+          .then(pl.lit(-99999.0))
+          .otherwise(pl.col("single_photon_other_score"))
+          .alias("single_photon_other_score"),
+        
+        pl.when(pl.col("single_photon_ncpi0_score").is_nan())
+          .then(pl.lit(-99999.0))
+          .otherwise(pl.col("single_photon_ncpi0_score"))
+          .alias("single_photon_ncpi0_score"),
+        
+        pl.when(pl.col("single_photon_nue_score").is_nan())
+          .then(pl.lit(-99999.0))
+          .otherwise(pl.col("single_photon_nue_score"))
+          .alias("single_photon_nue_score"),
+        
+        # Calculate truth shower momentum components
+        pl.col("truth_showerMomentum").list.get(0).alias("truth_showerMomentum0"),
+        pl.col("truth_showerMomentum").list.get(1).alias("truth_showerMomentum1"),
+        pl.col("truth_showerMomentum").list.get(2).alias("truth_showerMomentum2"),
+        pl.col("truth_showerMomentum").list.get(3).alias("truth_showerMomentum3"),
+        
+        # Calculate reco shower momentum components
+        pl.col("reco_showerMomentum").list.get(0).alias("reco_showerMomentum0"),
+        pl.col("reco_showerMomentum").list.get(1).alias("reco_showerMomentum1"),
+        pl.col("reco_showerMomentum").list.get(2).alias("reco_showerMomentum2"),
+        pl.col("reco_showerMomentum").list.get(3).alias("reco_showerMomentum3"),
+        
+        # Time placeholder
+        pl.lit(-9999.0).alias("time")
+    ])
+    
+    # Calculate true_event_type using complex conditional logic
+    # This replaces the Python loop with Polars expressions
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns([
+        pl.when(
+            # Calculate signal conditions
+            (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) &
+            (pl.col("truth_single_photon") == 1)
+        ).then(
+            # If NC signal
+            pl.when(~pl.col("truth_isCC"))
+              .then(
+                  pl.when(~pl.col("truth_vtxInside"))
+                    .then(pl.lit(111))
+                    .when(pl.col("truth_NCDelta") == 1)
+                    .then(pl.lit(2))
+                    .when(pl.col("truth_showerMother") == 111)
+                    .then(pl.lit(3))
+                    .otherwise(pl.lit(1))
+              )
+            # If CC signal
+            .when(
+                pl.col("truth_isCC") & 
+                (pl.col("truth_nuPdg").abs() == 14) &
+                ((pl.col("truth_muonMomentum").list.get(3) - 0.105658) < 0.1)
+            ).then(
+                pl.when(pl.col("truth_vtxInside"))
+                  .then(pl.lit(0))
+                  .otherwise(pl.lit(111))
+            )
+            .otherwise(pl.lit(-1))  # Not categorized signal
+        ).when(
+            # Background categorization
+            (pl.col("truth_energyInside") != 0) &
+            (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1)
+        ).then(
+            pl.when(
+                pl.col("truth_isCC") & 
+                (pl.col("truth_nuPdg").abs() == 14) & 
+                pl.col("truth_vtxInside")
+            ).then(
+                pl.when(pl.col("truth_Npi0") > 0)
+                  .then(pl.lit(8))
+                  .otherwise(pl.lit(7))
+            )
+            .when(~pl.col("truth_isCC") & (pl.col("truth_vtxInside") == 1))
+            .then(
+                pl.when(pl.col("truth_Npi0") > 0)
+                  .then(pl.lit(6))
+                  .otherwise(pl.lit(5))
+            )
+            .when(
+                pl.col("truth_isCC") & 
+                (pl.col("truth_nuPdg").abs() == 12) & 
+                pl.col("truth_vtxInside")
+            ).then(pl.lit(4))
+            .when(~pl.col("truth_vtxInside"))
+            .then(pl.lit(9))
+            .otherwise(pl.lit(10))
+        ).otherwise(pl.lit(10))
+        .alias("true_event_type")
+    ])
+    
+    # Calculate N_protons using list operations instead of loops
+    # This is tricky - for complex particle counting, you might still need to collect
+    # and process, but do it in chunks or use more sophisticated Polars expressions
+    
+    # Join all dataframes (still lazy)
+    print("Joining dataframes (lazy)")
+    all_df_in_bdt_over = all_df_in_bdt_over.join(
+        all_df_in_pfeval_over, 
+        on=pl.int_range(pl.len()).alias("__idx"),
+        how="left"
+    )
+    all_df_in_bdt_over = all_df_in_bdt_over.join(
+        all_df_in_kine_over,
+        on=pl.int_range(pl.len()).alias("__idx"),
+        how="left"
+    )
+    all_df_in_bdt_over = all_df_in_bdt_over.join(
+        all_df_in_eval_over,
+        on=pl.int_range(pl.len()).alias("__idx"),
+        how="left"
+    )
+    
+    if su and all_df_in_time_over is not None:
+        all_df_in_bdt_over = all_df_in_bdt_over.join(
+            all_df_in_time_over,
+            on=pl.int_range(pl.len()).alias("__idx"),
+            how="left"
+        )
+    
+    # Rename columns with prefix
+    all_df_in_bdt_over = all_df_in_bdt_over.select([
+        pl.col("*").prefix("wc_")
+    ])
+    
+    # Add back the non-prefixed columns
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns([
+        pl.col("wc_true_event_type").alias("true_event_type"),
+        pl.col("wc_filetype").alias("filetype")
+    ])
+    
+    if su and all_df_in_pelee_over is not None:
+        all_df_in_bdt_over = all_df_in_bdt_over.join(
+            all_df_in_pelee_over,
+            on=pl.int_range(pl.len()).alias("__idx"),
+            how="left",
+            suffix="_pelee"
+        )
+    
+    if su and all_df_in_glee_over is not None:
+        all_df_in_bdt_over = all_df_in_bdt_over.join(
+            all_df_in_glee_over,
+            on=pl.int_range(pl.len()).alias("__idx"),
+            how="left",
+            suffix="_glee"
+        )
+    
+    if su and all_df_in_lantern_over is not None:
+        all_df_in_bdt_over = all_df_in_bdt_over.join(
+            all_df_in_lantern_over,
+            on=pl.int_range(pl.len()).alias("__idx"),
+            how="left",
+            suffix="_lantern"
+        )
+    
+    if gennu_only:
+        print("Filtering events that don't pass generic neutrino selection")
+        # This is still lazy - no collection yet
+        all_df_in_bdt_over = all_df_in_bdt_over.filter(
+            pl.col("wc_kine_reco_Enu") >= 0
+        )
+    
+    print("Done loading BNB Overlay (still lazy)")
     return all_df_in_bdt_over
 
 ###
@@ -2808,12 +3449,54 @@ def GetVariableArrays(all_df, var, array_name, array_sig = [0,1,2,3,111], select
     return var_array_sig, var_array_bkg, var_array_data
 
 ###
+def GetVariableArraysLazy(all_df, var, array_name, array_sig=[0,1,2,3,111], selection="all", ignore_cat=[]):
+    
+    # Build filter expression lazily
+    passed_sel = PassSelectionLazy(selection, all_df, -1)
+    
+    # Apply filters using Polars expressions
+    df_filtered = all_df.filter(passed_sel)
+    
+    # Collect only the final filtered result
+    df_collected = df_filtered.select([
+        var,
+        "true_event_type",
+        "weights"
+    ]).collect()
+    
+    # Now convert to arrays
+    var_array = df_collected[var].to_numpy()
+    types = df_collected["true_event_type"].to_numpy()
+    weights = df_collected["weights"].to_numpy()
+    
+    # Separate by type
+    mask_sig = np.isin(types, array_sig) & ~np.isin(types, ignore_cat)
+    mask_data = (types == 13) & ~np.isin(types, ignore_cat)
+    mask_bkg = (types > -1) & ~np.isin(types, array_sig + [13]) & ~np.isin(types, ignore_cat)
+    
+    var_array_sig = var_array[mask_sig]
+    var_array_bkg = var_array[mask_bkg]
+    var_array_data = var_array[mask_data]
+    
+    return var_array_sig, var_array_bkg, var_array_data
+
+###
 def GetEffPur(all_df, selection, array_sig = [0,1,2,3,111], ignore_cat = []):
     #return the efficiency and purity of the selection
+    is_lazy = isinstance(all_df, pl.LazyFrame)
 
+    if is_lazy:
+        lazy_df = all_df
+        passed_sel = PassSelectionLazy(selection, lazy_df, -1)
+        all_df = lazy_df.select([
+                        "true_event_type"
+                    ]).collect()
+    else:
+        passed_sel = PassSelection(selection, all_df, -1)
+    
     y = all_df["true_event_type"].to_numpy(zero_copy_only=False)
     num_evts = all_df.shape[0]
-    passed_sel = PassSelection(selection, all_df, -1)
+    
 
     tot_sig = 0.0
     sel_sig = 0.0
@@ -3638,6 +4321,281 @@ def PassSelection(selection, all_df, i):
     
     return p
 
+def PassSelectionLazyAll(selection, df):
+    """
+    Returns a Polars expression representing the selection mask.
+    Works with both DataFrame and LazyFrame.
+    
+    Parameters:
+    -----------
+    selection : str
+        Selection name (e.g., "pur", "generic", "2photon_wc")
+    df : pl.DataFrame or pl.LazyFrame
+        Input dataframe (used to check column existence)
+        
+    Returns:
+    --------
+    pl.Expr
+        Polars expression that evaluates to boolean mask
+    """
+    
+    # Simple cases - return expression directly
+    if selection == "all":
+        return pl.lit(True)
+    
+    if selection == "generic":
+        return pl.col("wc_kine_reco_Enu") > 0.0
+    
+    # Sideband selections
+    if selection == "numu_sideband":
+        return (
+            (pl.col("wc_single_photon_numu_score") < 0.1) &
+            (pl.col("wc_single_photon_numu_score") > -20.0)
+        )
+    
+    if selection == "other_sideband":
+        return (
+            (pl.col("wc_single_photon_numu_score") > 0.1) &
+            (pl.col("wc_single_photon_other_score") < -0.4) &
+            (pl.col("wc_single_photon_other_score") > -20.0)
+        )
+    
+    if selection == "ncpi0_sideband":
+        return (
+            (pl.col("wc_single_photon_numu_score") > 0.1) &
+            (pl.col("wc_single_photon_other_score") > -0.4) &
+            (pl.col("wc_single_photon_ncpi0_score") < -0.4) &
+            (pl.col("wc_single_photon_ncpi0_score") > -20.0)
+        )
+    
+    if selection == "nue_sideband":
+        return (
+            (pl.col("wc_single_photon_numu_score") > 0.1) &
+            (pl.col("wc_single_photon_other_score") > -0.4) &
+            (pl.col("wc_single_photon_ncpi0_score") > -0.4) &
+            (pl.col("wc_single_photon_nue_score") < -3.0) &
+            (pl.col("wc_single_photon_nue_score") > -20.0) &
+            (pl.col("wc_shw_sp_n_20mev_showers") == 1)
+        )
+    
+    # Efficiency selections
+    if selection == "eff":
+        return (
+            (pl.col("wc_single_photon_numu_score") > 0.1) &
+            (pl.col("wc_single_photon_other_score") > -0.4) &
+            (pl.col("wc_single_photon_ncpi0_score") > -0.4) &
+            (pl.col("wc_single_photon_nue_score") > -3.0) &
+            (pl.col("wc_shw_sp_n_20mev_showers") == 1)
+        )
+    
+    # Purity selections
+    if selection == "pur":
+        return (
+            (pl.col("wc_single_photon_numu_score") > 0.4) &
+            (pl.col("wc_single_photon_other_score") > 0.2) &
+            (pl.col("wc_single_photon_ncpi0_score") > -0.05) &
+            (pl.col("wc_single_photon_nue_score") > -1.0) &
+            (pl.col("wc_shw_sp_n_20mev_showers") == 1)
+        )
+    
+    # 2 shower selections
+    if selection == "2shower_wc":
+        return (
+            (pl.col("wc_kine_reco_Enu") > 0.0) &
+            (pl.col("wc_shw_sp_n_20br1_showers") == 2)
+        )
+    
+    if selection == "2shower_pelee":
+        flash_condition = (
+            (pl.col("pelee_slice_orig_pass_id") == 1) |
+            ((pl.col("pelee_slice_orig_pass_id") == 0) & (pl.col("pelee_topological_score") > 0.67))
+        )
+        return flash_condition & (pl.col("pelee_n_showers_contained") == 2)
+    
+    if selection == "2shower_lantern":
+        return (
+            (pl.col("lantern_vtxIsFiducial") > -1) &
+            (pl.col("lantern_nShowers") == 2)
+        )
+    
+    if selection == "2shower_glee":
+        return pl.col("glee_reco_asso_showers") == 2
+    
+    if selection == "2shower_all":
+        return (
+            PassSelectionLazyAll("2shower_wc", df) &
+            PassSelectionLazyAll("2shower_pelee", df) &
+            PassSelectionLazyAll("2shower_glee", df) &
+            PassSelectionLazyAll("2shower_lantern", df)
+        )
+    
+    if selection == "2shower_any":
+        return (
+            PassSelectionLazyAll("2shower_wc", df) |
+            PassSelectionLazyAll("2shower_pelee", df) |
+            PassSelectionLazyAll("2shower_glee", df) |
+            PassSelectionLazyAll("2shower_lantern", df)
+        )
+    
+    # 2 photon selections - check if photon columns exist
+    if "2photon" in selection:
+        # Ensure photon counting columns exist
+        if "nphotons_wc" not in df.columns:
+            print("Warning: Photon counting columns don't exist. Run Get2Photons() first.")
+            return pl.lit(False)
+        
+        if selection == "2photon_wc":
+            return (
+                (pl.col("wc_kine_reco_Enu") > 0.0) &
+                (pl.col("nphotons_wc") == 2)
+            )
+        
+        if selection == "2photon_pandora":
+            flash_condition = (
+                (pl.col("pelee_slice_orig_pass_id") == 1) |
+                ((pl.col("pelee_slice_orig_pass_id") == 0) & (pl.col("pelee_topological_score") > 0.67))
+            )
+            return flash_condition & (pl.col("nphotons_pandora") == 2)
+
+        if selection == "2photon_nugraph":
+            flash_condition = (
+                (pl.col("pelee_slice_orig_pass_id") == 1) |
+                ((pl.col("pelee_slice_orig_pass_id") == 0) & (pl.col("pelee_topological_score") > 0.67))
+            )
+            return flash_condition & (pl.col("nphotons_nugraph") == 2)
+        
+        if selection == "2photon_lantern":
+            return (
+                (pl.col("lantern_vtxIsFiducial") > -1) &
+                (pl.col("nphotons_lantern") == 2)
+            )
+
+        if selection == "2photon_wclantern":
+            return (
+                (pl.col("wc_kine_reco_Enu") > 0.0) &
+                (pl.col("nphotons_wc") == 2) &
+                (pl.col("lantern_vtxIsFiducial") > -1) &
+                (pl.col("nphotons_lantern") == 2)
+            )
+
+        if selection == "2photon_wclanternnugraph":
+            return (
+                (pl.col("wc_kine_reco_Enu") > 0.0) &
+                (pl.col("nphotons_wc") == 2) &
+                (pl.col("lantern_vtxIsFiducial") > -1) &
+                (pl.col("nphotons_lantern") == 2) &
+                (pl.col("nphotons_nugraph") == 2)
+            )
+
+        if selection == "2photon_lanternnugraph":
+            return (
+                (pl.col("wc_kine_reco_Enu") > 0.0) &
+                (pl.col("lantern_vtxIsFiducial") > -1) &
+                (pl.col("nphotons_lantern") == 2) &
+                (pl.col("nphotons_nugraph") == 2)
+            )
+        
+        if selection == "2photon_any" or selection == "2photon_any_noglee":
+            return (
+                PassSelectionLazyAll("2photon_wc", df) |
+                PassSelectionLazyAll("2photon_pandora", df) |
+                PassSelectionLazyAll("2photon_lantern", df) | 
+                PassSelectionLazyAll("2photon_nugraph", df)
+            )
+        
+        if selection == "2photon_any_gen":
+            return (
+                (pl.col("wc_kine_reco_Enu") > 0.0) &
+                PassSelectionLazyAll("2photon_any", df)
+            )
+        
+        if selection == "2photon_any_dist":
+            # Check if distance columns exist
+            if "wc_pandora_dist" not in df.columns:
+                print("Warning: Distance columns don't exist. Run AddRecoVars() first.")
+                return pl.lit(False)
+            
+            return (
+                (pl.col("wc_kine_reco_Enu") > 0.0) &
+                (pl.col("wc_pandora_dist") < 5.0) &
+                (pl.col("wc_lantern_dist") < 5.0) &
+                (pl.col("lantern_pandora_dist") < 5.0) &
+                PassSelectionLazyAll("2photon_any", df)
+            )
+
+        if selection == "2photon_all" or selection == "2photon_all_noglee":
+            return (
+                PassSelectionLazyAll("2photon_wc", df) &
+                PassSelectionLazyAll("2photon_pandora", df) &
+                PassSelectionLazyAll("2photon_lantern", df) &
+                PassSelectionLazyAll("2photon_nugraph", df)
+            )
+    
+    # CC/NC selections - check if muon columns exist
+    if "_CC" in selection or "_NC" in selection:
+        if "nmuons_wc" not in df.columns:
+            print("Warning: Muon counting columns don't exist. Run GetMuons() first.")
+            return pl.lit(False)
+        
+        base_sel = selection.replace("_CC", "").replace("_NC", "")
+        base_condition = PassSelectionLazyAll(base_sel, df)
+        
+        has_muon = (
+            (pl.col("nmuons_lantern") > 0) |
+            (pl.col("nmuons_pandora") > 0) |
+            (pl.col("nmuons_wc") > 0)
+        )
+        
+        if "_CC" in selection:
+            return base_condition & has_muon
+        else:  # _NC
+            return base_condition & ~has_muon
+    
+    # If selection not found, return False
+    print(f"Warning: Selection '{selection}' not implemented in lazy version")
+    return pl.lit(False)
+
+
+def PassSelectionLazy(selection, all_df, i=-1):
+    """
+    Wrapper function that handles both lazy and eager evaluation.
+    
+    Parameters:
+    -----------
+    selection : str
+        Selection name
+    all_df : pl.DataFrame or pl.LazyFrame
+        Input dataframe
+    i : int
+        If >= 0, returns boolean for single event (legacy mode)
+        If < 0, returns array of booleans for all events
+        
+    Returns:
+    --------
+    bool or list[bool] or pl.Series
+        Selection mask
+    """
+    
+    # Get lazy expression
+    expr = PassSelectionLazyAll(selection, all_df)
+    
+    # Legacy mode: single event
+    if i >= 0:
+        # For single event, we need to collect and evaluate
+        if isinstance(all_df, pl.LazyFrame):
+            result = all_df.select(expr.alias("passed")).collect()
+        else:
+            result = all_df.select(expr.alias("passed"))
+        return result["passed"][i]
+    
+    # Return evaluated mask
+    if isinstance(all_df, pl.LazyFrame):
+        # For LazyFrame, return as a new LazyFrame column
+        return all_df.select(expr.alias("passed")).collect()["passed"].to_list()
+    else:
+        # For DataFrame, evaluate directly
+        return all_df.select(expr.alias("passed"))["passed"].to_list()
+
 def GetSelectionROOTExpression(selection):
     """
     Generate a ROOT cut expression string from a selection name by analyzing PassSelection logic.
@@ -3784,17 +4742,33 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
     
     newcatsadded = False
 
-    var_sig, var_bkg, var_data = GetVariableArrays(all_df, var, "var", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
-    weights_sig, weights_bkg, weights_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+    # Check if lazy
+    is_lazy = isinstance(all_df, pl.LazyFrame)
 
-    selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    if "true_event_type_name" in all_df.columns:
-        newcatsadded = True
-        selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArrays(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-        selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArrays(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-        selected_true_event_type_fill_sig, selected_true_event_type_fill_bkg, selected_true_event_type_fill_data = GetVariableArrays(all_df, "true_event_type_fill", "true_event_type_fill", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    if is_lazy:
+        var_sig, var_bkg, var_data = GetVariableArraysLazy(all_df, var, "var", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+        weights_sig, weights_bkg, weights_data = GetVariableArraysLazy(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+
+        selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArraysLazy(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArraysLazy(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArraysLazy(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        if "true_event_type_name" in all_df.columns:
+            newcatsadded = True
+            selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArraysLazy(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+            selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArraysLazy(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+            selected_true_event_type_fill_sig, selected_true_event_type_fill_bkg, selected_true_event_type_fill_data = GetVariableArraysLazy(all_df, "true_event_type_fill", "true_event_type_fill", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    else:
+        var_sig, var_bkg, var_data = GetVariableArrays(all_df, var, "var", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+        weights_sig, weights_bkg, weights_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+
+        selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        if "true_event_type_name" in all_df.columns:
+            newcatsadded = True
+            selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArrays(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+            selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArrays(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+            selected_true_event_type_fill_sig, selected_true_event_type_fill_bkg, selected_true_event_type_fill_data = GetVariableArrays(all_df, "true_event_type_fill", "true_event_type_fill", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
 
     #single_photon_numu_score_sig, single_photon_numu_score_bkg, single_photon_numu_score_data = GetVariableArrays(all_df, "single_photon_numu_score", "single_photon_numu_score", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
     #single_photon_other_score_sig, single_photon_other_score_bkg, single_photon_other_score_data = GetVariableArrays(all_df, "single_photon_other_score", "single_photon_other_score", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
@@ -4739,9 +5713,17 @@ def MakeDataPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y
     
     selected_true_event_type_data = []
 
-    selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    # Check if lazy
+    is_lazy = isinstance(all_df, pl.LazyFrame)
+
+    if is_lazy:
+        selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArraysLazy(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArraysLazy(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArraysLazy(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    else:
+        selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
 
 
     #for i in range(0, len(e_data)):
@@ -4958,19 +5940,34 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
 
     newcatsadded = False
 
-    var_sig, var_bkg, var_data = GetVariableArrays(all_df, var, "var", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
-    weights_sig, weights_bkg, weights_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+    # Check if lazy
+    is_lazy = isinstance(all_df, pl.LazyFrame)
 
+    if is_lazy:
+        var_sig, var_bkg, var_data = GetVariableArraysLazy(all_df, var, "var", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+        weights_sig, weights_bkg, weights_data = GetVariableArraysLazy(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+    
+        selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArraysLazy(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArraysLazy(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArraysLazy(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        if "true_event_type_name" in all_df.columns:
+            newcatsadded = True
+            selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArraysLazy(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+            selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArraysLazy(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+            selected_true_event_type_fill_sig, selected_true_event_type_fill_bkg, selected_true_event_type_fill_data = GetVariableArraysLazy(all_df, "true_event_type_fill", "true_event_type_fill", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)    
+    else:
+        var_sig, var_bkg, var_data = GetVariableArrays(all_df, var, "var", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+        weights_sig, weights_bkg, weights_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
 
-    selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    if "true_event_type_name" in all_df.columns:
-        newcatsadded = True
-        selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArrays(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-        selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArrays(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-        selected_true_event_type_fill_sig, selected_true_event_type_fill_bkg, selected_true_event_type_fill_data = GetVariableArrays(all_df, "true_event_type_fill", "true_event_type_fill", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-        
+        selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        if "true_event_type_name" in all_df.columns:
+            newcatsadded = True
+            selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArrays(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+            selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArrays(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+            selected_true_event_type_fill_sig, selected_true_event_type_fill_bkg, selected_true_event_type_fill_data = GetVariableArrays(all_df, "true_event_type_fill", "true_event_type_fill", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+            
 
 
     #for i in range(0, len(e_sig)):
@@ -5675,6 +6672,8 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     
     return h_sig, h_bkg, hmc
 
+
+###
 def MakeVarPlots(all_df, var_list, num_bins, folder_name, plot_folder_name, selection):
     #make and save data/mc hists for all variables in var_list with any cuts made before function call
     #var_list: array of variable names in input files (e.g. all_sp_scalars, load_varaibles, etc.)
@@ -5745,12 +6744,23 @@ def MakeEffPurPlots(all_df, var, bin_width, start_edge, end_edge, title, x_label
     selected_true_event_type_sig = []
     selected_true_event_type_bkg = []
 
-    var_sig, var_bkg, var_data = GetVariableArrays(all_df, var, "var", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
-    weights_sig, weights_bkg, weights_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+    # Check if lazy
+    is_lazy = isinstance(all_df, pl.LazyFrame)
 
-    selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    if is_lazy:
+        var_sig, var_bkg, var_data = GetVariableArraysLazy(all_df, var, "var", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+        weights_sig, weights_bkg, weights_data = GetVariableArraysLazy(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+    
+        selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArraysLazy(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArraysLazy(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArraysLazy(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    else:
+        var_sig, var_bkg, var_data = GetVariableArrays(all_df, var, "var", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+        weights_sig, weights_bkg, weights_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+
+        selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
 
     #for i in range(0, len(e_sig)):
     #    if(PassSelection(selection, single_photon_numu_score_sig[i], single_photon_other_score_sig[i], single_photon_ncpi0_score_sig[i], single_photon_nue_score_sig[i], num_shw_sig[i], num_pro_sig[i], r_sig[i], s_sig[i], e_sig[i])):
@@ -6039,14 +7049,27 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     selected_true_event_type_bkg = []
     selected_true_event_type_data = []
 
-    varx_sig, varx_bkg, varx_data = GetVariableArrays(all_df, varx, "varx", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
-    vary_sig, vary_bkg, vary_data = GetVariableArrays(all_df, vary, "vary", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
-    weights_sig, weights_bkg, weights_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+    # Check if lazy
+    is_lazy = isinstance(all_df, pl.LazyFrame)
 
-    selected_varx_sig, selected_varx_bkg, selected_varx_data = GetVariableArrays(all_df, varx, "selected_varx", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_vary_sig, selected_vary_bkg, selected_vary_data = GetVariableArrays(all_df, vary, "selected_vary", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    if is_lazy:
+        varx_sig, varx_bkg, varx_data = GetVariableArraysLazy(all_df, varx, "varx", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+        vary_sig, vary_bkg, vary_data = GetVariableArraysLazy(all_df, vary, "vary", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+        weights_sig, weights_bkg, weights_data = GetVariableArraysLazy(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+    
+        selected_varx_sig, selected_varx_bkg, selected_varx_data = GetVariableArraysLazy(all_df, varx, "selected_varx", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_vary_sig, selected_vary_bkg, selected_vary_data = GetVariableArraysLazy(all_df, vary, "selected_vary", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArraysLazy(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArraysLazy(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    else:
+        varx_sig, varx_bkg, varx_data = GetVariableArrays(all_df, varx, "varx", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+        vary_sig, vary_bkg, vary_data = GetVariableArrays(all_df, vary, "vary", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+        weights_sig, weights_bkg, weights_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+
+        selected_varx_sig, selected_varx_bkg, selected_varx_data = GetVariableArrays(all_df, varx, "selected_varx", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_vary_sig, selected_vary_bkg, selected_vary_data = GetVariableArrays(all_df, vary, "selected_vary", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
 
 
     #for i in range(0, len(e_sig)):
@@ -6750,13 +7773,28 @@ def CombinePhotonVars(all_df, var):
     # save one kinematic variable in the case where not all recos have found two photons
     # Priority (based on current evaluation of resolution): WC, Pandora, Lantern
     var_list = []
+    is_lazy = isinstance(all_df, pl.LazyFrame)
+    if is_lazy:
+        lazy_df = all_df
+        passed_wc = PassSelectionLazy("2photon_wc", lazy_df, -1)
+        passed_pandora = PassSelectionLazy("2photon_pandora", lazy_df, -1)
+        passed_lantern = PassSelectionLazy("2photon_lantern", lazy_df, -1)    
+        # Collect only the final filtered result
+        all_df = lazy_df.select([
+            var+"_wc",
+            var+"_pandora",
+            var+"_lantern"
+        ]).collect()
+    else:
+        passed_wc = PassSelection("2photon_wc", all_df, -1)
+        passed_pandora = PassSelection("2photon_pandora", all_df, -1)
+        passed_lantern = PassSelection("2photon_lantern", all_df, -1)
+
     var_wc = all_df[var+"_wc"].to_numpy(zero_copy_only=False)
     var_pandora = all_df[var+"_pandora"].to_numpy(zero_copy_only=False)
     var_lantern = all_df[var+"_lantern"].to_numpy(zero_copy_only=False)
 
-    passed_wc = PassSelection("2photon_wc", all_df, -1)
-    passed_pandora = PassSelection("2photon_pandora", all_df, -1)
-    passed_lantern = PassSelection("2photon_lantern", all_df, -1)
+    
 
     num_evts = all_df.shape[0]
 
@@ -6896,6 +7934,23 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
     #with ROOT.TFile(outFileName, "RECREATE") as outfile:
     #uncomment here
         sel_tree = ROOT.TTree("sel_tree", "sel_tree")
+        is_lazy = isinstance(all_df, pl.LazyFrame)
+        if is_lazy:
+            lazy_df = all_df
+            passed_vec = PassSelectionLazy(selection, lazy_df, -1)    
+            # Collect only the final filtered result
+            all_df = lazy_df.select([
+                var,
+                "wc_run",
+                "wc_subrun",
+                "wc_event",
+                "wc_weight_cv",
+                "wc_weight_spline",
+                "wc_file_name"
+            ]).collect()
+        else:
+            passed_vec = PassSelection(selection, all_df, -1)
+
         allvars = all_df[var].to_numpy(zero_copy_only=False)
         print(len(allvars))
         rs = all_df["wc_run"].to_numpy(zero_copy_only=False)
@@ -6904,7 +7959,6 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
         weight_cvs = all_df["wc_weight_cv"].to_numpy(zero_copy_only=False)
         weight_splines = all_df["wc_weight_spline"].to_numpy(zero_copy_only=False)
         #weightReints = all_df["pelee_weightsReint"].to_numpy(zero_copy_only=False)
-        passed_vec = PassSelection(selection, all_df, -1)
         is_file = (all_df["wc_file_name"].to_numpy(zero_copy_only=False) == file_path)
         var_type = str(type(allvars[0]))
         var_type_array = 'd'
