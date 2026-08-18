@@ -1930,14 +1930,14 @@ def LoadBNBOverlayLazy(files, su = False, gennu_only = False):
         pl.lit("nu_overlay").alias("filetype"),
         pl.lit(0).cast(pl.Int32).alias("is_sigoverlay"),
         pl.lit(-9999.0).alias("time"),
-        pl.col("truth_showerMomentum").list.get(0).alias("truth_showerMomentum0"),
-        pl.col("truth_showerMomentum").list.get(1).alias("truth_showerMomentum1"),
-        pl.col("truth_showerMomentum").list.get(2).alias("truth_showerMomentum2"),
-        pl.col("truth_showerMomentum").list.get(3).alias("truth_showerMomentum3"),
-        pl.col("reco_showerMomentum").list.get(0).alias("reco_showerMomentum0"),
-        pl.col("reco_showerMomentum").list.get(1).alias("reco_showerMomentum1"),
-        pl.col("reco_showerMomentum").list.get(2).alias("reco_showerMomentum2"),
-        pl.col("reco_showerMomentum").list.get(3).alias("reco_showerMomentum3"),
+        pl.col("truth_showerMomentum").arr.get(0).alias("truth_showerMomentum0"),
+        pl.col("truth_showerMomentum").arr.get(1).alias("truth_showerMomentum1"),
+        pl.col("truth_showerMomentum").arr.get(2).alias("truth_showerMomentum2"),
+        pl.col("truth_showerMomentum").arr.get(3).alias("truth_showerMomentum3"),
+        pl.col("reco_showerMomentum").arr.get(0).alias("reco_showerMomentum0"),
+        pl.col("reco_showerMomentum").arr.get(1).alias("reco_showerMomentum1"),
+        pl.col("reco_showerMomentum").arr.get(2).alias("reco_showerMomentum2"),
+        pl.col("reco_showerMomentum").arr.get(3).alias("reco_showerMomentum3"),
         pl.when(pl.col("single_photon_numu_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_numu_score")).alias("single_photon_numu_score"),
         pl.when(pl.col("single_photon_other_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_other_score")).alias("single_photon_other_score"),
         pl.when(pl.col("single_photon_ncpi0_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_ncpi0_score")).alias("single_photon_ncpi0_score"),
@@ -1970,8 +1970,8 @@ def LoadBNBOverlayLazy(files, su = False, gennu_only = False):
         .when(signal & ~pl.col("truth_isCC") & (pl.col("truth_NCDelta") == 1)).then(2)
         .when(signal & ~pl.col("truth_isCC") & (pl.col("truth_showerMother") == 111)).then(3)
         .when(signal & ~pl.col("truth_isCC")).then(1)
-        .when(signal & pl.col("truth_isCC") & (pl.col("truth_nuPdg").abs() == 14) & ((pl.col("truth_muonMomentum").list.get(3) - 0.105658) < 0.1) & pl.col("truth_vtxInside")).then(0)
-        .when(signal & pl.col("truth_isCC") & (pl.col("truth_nuPdg").abs() == 14) & ((pl.col("truth_muonMomentum").list.get(3) - 0.105658) < 0.1)).then(111)
+        .when(signal & pl.col("truth_isCC") & (pl.col("truth_nuPdg").abs() == 14) & ((pl.col("truth_muonMomentum").arr.get(3) - 0.105658) < 0.1) & pl.col("truth_vtxInside")).then(0)
+        .when(signal & pl.col("truth_isCC") & (pl.col("truth_nuPdg").abs() == 14) & ((pl.col("truth_muonMomentum").arr.get(3) - 0.105658) < 0.1)).then(111)
         .when((pl.col("truth_energyInside") != 0) & (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) & pl.col("truth_isCC") & (pl.col("truth_nuPdg").abs() == 14) & pl.col("truth_vtxInside") & (pl.col("truth_Npi0") > 0)).then(8)
         .when((pl.col("truth_energyInside") != 0) & (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) & pl.col("truth_isCC") & (pl.col("truth_nuPdg").abs() == 14) & pl.col("truth_vtxInside")).then(7)
         .when((pl.col("truth_energyInside") != 0) & (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) & ~pl.col("truth_isCC") & pl.col("truth_vtxInside") & (pl.col("truth_Npi0") > 0)).then(6)
@@ -7649,6 +7649,7 @@ def GetMuons(all_df, reco):
     if reco == "wc":
         return all_df.with_columns(
             pl.col("wc_reco_pdg")
+            .cast(pl.List(pl.Int64))
             .list.eval(pl.element().abs() == 13)
             .list.sum()
             .cast(pl.Int64)
@@ -7658,6 +7659,7 @@ def GetMuons(all_df, reco):
     if reco == "lantern":
         return all_df.with_columns(
             pl.col("lantern_trackPID")
+            .cast(pl.List(pl.Int64))
             .list.eval(pl.element().abs() == 13)
             .list.sum()
             .cast(pl.Int64)
@@ -7667,6 +7669,7 @@ def GetMuons(all_df, reco):
     if reco == "pandora":
         return all_df.with_columns(
             pl.col("pelee_pfng2semlabel")
+            .cast(pl.List(pl.Int64))
             .list.eval(pl.element() == 0)
             .list.sum()
             .cast(pl.Int64)
