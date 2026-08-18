@@ -597,14 +597,21 @@ def AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill=1001):
     # Initialize result arrays
     is_lazy = isinstance(all_df, pl.LazyFrame)
     if is_lazy:
-        lazy_df = all_df  
-        # Collect only the final filtered result
-        all_df = lazy_df.select([
+        lazy_df = all_df
+        available_columns = set(lazy_df.collect_schema().names())
+        required_columns = [
             "true_event_type", "wc_truth_Ntrack", "wc_truth_pdg",
             "wc_truth_startMomentum", "wc_truth_process", "wc_truth_mother",
-            "wc_truth_endXYZT", "wc_truth_isCC", "filetype",
-            "true_event_type_name", "true_event_type_color", "true_event_type_fill"
-        ]).collect()
+            "wc_truth_endXYZT"
+        ]
+        optional_columns = [
+            "wc_truth_isCC", "filetype", "true_event_type_name",
+            "true_event_type_color", "true_event_type_fill"
+        ]
+        selected_columns = required_columns + [
+            column for column in optional_columns if column in available_columns
+        ]
+        all_df = lazy_df.select(selected_columns).collect()
 
     num_evts = all_df.height
     newcat = []
@@ -754,19 +761,32 @@ def AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill=1001):
     else:
         newcatfill = all_df["true_event_type_fill"].to_list()
     
-    # Update DataFrame with new columns
-    if is_lazy:
-        del all_df
-        all_df = lazy_df
-    
-    all_df = all_df.with_columns([
+    computed_columns = [
         pl.Series("true_event_type", newcat),
         pl.Series("true_event_type_name", newcatname),
         pl.Series("true_event_type_color", newcatcolor),
-        pl.Series("true_event_type_fill", newcatfill)
-    ])
-    
-    # Add photon information for photon-counting categories
+        pl.Series("true_event_type_fill", newcatfill),
+    ]
+
+    # Join computed eager columns back onto the original lazy plan by row order.
+    if is_lazy:
+        computed = pl.DataFrame(computed_columns)
+        if any(x in catname for x in ["2 true photons", "6 true photons"]):
+            computed = computed.with_columns([
+                pl.Series("truth_photon1_mom", photon1_mom),
+                pl.Series("truth_photon2_mom", photon2_mom),
+                pl.Series("truth_photon1_process", photon1_process),
+                pl.Series("truth_photon2_process", photon2_process),
+                pl.Series("truth_photon1_XYZT", photon1_XYZT),
+                pl.Series("truth_photon2_XYZT", photon2_XYZT),
+                pl.Series("truth_photon1_mother", photon1_mother),
+                pl.Series("truth_photon2_mother", photon2_mother),
+            ])
+        computed = computed.with_row_index("__truth_cat_index").lazy()
+        original = lazy_df.drop(computed.columns, strict=False).with_row_index("__truth_cat_index")
+        return original.join(computed, on="__truth_cat_index", how="left").drop("__truth_cat_index")
+
+    all_df = all_df.with_columns(computed_columns)
     if any(x in catname for x in ["2 true photons", "6 true photons"]):
         all_df = all_df.with_columns([
             pl.Series("truth_photon1_mom", photon1_mom),
@@ -776,9 +796,8 @@ def AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill=1001):
             pl.Series("truth_photon1_XYZT", photon1_XYZT),
             pl.Series("truth_photon2_XYZT", photon2_XYZT),
             pl.Series("truth_photon1_mother", photon1_mother),
-            pl.Series("truth_photon2_mother", photon2_mother)
+            pl.Series("truth_photon2_mother", photon2_mother),
         ])
-    
     return all_df
     
 
