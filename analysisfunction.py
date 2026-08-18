@@ -7532,12 +7532,12 @@ def Get2Photons(all_df, reco):
                         row["lantern_showerStartPosZ"][index],
                         energy,
                     ])
-                    processes.append(row["lantern_showerProcess"][index])
+                    processes.append(str(row["lantern_showerProcess"][index]))
             while len(momenta) < 2:
                 empty_momentum, empty_position, empty_process = empty_photon()
                 momenta.append(empty_momentum)
                 positions.append(empty_position)
-                processes.append(empty_process)
+                processes.append(str(empty_process))
             mass = GetInvariantMass(momenta[0], momenta[1]) if nphotons >= 2 else np.float32(-9999.0)
             return {
                 "nphotons_lantern": nphotons,
