@@ -1840,188 +1840,102 @@ def LoadBNBOverlayLazy(files, su = False, gennu_only = False):
         all_df_in_lantern_over = None
 
     print("Processing with lazy evaluation")
-    
-    # Add filetype column (still lazy)
+
+    frames = [all_df_in_bdt_over, all_df_in_pfeval_over,
+              all_df_in_kine_over, all_df_in_eval_over]
+    if su:
+        frames.extend([all_df_in_time_over, all_df_in_pelee_over,
+                       all_df_in_glee_over, all_df_in_lantern_over])
+    frames = [frame.with_row_index("__idx") for frame in frames]
+    (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over,
+     all_df_in_eval_over) = frames[:4]
+
+    all_df_in_bdt_over = all_df_in_bdt_over.join(
+        all_df_in_pfeval_over, on="__idx", how="left", suffix="_pfeval"
+    ).join(
+        all_df_in_kine_over, on="__idx", how="left", suffix="_kine"
+    ).join(
+        all_df_in_eval_over, on="__idx", how="left", suffix="_eval"
+    )
+
+    if su:
+        (all_df_in_time_over, all_df_in_pelee_over, all_df_in_glee_over,
+         all_df_in_lantern_over) = frames[4:]
+        all_df_in_bdt_over = all_df_in_bdt_over.join(
+            all_df_in_time_over, on="__idx", how="left", suffix="_time"
+        )
+
     all_df_in_bdt_over = all_df_in_bdt_over.with_columns([
         pl.lit("nu_overlay").alias("filetype"),
-        pl.lit(0).cast(pl.Int32).alias("is_sigoverlay")
-    ])
-    
-    # Calculate derived columns using Polars expressions instead of loops
-    all_df_in_bdt_over = all_df_in_bdt_over.with_columns([
-        # Calculate shw_sp_energy
-        pl.col("shw_sp_energy").alias("shw_sp_energy"),
-        
-        # Calculate BDT scores with proper null handling
-        pl.when(pl.col("single_photon_numu_score").is_nan())
-          .then(pl.lit(-99999.0))
-          .otherwise(pl.col("single_photon_numu_score"))
-          .alias("single_photon_numu_score"),
-        
-        pl.when(pl.col("single_photon_other_score").is_nan())
-          .then(pl.lit(-99999.0))
-          .otherwise(pl.col("single_photon_other_score"))
-          .alias("single_photon_other_score"),
-        
-        pl.when(pl.col("single_photon_ncpi0_score").is_nan())
-          .then(pl.lit(-99999.0))
-          .otherwise(pl.col("single_photon_ncpi0_score"))
-          .alias("single_photon_ncpi0_score"),
-        
-        pl.when(pl.col("single_photon_nue_score").is_nan())
-          .then(pl.lit(-99999.0))
-          .otherwise(pl.col("single_photon_nue_score"))
-          .alias("single_photon_nue_score"),
-        
-        # Calculate truth shower momentum components
+        pl.lit(0).cast(pl.Int32).alias("is_sigoverlay"),
+        pl.lit(-9999.0).alias("time"),
         pl.col("truth_showerMomentum").list.get(0).alias("truth_showerMomentum0"),
         pl.col("truth_showerMomentum").list.get(1).alias("truth_showerMomentum1"),
         pl.col("truth_showerMomentum").list.get(2).alias("truth_showerMomentum2"),
         pl.col("truth_showerMomentum").list.get(3).alias("truth_showerMomentum3"),
-        
-        # Calculate reco shower momentum components
         pl.col("reco_showerMomentum").list.get(0).alias("reco_showerMomentum0"),
         pl.col("reco_showerMomentum").list.get(1).alias("reco_showerMomentum1"),
         pl.col("reco_showerMomentum").list.get(2).alias("reco_showerMomentum2"),
         pl.col("reco_showerMomentum").list.get(3).alias("reco_showerMomentum3"),
-        
-        # Time placeholder
-        pl.lit(-9999.0).alias("time")
+        pl.when(pl.col("single_photon_numu_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_numu_score")).alias("single_photon_numu_score"),
+        pl.when(pl.col("single_photon_other_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_other_score")).alias("single_photon_other_score"),
+        pl.when(pl.col("single_photon_ncpi0_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_ncpi0_score")).alias("single_photon_ncpi0_score"),
+        pl.when(pl.col("single_photon_nue_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_nue_score")).alias("single_photon_nue_score"),
+        pl.struct(["kine_energy_particle", "kine_particle_type"]).map_elements(
+            lambda row: sum(
+                abs(particle_type) == 2212 and particle_energy > 35
+                for particle_energy, particle_type in zip(
+                    row["kine_energy_particle"], row["kine_particle_type"]
+                )
+            ),
+            return_dtype=pl.Int64,
+        ).alias("N_protons"),
+        pl.struct([
+            "truth_Ntrack", "truth_pdg", "truth_mother", "truth_startMomentum"
+        ]).map_elements(
+            lambda row: sum(
+                abs(row["truth_pdg"][index]) == 2212
+                and row["truth_mother"][index] == 0
+                and row["truth_startMomentum"][index][3] - 0.938272 > 0.035
+                for index in range(row["truth_Ntrack"])
+            ),
+            return_dtype=pl.Int64,
+        ).alias("true_N_protons")
     ])
-    
-    # Calculate true_event_type using complex conditional logic
-    # This replaces the Python loop with Polars expressions
-    all_df_in_bdt_over = all_df_in_bdt_over.with_columns([
-        pl.when(
-            # Calculate signal conditions
-            (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) &
-            (pl.col("truth_single_photon") == 1)
-        ).then(
-            # If NC signal
-            pl.when(~pl.col("truth_isCC"))
-              .then(
-                  pl.when(~pl.col("truth_vtxInside"))
-                    .then(pl.lit(111))
-                    .when(pl.col("truth_NCDelta") == 1)
-                    .then(pl.lit(2))
-                    .when(pl.col("truth_showerMother") == 111)
-                    .then(pl.lit(3))
-                    .otherwise(pl.lit(1))
-              )
-            # If CC signal
-            .when(
-                pl.col("truth_isCC") & 
-                (pl.col("truth_nuPdg").abs() == 14) &
-                ((pl.col("truth_muonMomentum").list.get(3) - 0.105658) < 0.1)
-            ).then(
-                pl.when(pl.col("truth_vtxInside"))
-                  .then(pl.lit(0))
-                  .otherwise(pl.lit(111))
-            )
-            .otherwise(pl.lit(-1))  # Not categorized signal
-        ).when(
-            # Background categorization
-            (pl.col("truth_energyInside") != 0) &
-            (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1)
-        ).then(
-            pl.when(
-                pl.col("truth_isCC") & 
-                (pl.col("truth_nuPdg").abs() == 14) & 
-                pl.col("truth_vtxInside")
-            ).then(
-                pl.when(pl.col("truth_Npi0") > 0)
-                  .then(pl.lit(8))
-                  .otherwise(pl.lit(7))
-            )
-            .when(~pl.col("truth_isCC") & (pl.col("truth_vtxInside") == 1))
-            .then(
-                pl.when(pl.col("truth_Npi0") > 0)
-                  .then(pl.lit(6))
-                  .otherwise(pl.lit(5))
-            )
-            .when(
-                pl.col("truth_isCC") & 
-                (pl.col("truth_nuPdg").abs() == 12) & 
-                pl.col("truth_vtxInside")
-            ).then(pl.lit(4))
-            .when(~pl.col("truth_vtxInside"))
-            .then(pl.lit(9))
-            .otherwise(pl.lit(10))
-        ).otherwise(pl.lit(10))
-        .alias("true_event_type")
-    ])
-    
-    # Calculate N_protons using list operations instead of loops
-    # This is tricky - for complex particle counting, you might still need to collect
-    # and process, but do it in chunks or use more sophisticated Polars expressions
-    
-    # Join all dataframes (still lazy)
-    print("Joining dataframes (lazy)")
-    all_df_in_bdt_over = all_df_in_bdt_over.join(
-        all_df_in_pfeval_over, 
-        on=pl.int_range(pl.len()).alias("__idx"),
-        how="left"
+
+    signal = ((pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) & (pl.col("truth_single_photon") == 1))
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns(
+        pl.when(signal & ~pl.col("truth_isCC") & ~pl.col("truth_vtxInside")).then(111)
+        .when(signal & ~pl.col("truth_isCC") & (pl.col("truth_NCDelta") == 1)).then(2)
+        .when(signal & ~pl.col("truth_isCC") & (pl.col("truth_showerMother") == 111)).then(3)
+        .when(signal & ~pl.col("truth_isCC")).then(1)
+        .when(signal & pl.col("truth_isCC") & (pl.col("truth_nuPdg").abs() == 14) & ((pl.col("truth_muonMomentum").list.get(3) - 0.105658) < 0.1) & pl.col("truth_vtxInside")).then(0)
+        .when(signal & pl.col("truth_isCC") & (pl.col("truth_nuPdg").abs() == 14) & ((pl.col("truth_muonMomentum").list.get(3) - 0.105658) < 0.1)).then(111)
+        .when((pl.col("truth_energyInside") != 0) & (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) & pl.col("truth_isCC") & (pl.col("truth_nuPdg").abs() == 14) & pl.col("truth_vtxInside") & (pl.col("truth_Npi0") > 0)).then(8)
+        .when((pl.col("truth_energyInside") != 0) & (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) & pl.col("truth_isCC") & (pl.col("truth_nuPdg").abs() == 14) & pl.col("truth_vtxInside")).then(7)
+        .when((pl.col("truth_energyInside") != 0) & (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) & ~pl.col("truth_isCC") & pl.col("truth_vtxInside") & (pl.col("truth_Npi0") > 0)).then(6)
+        .when((pl.col("truth_energyInside") != 0) & (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) & ~pl.col("truth_isCC") & pl.col("truth_vtxInside")).then(5)
+        .when((pl.col("truth_energyInside") != 0) & (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) & pl.col("truth_isCC") & (pl.col("truth_nuPdg").abs() == 12) & pl.col("truth_vtxInside")).then(4)
+        .when((pl.col("truth_energyInside") != 0) & (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) & ~pl.col("truth_vtxInside")).then(9)
+        .otherwise(10).alias("true_event_type")
     )
-    all_df_in_bdt_over = all_df_in_bdt_over.join(
-        all_df_in_kine_over,
-        on=pl.int_range(pl.len()).alias("__idx"),
-        how="left"
-    )
-    all_df_in_bdt_over = all_df_in_bdt_over.join(
-        all_df_in_eval_over,
-        on=pl.int_range(pl.len()).alias("__idx"),
-        how="left"
-    )
-    
-    if su and all_df_in_time_over is not None:
-        all_df_in_bdt_over = all_df_in_bdt_over.join(
-            all_df_in_time_over,
-            on=pl.int_range(pl.len()).alias("__idx"),
-            how="left"
-        )
-    
-    # Rename columns with prefix
-    all_df_in_bdt_over = all_df_in_bdt_over.select([
-        pl.col("*").prefix("wc_")
-    ])
-    
-    # Add back the non-prefixed columns
+
+    all_df_in_bdt_over = all_df_in_bdt_over.rename(lambda col: f"wc_{col}" if col != "__idx" else col)
     all_df_in_bdt_over = all_df_in_bdt_over.with_columns([
         pl.col("wc_true_event_type").alias("true_event_type"),
         pl.col("wc_filetype").alias("filetype")
     ])
-    
-    if su and all_df_in_pelee_over is not None:
-        all_df_in_bdt_over = all_df_in_bdt_over.join(
-            all_df_in_pelee_over,
-            on=pl.int_range(pl.len()).alias("__idx"),
-            how="left",
-            suffix="_pelee"
-        )
-    
-    if su and all_df_in_glee_over is not None:
-        all_df_in_bdt_over = all_df_in_bdt_over.join(
-            all_df_in_glee_over,
-            on=pl.int_range(pl.len()).alias("__idx"),
-            how="left",
-            suffix="_glee"
-        )
-    
-    if su and all_df_in_lantern_over is not None:
-        all_df_in_bdt_over = all_df_in_bdt_over.join(
-            all_df_in_lantern_over,
-            on=pl.int_range(pl.len()).alias("__idx"),
-            how="left",
-            suffix="_lantern"
-        )
-    
+    if su:
+        for frame, suffix in ((all_df_in_pelee_over, "pelee"),
+                              (all_df_in_glee_over, "glee"),
+                              (all_df_in_lantern_over, "lantern")):
+            all_df_in_bdt_over = all_df_in_bdt_over.join(
+                frame, on="__idx", how="left", suffix=f"_{suffix}"
+            )
+    all_df_in_bdt_over = all_df_in_bdt_over.drop("__idx")
     if gennu_only:
-        print("Filtering events that don't pass generic neutrino selection")
-        # This is still lazy - no collection yet
-        all_df_in_bdt_over = all_df_in_bdt_over.filter(
-            pl.col("wc_kine_reco_Enu") >= 0
-        )
-    
+        print("Throwing away events that don't pass generic neutrino selection")
+        all_df_in_bdt_over = all_df_in_bdt_over.filter(pl.col("wc_kine_reco_Enu") >= 0)
     print("Done loading BNB Overlay (still lazy)")
     return all_df_in_bdt_over
 
@@ -3791,6 +3705,19 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
     Lrun5modpi0POT = globals()["Lrun5modpi0POT"] if any(entry[0] == "run5modpi0POT" for entry in pot_vars) else 1.0
 
     #print(f"Lrun4bBnbPOT: {Lrun4bBnbPOT}")
+
+    is_lazy = isinstance(all_df, pl.LazyFrame)
+    if is_lazy:
+        lazy_df = all_df  
+        # Collect only the final filtered result
+        all_df = lazy_df.select([
+            "wc_weight_cv",
+            "wc_weight_spline",
+            "true_event_type",
+            "wc_is_sigoverlay",
+            "filetype",
+            "wc_run_period"
+        ]).collect()
     
     weight_cv = all_df["wc_weight_cv"].to_numpy(zero_copy_only=False)
     weight_spline = all_df["wc_weight_spline"].to_numpy(zero_copy_only=False)
