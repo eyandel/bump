@@ -596,7 +596,7 @@ def AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill=1001):
     
     # Initialize result arrays
     if isinstance(all_df, pl.LazyFrame):
-        num_evts = all_df.select(pl.count("wc_run")).collect().item()
+        num_evts = all_df.select(["true_event_type"]).collect().height
     else:
         num_evts = all_df.height
     newcat = []
@@ -3443,7 +3443,7 @@ def GetEffPur(all_df, selection, array_sig = [0,1,2,3,111], ignore_cat = []):
     
     y = all_df["true_event_type"].to_numpy(zero_copy_only=False)
     if isinstance(all_df, pl.LazyFrame):
-        num_evts = all_df.select(pl.count("wc_run")).collect().item()
+        num_evts = all_df.select(["true_event_type"]).collect().height
     else:
         num_evts = all_df.height
     
@@ -3491,7 +3491,7 @@ def GetEffPur(all_df, selection, array_sig = [0,1,2,3,111], ignore_cat = []):
 def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat = []):
     #return a table of efficiency and purity for multiple selections
     if isinstance(all_df, pl.LazyFrame):
-        num_evts = all_df.select(pl.count("wc_run")).collect().item()
+        num_evts = all_df.select(["true_event_type"]).collect().height
     else:
         num_evts = all_df.height  
     effs = []
@@ -3990,7 +3990,7 @@ def PassSelection(selection, all_df, i):
     if (i < 0):
         p = []
         if isinstance(all_df, pl.LazyFrame):
-            num_evts = all_df.select(pl.count("wc_run")).collect().item()
+            num_evts = all_df.select(["true_event_type"]).collect().height
         else:
             num_evts = all_df.height
         if selection=="all":
@@ -7706,7 +7706,7 @@ def CombinePhotonVars(all_df, var):
     
 
     if isinstance(all_df, pl.LazyFrame):
-        num_evts = all_df.select(pl.count("wc_run")).collect().item()
+        num_evts = all_df.select(["true_event_type"]).collect().height
     else:
         num_evts = all_df.height
 
