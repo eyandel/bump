@@ -1187,17 +1187,45 @@ def LoadTreesTruth1Lazy(file1, su = False):
         all_df_in_eval_over = pl.from_pandas(f_in_eval_over.arrays(eval_variables + eval_truth_variables, library="pd")).lazy()
 
     # Determine run number using Polars expressions (still lazy)
-    run_number_val = None
+    run_number_val = -999
     if is_gpvm:
         if "run1_full_samples" in file1:
             run_number_val = 1
         elif "run2_full_samples" in file1:
             run_number_val = 2
-        # ... etc
+        elif "run3_full_samples" in file1:
+            run_number_val = 3
+        elif "run4a_full_samples" in file1:
+            run_number_val = 41
+        elif "run4b_full_samples" in file1:
+            run_number_val = 42
+        elif "run4c_full_samples" in file1:
+            run_number_val = 43
+        elif "run4d_full_samples" in file1:
+            run_number_val = 44
+        elif "run4_full_samples" in file1:
+            run_number_val = 4
+        elif "run5_full_samples" in file1:
+            run_number_val = 5
     else:
         if "run1" in file1 or "Run1" in file1 or "run_1" in file1.lower():
             run_number_val = 1
-        # ... etc
+        elif "run2" in file1 or "Run2" in file1 or "run_2" in file1.lower():
+            run_number_val = 2
+        elif "run3" in file1 or "Run3" in file1 or "run_3" in file1.lower():
+            run_number_val = 3
+        elif "run4a" in file1 or "Run4a" in file1 or "run_4a" in file1.lower():
+            run_number_val = 41
+        elif "run4b" in file1 or "Run4b" in file1 or "run_4b" in file1.lower():
+            run_number_val = 42
+        elif "run4c" in file1 or "Run4c" in file1 or "run_4c" in file1.lower():
+            run_number_val = 43
+        elif "run4d" in file1 or "Run4d" in file1 or "run_4d" in file1.lower():
+            run_number_val = 44
+        elif "run4_" in file1 or "Run4_" in file1 or "run_4_" in file1.lower():
+            run_number_val = 4
+        elif "run5" in file1 or "Run5" in file1 or "run_5" in file1.lower():
+            run_number_val = 5
     
     # Add columns using lazy operations
     all_df_in_bdt_over = all_df_in_bdt_over.with_columns([
@@ -1216,19 +1244,19 @@ def LoadTreesTruth1Lazy(file1, su = False):
             all_df_in_pelee_data = pl.from_pandas(f_in_pelee_data.arrays(
                 pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables + pelee_time_variables, 
                 library="pd"
-            )).lazy().select([pl.col("*").prefix("pelee_")])
+            )).lazy().select([pl.col("*").name.prefix("pelee_")])
         
         with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
             all_df_in_glee_data = pl.from_pandas(f_in_glee_data.arrays(
                 glee_reco_variables, 
                 library="pd"
-            )).lazy().select([pl.col("*").prefix("glee_")])
+            )).lazy().select([pl.col("*").name.prefix("glee_")])
         
         with uproot.open(file1)["lantern/EventTree"] as f_in_lantern_data:
             all_df_in_lantern_data = pl.from_pandas(f_in_lantern_data.arrays(
                 lantern_reco_variables, 
                 library="pd"
-            )).lazy().select([pl.col("*").prefix("lantern_")])
+            )).lazy().select([pl.col("*").name.prefix("lantern_")])
         
         return (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, 
                 all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, 
