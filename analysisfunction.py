@@ -165,6 +165,10 @@ for detvar in detvars:
     detvar_file_dict.append({f"nu_overlay_4_detvar_{detvar}": eval(f"nu_overlay_4_detvar_{detvar.lower()}")})
 
 def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
+    is_lazy = isinstance(all_df, pl.LazyFrame)
+    if is_lazy:
+        return AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill)
+
     newcat = []
     newcatname = []
     newcatcolor = []
@@ -844,6 +848,7 @@ def AddRecoVars(all_df):
 def LoadFiles(files, filetype, su = False, gennu_only = False):
     #files: list of files
     #filetype: string of file type e.g. "ext", "data", "bnboverlay", "dirt", "ncpi0", "modpi0"
+    
     dfs = []
     i_run = 0
     for file in files:
@@ -3385,6 +3390,10 @@ def GetVariableArrays(all_df, var, array_name, array_sig = [0,1,2,3,111], select
     #var: string of variable name in root file
     #array_name: name of variable array
 
+    is_lazy = isinstance(all_df, pl.LazyFrame)
+    if is_lazy:
+        return GetVariableArraysLazy(all_df, var, array_name, array_sig, selection, ignore_cat)
+
     single_photon_numu_score = all_df["wc_single_photon_numu_score"].to_numpy(zero_copy_only=False)
     single_photon_other_score = all_df["wc_single_photon_other_score"].to_numpy(zero_copy_only=False)
     single_photon_ncpi0_score = all_df["wc_single_photon_ncpi0_score"].to_numpy(zero_copy_only=False)
@@ -4015,6 +4024,10 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
 ###
 def PassSelection(selection, all_df, i):
     #returns a boolean that indicates if events pass selection
+    is_lazy = isinstance(all_df, pl.LazyFrame)
+    if is_lazy:
+        return PassSelectionLazy(selection, all_df, i)
+
     p = False
 
     #if i < 0, return array of bools for all events in the dataframe
