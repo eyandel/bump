@@ -7411,241 +7411,191 @@ def FindWCMother(p, Ntrack, id, pdg):
     return m
 
 def Get2Photons(all_df, reco):
-    photon1_mom = []
-    photon2_mom = []
-    photon1_XYZT = []
-    photon2_XYZT = []
-    photon1_mother = []
-    photon2_mother = []
-    nphotons_list = []
-    inv_mass = []
-    em_charge_scale = 1.0
-    num_evts = all_df.select(pl.count()).collect().item() #all_df.shape[0]
-    data = False 
-    true_event_types = all_df["true_event_type"].to_numpy(zero_copy_only=False)
-    default_list = [-9999., -9999., -9999., -9999.]
-    if reco == "wc":
-        #em_charge_scale = wc_em_charge_scale
-        reco_Ntrack = all_df["wc_reco_Ntrack"].to_numpy(zero_copy_only=False)
-        reco_startXYZT = all_df["wc_reco_startXYZT"].to_numpy(zero_copy_only=False)
-        reco_startMomentum = all_df["wc_reco_startMomentum"].to_numpy(zero_copy_only=False)
-        reco_pdg = all_df["wc_reco_pdg"].to_numpy(zero_copy_only=False)
-        reco_mother = all_df["wc_reco_mother"].to_numpy(zero_copy_only=False)
-        reco_id = all_df["wc_reco_id"].to_numpy(zero_copy_only=False)
-        for i in range(num_evts):
-            if true_event_types[i]==12 or true_event_types[i]==13:
-                data = True
-            else:
-                data = False
-            nphotons_wc = 0
-            photon1 = False
-            photon2 = False
-            mass = np.float32(-9999.)
-            for j in range(int(reco_Ntrack[i])):
-                ex = reco_startXYZT[i][j][0]
-                ey = reco_startXYZT[i][j][1]
-                ez = reco_startXYZT[i][j][2]
-                mother = FindWCMother(reco_mother[i][j], reco_Ntrack[i], reco_id[i], reco_pdg[i])
-                mom = reco_startMomentum[i][j].copy()
-                mom[0] *= 1000.0
-                mom[1] *= 1000.0
-                mom[2] *= 1000.0
-                mom[3] *= 1000.0
-                if data:
-                    mom[0] *= em_charge_scale
-                    mom[1] *= em_charge_scale
-                    mom[2] *= em_charge_scale
-                    mom[3] *= em_charge_scale
-                if reco_pdg[i][j] == 22 and mother != 11 and mother != 22 and mom[3] > 20.0:
-                    if ex > 3.0 and ex < 253.0 and ey > -113.0 and ey < 114.0 and ez > 3.0 and ez < 1034.0: #same as single photons
-                        nphotons_wc += 1
-                        if not photon1:
-                            photon1 = True
-                            photon1_mom.append(mom)
-                            photon1_XYZT.append(reco_startXYZT[i][j])
-                            photon1_mother.append(reco_mother[i][j])
-                        elif not photon2:
-                            photon2 = True
-                            photon2_mom.append(mom)
-                            photon2_XYZT.append(reco_startXYZT[i][j])
-                            photon2_mother.append(reco_mother[i][j])
-            if not photon1:
-                photon1_mom.append(np.array(default_list, dtype='float32'))
-                photon1_XYZT.append(np.array(default_list, dtype='float32'))
-                photon1_mother.append(np.int32(-9999))
-            if not photon2:
-                photon2_mom.append(np.array(default_list, dtype='float32'))
-                photon2_XYZT.append(np.array(default_list, dtype='float32'))
-                photon2_mother.append(np.int32(-9999))
-            else:
-                mass = GetInvariantMass(photon1_mom[i], photon2_mom[i])
-            nphotons_list.append(nphotons_wc)
-            inv_mass.append(mass)
+    default = [-9999.0, -9999.0, -9999.0, -9999.0]
 
-        all_df = all_df.with_columns([
-            pl.Series("nphotons_wc", nphotons_list),
-            pl.Series("photon1_mom_wc", photon1_mom),
-            pl.Series("photon2_mom_wc", photon2_mom),
-            pl.Series("photon1_XYZT_wc", photon1_XYZT),
-            pl.Series("photon2_XYZT_wc", photon2_XYZT),
-            pl.Series("photon1_mother_wc", photon1_mother),
-            pl.Series("photon2_mother_wc", photon2_mother),
-            pl.Series("photon_inv_mass_wc", inv_mass)
-        ])
-    
+    def photon_row(row):
+        def empty_photon():
+            return list(default), list(default), -9999
+
+        if reco == "wc":
+            momenta = []
+            positions = []
+            mothers = []
+            nphotons = 0
+            is_data = row["true_event_type"] in (12, 13)
+            for index in range(int(row["wc_reco_Ntrack"])):
+                position = list(row["wc_reco_startXYZT"][index])
+                mother = FindWCMother(
+                    row["wc_reco_mother"][index],
+                    row["wc_reco_Ntrack"],
+                    row["wc_reco_id"],
+                    row["wc_reco_pdg"],
+                )
+                momentum = np.asarray(row["wc_reco_startMomentum"][index], dtype=np.float32).copy() * 1000.0
+                if is_data:
+                    momentum *= 1.0
+                if (
+                    row["wc_reco_pdg"][index] == 22
+                    and mother not in (11, 22)
+                    and momentum[3] > 20.0
+                    and 3.0 < position[0] < 253.0
+                    and -113.0 < position[1] < 114.0
+                    and 3.0 < position[2] < 1034.0
+                ):
+                    nphotons += 1
+                    if len(momenta) < 2:
+                        momenta.append(momentum.tolist())
+                        positions.append(position)
+                        mothers.append(row["wc_reco_mother"][index])
+            while len(momenta) < 2:
+                empty_momentum, empty_position, empty_mother = empty_photon()
+                momenta.append(empty_momentum)
+                positions.append(empty_position)
+                mothers.append(empty_mother)
+            mass = GetInvariantMass(momenta[0], momenta[1]) if nphotons >= 2 else np.float32(-9999.0)
+            return {
+                "nphotons_wc": nphotons,
+                "photon1_mom_wc": momenta[0], "photon2_mom_wc": momenta[1],
+                "photon1_XYZT_wc": positions[0], "photon2_XYZT_wc": positions[1],
+                "photon1_mother_wc": mothers[0], "photon2_mother_wc": mothers[1],
+                "photon_inv_mass_wc": mass,
+            }
+
+        if reco == "lantern":
+            momenta = []
+            positions = []
+            processes = []
+            nphotons = 0
+            for index in range(int(row["lantern_nShowers"])):
+                if row["lantern_showerPID"][index] != 22:
+                    continue
+                nphotons += 1
+                if len(momenta) < 2:
+                    energy = row["lantern_showerRecoE"][index]
+                    direction = [
+                        row["lantern_showerStartDirX"][index],
+                        row["lantern_showerStartDirY"][index],
+                        row["lantern_showerStartDirZ"][index],
+                    ]
+                    momenta.append([energy * component for component in direction] + [energy])
+                    positions.append([
+                        row["lantern_showerStartPosX"][index],
+                        row["lantern_showerStartPosY"][index],
+                        row["lantern_showerStartPosZ"][index],
+                        energy,
+                    ])
+                    processes.append(row["lantern_showerProcess"][index])
+            while len(momenta) < 2:
+                empty_momentum, empty_position, empty_process = empty_photon()
+                momenta.append(empty_momentum)
+                positions.append(empty_position)
+                processes.append(empty_process)
+            mass = GetInvariantMass(momenta[0], momenta[1]) if nphotons >= 2 else np.float32(-9999.0)
+            return {
+                "nphotons_lantern": nphotons,
+                "photon1_mom_lantern": momenta[0], "photon2_mom_lantern": momenta[1],
+                "photon1_XYZT_lantern": positions[0], "photon2_XYZT_lantern": positions[1],
+                "photon1_process_lantern": processes[0], "photon2_process_lantern": processes[1],
+                "photon_inv_mass_lantern": mass,
+            }
+
+        if reco == "pandora":
+            energy1 = row["pelee_pi0_energy1_Y"] / 0.83 * 1.10
+            energy2 = row["pelee_pi0_energy2_Y"] / 0.83 * 1.10
+            momenta = []
+            positions = []
+            if energy1 > 0.0:
+                momenta.append([
+                    energy1 * row["pelee_pi0_dir1_x"], energy1 * row["pelee_pi0_dir1_y"],
+                    energy1 * row["pelee_pi0_dir1_z"], energy1,
+                ])
+                direction = [row["pelee_pi0_dir1_x"], row["pelee_pi0_dir1_y"], row["pelee_pi0_dir1_z"]]
+                vertex = [row["pelee_pi0_rc_vtx_x"], row["pelee_pi0_rc_vtx_y"], row["pelee_pi0_rc_vtx_z"]]
+                radius = row["pelee_pi0_radlen1"]
+                norm = sum(component * component for component in direction)
+                projection = (-0.5 * np.sqrt(
+                    (-2.0 * sum(a * b for a, b in zip(direction, vertex))) ** 2
+                    - 4.0 * norm * (norm - radius ** 2)
+                ) + sum(a * b for a, b in zip(direction, vertex))) / norm
+                positions.append([projection * component for component in direction] + [projection])
+            if energy2 > 0.0:
+                momenta.append([
+                    energy2 * row["pelee_pi0_dir2_x"], energy2 * row["pelee_pi0_dir2_y"],
+                    energy2 * row["pelee_pi0_dir2_z"], energy2,
+                ])
+                direction = [row["pelee_pi0_dir2_x"], row["pelee_pi0_dir2_y"], row["pelee_pi0_dir2_z"]]
+                vertex = [row["pelee_pi0_rc_vtx_x"], row["pelee_pi0_rc_vtx_y"], row["pelee_pi0_rc_vtx_z"]]
+                radius = row["pelee_pi0_radlen2"]
+                norm = sum(component * component for component in direction)
+                projection = (-0.5 * np.sqrt(
+                    (-2.0 * sum(a * b for a, b in zip(direction, vertex))) ** 2
+                    - 4.0 * norm * (norm - radius ** 2)
+                ) + sum(a * b for a, b in zip(direction, vertex))) / norm
+                positions.append([projection * component for component in direction] + [projection])
+            while len(momenta) < 2:
+                empty_momentum, empty_position, _ = empty_photon()
+                momenta.append(empty_momentum)
+                positions.append(empty_position)
+            nphotons_nugraph = sum(pid == 2 for pid in row["pelee_pfng2semlabel"])
+            mass = GetInvariantMass(momenta[0], momenta[1]) if energy1 > 0.0 and energy2 > 0.0 else np.float32(-9999.0)
+            return {
+                "nphotons_pandora": row["pelee_n_showers_contained"],
+                "nphotons_nugraph": nphotons_nugraph,
+                "photon1_mom_pandora": momenta[0], "photon2_mom_pandora": momenta[1],
+                "photon1_XYZT_pandora": positions[0], "photon2_XYZT_pandora": positions[1],
+                "photon1_process_pandora": -9999, "photon2_process_pandora": -9999,
+                "photon_inv_mass_pandora": mass,
+            }
+
+        raise ValueError(f"Unknown reconstruction: {reco}")
+
+    required = {
+        "wc": ["true_event_type", "wc_reco_Ntrack", "wc_reco_startXYZT", "wc_reco_startMomentum", "wc_reco_pdg", "wc_reco_mother", "wc_reco_id"],
+        "lantern": ["lantern_nShowers", "lantern_showerPID", "lantern_showerStartPosX", "lantern_showerStartPosY", "lantern_showerStartPosZ", "lantern_showerStartDirX", "lantern_showerStartDirY", "lantern_showerStartDirZ", "lantern_showerRecoE", "lantern_showerProcess"],
+        "pandora": ["pelee_n_showers_contained", "pelee_pi0_energy1_Y", "pelee_pi0_energy2_Y", "pelee_pi0_dir1_x", "pelee_pi0_dir1_y", "pelee_pi0_dir1_z", "pelee_pi0_dir2_x", "pelee_pi0_dir2_y", "pelee_pi0_dir2_z", "pelee_pi0_radlen1", "pelee_pi0_radlen2", "pelee_pi0_rc_vtx_x", "pelee_pi0_rc_vtx_y", "pelee_pi0_rc_vtx_z", "pelee_pfng2semlabel"],
+    }
+    if reco not in required:
+        raise ValueError(f"Unknown reconstruction: {reco}")
     if reco == "lantern":
-        nShowers = all_df["lantern_nShowers"].to_numpy(zero_copy_only=False)
-        showerPID = all_df["lantern_showerPID"].to_numpy(zero_copy_only=False)
-        showerStartPosX = all_df["lantern_showerStartPosX"].to_numpy(zero_copy_only=False)
-        showerStartPosY = all_df["lantern_showerStartPosY"].to_numpy(zero_copy_only=False)
-        showerStartPosZ = all_df["lantern_showerStartPosZ"].to_numpy(zero_copy_only=False)
-        showerStartDirX = all_df["lantern_showerStartDirX"].to_numpy(zero_copy_only=False)
-        showerStartDirY = all_df["lantern_showerStartDirY"].to_numpy(zero_copy_only=False)
-        showerStartDirZ = all_df["lantern_showerStartDirZ"].to_numpy(zero_copy_only=False)
-        showerRecoE = all_df["lantern_showerRecoE"].to_numpy(zero_copy_only=False)
-        showerProcess = all_df["lantern_showerProcess"].to_numpy(zero_copy_only=False)
-        for i in range(num_evts):
-            if true_event_types[i]==12 or true_event_types[i]==13:
-                data = True
-            else:
-                data = False
-            nphotons_lantern = 0
-            photon1 = False
-            photon2 = False
-            mass = np.float32(-9999.)
-            for j in range(nShowers[i]):
-                if showerPID[i][j] == 22:
-                    nphotons_lantern += 1
-                    if not photon1:
-                        photon1 = True
-                        mom = [showerRecoE[i][j]*showerStartDirX[i][j], showerRecoE[i][j]*showerStartDirY[i][j], showerRecoE[i][j]*showerStartDirZ[i][j], showerRecoE[i][j]]
-                        pos = [showerStartPosX[i][j], showerStartPosY[i][j], showerStartPosZ[i][j], showerRecoE[i][j]]
-                        photon1_mom.append(mom)
-                        photon1_XYZT.append(pos)
-                        photon1_mother.append(showerProcess[i][j])
-                    elif not photon2:
-                        photon2 = True
-                        mom = [showerRecoE[i][j]*showerStartDirX[i][j], showerRecoE[i][j]*showerStartDirY[i][j], showerRecoE[i][j]*showerStartDirZ[i][j], showerRecoE[i][j]]
-                        pos = [showerStartPosX[i][j], showerStartPosY[i][j], showerStartPosZ[i][j], showerRecoE[i][j]]
-                        photon2_mom.append(mom)
-                        photon2_XYZT.append(pos)
-                        photon2_mother.append(showerProcess[i][j])
-            if not photon1:
-                photon1_mom.append(np.array(default_list, dtype='float32'))
-                photon1_XYZT.append(np.array(default_list, dtype='float32'))
-                photon1_mother.append(np.int32(-9999))
-            if not photon2:
-                photon2_mom.append(np.array(default_list, dtype='float32'))
-                photon2_XYZT.append(np.array(default_list, dtype='float32'))
-                photon2_mother.append(np.int32(-9999))
-            else:
-                mass = GetInvariantMass(photon1_mom[i], photon2_mom[i])
-            nphotons_list.append(nphotons_lantern)
-            inv_mass.append(mass)
-
-        all_df = all_df.with_columns([
-            pl.Series("nphotons_lantern", nphotons_list),
-            pl.Series("photon1_mom_lantern", photon1_mom),
-            pl.Series("photon2_mom_lantern", photon2_mom),
-            pl.Series("photon1_XYZT_lantern", photon1_XYZT),
-            pl.Series("photon2_XYZT_lantern", photon2_XYZT),
-            pl.Series("photon1_process_lantern", photon1_mother),
-            pl.Series("photon2_process_lantern", photon2_mother),
-            pl.Series("photon_inv_mass_lantern", inv_mass)
+        return_dtype = pl.Struct([
+            pl.Field("nphotons_lantern", pl.Int64),
+            pl.Field("photon1_mom_lantern", pl.List(pl.Float64)),
+            pl.Field("photon2_mom_lantern", pl.List(pl.Float64)),
+            pl.Field("photon1_XYZT_lantern", pl.List(pl.Float64)),
+            pl.Field("photon2_XYZT_lantern", pl.List(pl.Float64)),
+            pl.Field("photon1_process_lantern", pl.String),
+            pl.Field("photon2_process_lantern", pl.String),
+            pl.Field("photon_inv_mass_lantern", pl.Float64),
         ])
-
-    if reco == "pandora":
-        n_showers_contained = all_df["pelee_n_showers_contained"].to_numpy(zero_copy_only=False)
-        pi0_energy1_Y = [(x/0.83) * 1.10 for x in all_df["pelee_pi0_energy1_Y"].to_numpy(zero_copy_only=False)]
-        pi0_energy2_Y = [(x/0.83) * 1.10 for x in all_df["pelee_pi0_energy2_Y"].to_numpy(zero_copy_only=False)]
-        pi0_dir1_x = all_df["pelee_pi0_dir1_x"].to_numpy(zero_copy_only=False)
-        pi0_dir1_y = all_df["pelee_pi0_dir1_y"].to_numpy(zero_copy_only=False)
-        pi0_dir1_z = all_df["pelee_pi0_dir1_z"].to_numpy(zero_copy_only=False)
-        pi0_dir2_x = all_df["pelee_pi0_dir2_x"].to_numpy(zero_copy_only=False)
-        pi0_dir2_y = all_df["pelee_pi0_dir2_y"].to_numpy(zero_copy_only=False)
-        pi0_dir2_z = all_df["pelee_pi0_dir2_z"].to_numpy(zero_copy_only=False)
-        pi0_radlen1 = all_df["pelee_pi0_radlen1"].to_numpy(zero_copy_only=False)
-        pi0_radlen2 = all_df["pelee_pi0_radlen2"].to_numpy(zero_copy_only=False)
-        pi0_rc_vtx_x = all_df["pelee_pi0_rc_vtx_x"].to_numpy(zero_copy_only=False)
-        pi0_rc_vtx_y = all_df["pelee_pi0_rc_vtx_y"].to_numpy(zero_copy_only=False)
-        pi0_rc_vtx_z = all_df["pelee_pi0_rc_vtx_z"].to_numpy(zero_copy_only=False) 
-        #for nugraph, semantcic labels: 0 = MIP track, 1 = HIP track, 2 = Shower, 3= Michel electrons, 4 = Diffuse activity
-        pfng2semlbl = all_df["pelee_pfng2semlabel"].to_numpy(zero_copy_only=False)
-        nphotons_nugraph_list = []
-        for i in range(num_evts):
-            if true_event_types[i]==12 or true_event_types[i]==13:
-                data = True
-            else:
-                data = False
-            nphotons_pandora = 0
-            nphotons_nugraph = 0
-            photon1 = False
-            photon2 = False
-            mass = np.float32(-9999.)
-            nphotons_pandora = n_showers_contained[i]
-            for pid in pfng2semlbl[i]:
-                if pid == 2:
-                    nphotons_nugraph += 1
-            if pi0_energy1_Y[i] > 0.:
-                photon1 = True
-                mom = [pi0_energy1_Y[i]*pi0_dir1_x[i], pi0_energy1_Y[i]*pi0_dir1_y[i], pi0_energy1_Y[i]*pi0_dir1_z[i], pi0_energy1_Y[i]]
-                a = pi0_dir1_x[i]
-                b = pi0_dir1_y[i]
-                c = pi0_dir1_z[i]
-                x = pi0_rc_vtx_x[i]
-                y = pi0_rc_vtx_y[i]
-                z = pi0_rc_vtx_z[i]
-                r = pi0_radlen1[i]
-                posA = (-0.5*np.sqrt(pow(-2.0*a*x - 2.0*b*y - 2.0*c*z,2) - 4.0*(pow(a,2) + pow(b,2) + pow(c,2))*(pow(a,2) + pow(b,2) + pow(c,2) - pow(r,2))) + a*x + b*y + c*z) / (pow(a,2) + pow(b,2) + pow(c,2))
-                pos = [posA*pi0_dir1_x[i], posA*pi0_dir1_y[i], posA*pi0_dir1_z[i], posA]
-                photon1_mom.append(mom)
-                photon1_XYZT.append(pos)
-                photon1_mother.append(-9999)
-            if pi0_energy2_Y[i] > 0.:
-                photon2 = True
-                mom = [pi0_energy2_Y[i]*pi0_dir2_x[i], pi0_energy2_Y[i]*pi0_dir2_y[i], pi0_energy2_Y[i]*pi0_dir2_z[i], pi0_energy2_Y[i]]
-                a = pi0_dir2_x[i]
-                b = pi0_dir2_y[i]
-                c = pi0_dir2_z[i]
-                x = pi0_rc_vtx_x[i]
-                y = pi0_rc_vtx_y[i]
-                z = pi0_rc_vtx_z[i]
-                r = pi0_radlen2[i]
-                posA = (-0.5*np.sqrt(pow(-2.0*a*x - 2.0*b*y - 2.0*c*z,2) - 4.0*(pow(a,2) + pow(b,2) + pow(c,2))*(pow(a,2) + pow(b,2) + pow(c,2) - pow(r,2))) + a*x + b*y + c*z) / (pow(a,2) + pow(b,2) + pow(c,2))
-                pos = [posA*pi0_dir2_x[i], posA*pi0_dir2_y[i], posA*pi0_dir2_z[i], posA]
-                photon2_mom.append(mom)
-                photon2_XYZT.append(pos)
-                photon2_mother.append(np.int32(-9999))
-            if not photon1:
-                photon1_mom.append(np.array(default_list, dtype='float32'))
-                photon1_XYZT.append(np.array(default_list, dtype='float32'))
-                photon1_mother.append(np.int32(-9999))
-            if not photon2:
-                photon2_mom.append(np.array(default_list, dtype='float32'))
-                photon2_XYZT.append(np.array(default_list, dtype='float32'))
-                photon2_mother.append(np.int32(-9999))
-            else:
-                mass = GetInvariantMass(photon1_mom[i], photon2_mom[i])
-            nphotons_list.append(nphotons_pandora)
-            nphotons_nugraph_list.append(nphotons_nugraph)
-            inv_mass.append(mass)
-
-        all_df = all_df.with_columns([
-            pl.Series("nphotons_pandora", nphotons_list),
-            pl.Series("nphotons_nugraph", nphotons_nugraph_list),
-            pl.Series("photon1_mom_pandora", photon1_mom),
-            pl.Series("photon2_mom_pandora", photon2_mom),
-            pl.Series("photon1_XYZT_pandora", photon1_XYZT),
-            pl.Series("photon2_XYZT_pandora", photon2_XYZT),
-            pl.Series("photon1_process_pandora", photon1_mother),
-            pl.Series("photon2_process_pandora", photon2_mother),
-            pl.Series("photon_inv_mass_pandora", inv_mass)
+    elif reco == "pandora":
+        return_dtype = pl.Struct([
+            pl.Field("nphotons_pandora", pl.Int64),
+            pl.Field("nphotons_nugraph", pl.Int64),
+            pl.Field("photon1_mom_pandora", pl.List(pl.Float64)),
+            pl.Field("photon2_mom_pandora", pl.List(pl.Float64)),
+            pl.Field("photon1_XYZT_pandora", pl.List(pl.Float64)),
+            pl.Field("photon2_XYZT_pandora", pl.List(pl.Float64)),
+            pl.Field("photon1_process_pandora", pl.Int64),
+            pl.Field("photon2_process_pandora", pl.Int64),
+            pl.Field("photon_inv_mass_pandora", pl.Float64),
         ])
-
-    #if reco == "nugraph":
-
-
-    return all_df
+    else:
+        return_dtype = pl.Struct([
+            pl.Field("nphotons_wc", pl.Int64),
+            pl.Field("photon1_mom_wc", pl.List(pl.Float64)),
+            pl.Field("photon2_mom_wc", pl.List(pl.Float64)),
+            pl.Field("photon1_XYZT_wc", pl.List(pl.Float64)),
+            pl.Field("photon2_XYZT_wc", pl.List(pl.Float64)),
+            pl.Field("photon1_mother_wc", pl.Int64),
+            pl.Field("photon2_mother_wc", pl.Int64),
+            pl.Field("photon_inv_mass_wc", pl.Float64),
+        ])
+    output = all_df.with_columns(
+        pl.struct(required[reco]).map_elements(
+            photon_row, return_dtype=return_dtype
+        ).alias("__photons")
+    ).unnest("__photons")
+    return output.select(pl.all())
 
 def GetMuons(all_df, reco):
     nmuons_list = []
