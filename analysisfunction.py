@@ -535,7 +535,7 @@ def AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill=1001):
             return all_df
             
         # Collect to check for category 222
-        if 222 not in all_df.select(pl.col("true_event_type")).to_series():
+        if all_df.filter(pl.col("true_event_type") == 222).select(pl.count()).collect().item() == 0:
             print("Error: must add 2 photon truth category first")
             return all_df
         
