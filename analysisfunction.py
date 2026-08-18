@@ -595,7 +595,7 @@ def AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill=1001):
     # These require accessing nested arrays, so we use efficient NumPy operations
     
     # Initialize result arrays
-    num_evts = num_evts = all_df.select(pl.count()).collect().item() #all_df.height
+    num_evts = all_df.select(pl.count()).collect().item() #all_df.height
     newcat = []
     newcatname = []
     newcatcolor = []
@@ -783,7 +783,7 @@ def AddRecoVars(all_df):
     lantern_z = all_df["lantern_vtxZ"].to_numpy(zero_copy_only=False)
     lantern_foundvtx = all_df["lantern_foundVertex"].to_numpy(zero_copy_only=False)
 
-    num_evts = num_evts = all_df.select(pl.count()).collect().item() #all_df.height
+    num_evts = all_df.select(pl.count()).collect().item() #all_df.height
     for i in range(num_evts):
         wcpdist = np.sqrt(np.pow(wc_x[i] - pelee_x[i], 2) + np.pow(wc_y[i] - pelee_y[i], 2) + np.pow(wc_z[i] - pelee_z[i], 2))
         wcldist = np.sqrt(np.pow(wc_x[i] - lantern_x[i], 2) + np.pow(wc_y[i] - lantern_y[i], 2) + np.pow(wc_z[i] - lantern_z[i], 2))
