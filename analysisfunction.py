@@ -810,21 +810,21 @@ def AddRecoVars(all_df):
     pelee_invalid = pl.col("pelee_reco_nu_vtx_sce_z") < -1.0
     lantern_invalid = ~pl.col("lantern_foundVertex")
 
-    wc_pandora_distance = pl.sqrt(
+    wc_pandora_distance = (
         (pl.col("wc_reco_nuvtxX") - pl.col("pelee_reco_nu_vtx_sce_x")) ** 2
         + (pl.col("wc_reco_nuvtxY") - pl.col("pelee_reco_nu_vtx_sce_y")) ** 2
         + (pl.col("wc_reco_nuvtxZ") - pl.col("pelee_reco_nu_vtx_sce_z")) ** 2
-    )
-    wc_lantern_distance = pl.sqrt(
+    ).sqrt()
+    wc_lantern_distance = (
         (pl.col("wc_reco_nuvtxX") - pl.col("lantern_vtxX")) ** 2
         + (pl.col("wc_reco_nuvtxY") - pl.col("lantern_vtxY")) ** 2
         + (pl.col("wc_reco_nuvtxZ") - pl.col("lantern_vtxZ")) ** 2
-    )
-    lantern_pandora_distance = pl.sqrt(
+    ).sqrt()
+    lantern_pandora_distance = (
         (pl.col("lantern_vtxX") - pl.col("pelee_reco_nu_vtx_sce_x")) ** 2
         + (pl.col("lantern_vtxY") - pl.col("pelee_reco_nu_vtx_sce_y")) ** 2
         + (pl.col("lantern_vtxZ") - pl.col("pelee_reco_nu_vtx_sce_z")) ** 2
-    )
+    ).sqrt()
 
     return all_df.with_columns(
         pl.when(wc_invalid | pelee_invalid)
