@@ -807,8 +807,8 @@ def AddRecoVars(all_df):
         & (pl.col("wc_reco_nuvtxY") == -1.0)
         & (pl.col("wc_reco_nuvtxZ") == -1.0)
     )
-    pelee_invalid = pl.col("pelee_reco_nu_vtx_sce_z") < -1.0
-    lantern_invalid = ~pl.col("lantern_foundVertex")
+    pelee_invalid = pl.col("pelee_reco_nu_vtx_sce_z").cast(pl.Float64) < -1.0
+    lantern_invalid = ~pl.col("lantern_foundVertex").cast(pl.Boolean)
 
     wc_pandora_distance = (
         (pl.col("wc_reco_nuvtxX") - pl.col("pelee_reco_nu_vtx_sce_x")) ** 2
