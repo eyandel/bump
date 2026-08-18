@@ -595,10 +595,18 @@ def AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill=1001):
     # These require accessing nested arrays, so we use efficient NumPy operations
     
     # Initialize result arrays
-    if isinstance(all_df, pl.LazyFrame):
-        num_evts = all_df.select(["true_event_type"]).collect().height
-    else:
-        num_evts = all_df.height
+    is_lazy = isinstance(all_df, pl.LazyFrame)
+    if is_lazy:
+        lazy_df = all_df  
+        # Collect only the final filtered result
+        all_df = lazy_df.select([
+            "true_event_type", "wc_truth_Ntrack", "wc_truth_pdg",
+            "wc_truth_startMomentum", "wc_truth_process", "wc_truth_mother",
+            "wc_truth_endXYZT", "wc_truth_isCC", "filetype",
+            "true_event_type_name", "true_event_type_color", "true_event_type_fill"
+        ]).collect()
+
+    num_evts = all_df.height
     newcat = []
     newcatname = []
     newcatcolor = []
@@ -747,6 +755,10 @@ def AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill=1001):
         newcatfill = all_df["true_event_type_fill"].to_list()
     
     # Update DataFrame with new columns
+    if is_lazy:
+        del all_df
+        all_df = lazy_df
+    
     all_df = all_df.with_columns([
         pl.Series("true_event_type", newcat),
         pl.Series("true_event_type_name", newcatname),
