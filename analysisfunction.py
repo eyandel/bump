@@ -3427,7 +3427,7 @@ def GetVariableArrays(all_df, var, array_name, array_sig = [0,1,2,3,111], select
     var_array_data = []
 
     y = all_df["true_event_type"].to_numpy(zero_copy_only=False)
-    num_evts = all_df.shape[0]
+    num_evts = all_df.select(pl.count()).collect().item() #all_df.shape[0]
     passed_sel = PassSelection(selection, all_df, -1)
 
     for i in range(num_evts):
@@ -3495,7 +3495,7 @@ def GetEffPur(all_df, selection, array_sig = [0,1,2,3,111], ignore_cat = []):
         passed_sel = PassSelection(selection, all_df, -1)
     
     y = all_df["true_event_type"].to_numpy(zero_copy_only=False)
-    num_evts = all_df.shape[0]
+    num_evts = all_df.select(pl.count()).collect().item() #all_df.shape[0]
     
 
     tot_sig = 0.0
@@ -3540,7 +3540,7 @@ def GetEffPur(all_df, selection, array_sig = [0,1,2,3,111], ignore_cat = []):
 ###
 def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat = []):
     #return a table of efficiency and purity for multiple selections
-    num_evts = all_df.shape[0]
+    num_evts = all_df.select(pl.count()).collect().item() #all_df.shape[0]
     effs = []
     purs = []
     cc_effs = []
@@ -4020,7 +4020,7 @@ def PassSelection(selection, all_df, i):
     #if i < 0, return array of bools for all events in the dataframe
     if (i < 0):
         p = []
-        num_evts = all_df.shape[0]
+        num_evts = all_df.select(pl.count()).collect().item() #all_df.shape[0]
         if selection=="all":
             p = [True for j in range(num_evts)]
         else:
@@ -7465,7 +7465,7 @@ def Get2Photons(all_df, reco):
     nphotons_list = []
     inv_mass = []
     em_charge_scale = 1.0
-    num_evts = all_df.shape[0]
+    num_evts = all_df.select(pl.count()).collect().item() #all_df.shape[0]
     data = False 
     true_event_types = all_df["true_event_type"].to_numpy(zero_copy_only=False)
     default_list = [-9999., -9999., -9999., -9999.]
@@ -7694,7 +7694,7 @@ def Get2Photons(all_df, reco):
 
 def GetMuons(all_df, reco):
     nmuons_list = []
-    num_evts = all_df.shape[0]
+    num_evts = all_df.select(pl.count()).collect().item() #all_df.shape[0]
 
     if reco == "wc":
         reco_pdg = all_df["wc_reco_pdg"].to_numpy(zero_copy_only=False)
@@ -7796,7 +7796,7 @@ def CombinePhotonVars(all_df, var):
 
     
 
-    num_evts = all_df.shape[0]
+    num_evts = all_df.select(pl.count()).collect().item() #all_df.shape[0]
 
     for i in range(num_evts):
         if passed_wc[i]:
