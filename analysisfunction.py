@@ -874,11 +874,11 @@ def LoadFilesLazy(files, filetype, su = False, gennu_only = False):
         else:
             print("NOT A SUPPORTED FILE TYPE")
             break
-        df_temp = df_temp.with_columns([
-                                pl.col(pl.Float64).cast(pl.Float32),
-                                pl.col(pl.Int64).cast(pl.Int32),
-                                pl.col(pl.UInt64).cast(pl.UInt32),
-                            ]).rechunk()
+        #df_temp = df_temp.with_columns([
+        #                        pl.col(pl.Float64).cast(pl.Float32),
+        #                        pl.col(pl.Int64).cast(pl.Int32),
+        #                        pl.col(pl.UInt64).cast(pl.UInt32),
+        #                    ]).rechunk()
         dfs.append(df_temp)
         gc.collect()
     
