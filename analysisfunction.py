@@ -596,7 +596,7 @@ def AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill=1001):
     
     # Initialize result arrays
     if isinstance(all_df, pl.LazyFrame):
-        num_evts = all_df.select(pl.len()).collect().item()
+        num_evts = all_df.select(pl.count("wc_run")).collect().item()
     else:
         num_evts = all_df.height
     newcat = []
@@ -771,48 +771,44 @@ def AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill=1001):
     
 
 def AddRecoVars(all_df):
-    wc_pandora_dist = []
-    wc_lantern_dist = []
-    lantern_pandora_dist = []
-
-    wc_x      = all_df["wc_reco_nuvtxX"].to_numpy(zero_copy_only=False)
-    wc_y      = all_df["wc_reco_nuvtxY"].to_numpy(zero_copy_only=False)
-    wc_z      = all_df["wc_reco_nuvtxZ"].to_numpy(zero_copy_only=False)
-    pelee_x   = all_df["pelee_reco_nu_vtx_sce_x"].to_numpy(zero_copy_only=False)
-    pelee_y   = all_df["pelee_reco_nu_vtx_sce_y"].to_numpy(zero_copy_only=False)
-    pelee_z   = all_df["pelee_reco_nu_vtx_sce_z"].to_numpy(zero_copy_only=False)
-    lantern_x = all_df["lantern_vtxX"].to_numpy(zero_copy_only=False)
-    lantern_y = all_df["lantern_vtxY"].to_numpy(zero_copy_only=False)
-    lantern_z = all_df["lantern_vtxZ"].to_numpy(zero_copy_only=False)
-    lantern_foundvtx = all_df["lantern_foundVertex"].to_numpy(zero_copy_only=False)
-
-    if isinstance(all_df, pl.LazyFrame):
-        num_evts = all_df.select(pl.len()).collect().item()
-    else:
-        num_evts = all_df.height
-    for i in range(num_evts):
-        wcpdist = np.sqrt(np.pow(wc_x[i] - pelee_x[i], 2) + np.pow(wc_y[i] - pelee_y[i], 2) + np.pow(wc_z[i] - pelee_z[i], 2))
-        wcldist = np.sqrt(np.pow(wc_x[i] - lantern_x[i], 2) + np.pow(wc_y[i] - lantern_y[i], 2) + np.pow(wc_z[i] - lantern_z[i], 2))
-        lpdist = np.sqrt(np.pow(lantern_x[i] - pelee_x[i], 2) + np.pow(lantern_y[i] - pelee_y[i], 2) + np.pow(lantern_z[i] - pelee_z[i], 2))
-        if wc_x[i] == -1. and wc_y[i] == -1. and wc_z[i] == -1:
-            wcpdist = np.float32(-9999.)
-            wcldist = np.float32(-9999.)
-        if pelee_z[i] < -1.:
-            wcpdist = np.float32(-9999.)
-            lpdist = np.float32(-9999.)
-        if not lantern_foundvtx[i]:
-            wcldist = np.float32(-9999.)
-            lpdist = np.float32(-9999.)
-        wc_pandora_dist.append(wcpdist)
-        wc_lantern_dist.append(wcldist)
-        lantern_pandora_dist.append(lpdist)
-
-    all_df = all_df.with_columns(
-        pl.Series("wc_pandora_dist", wc_pandora_dist),
-        pl.Series("wc_lantern_dist", wc_lantern_dist),
-        pl.Series("lantern_pandora_dist", lantern_pandora_dist)
+    wc_invalid = (
+        (pl.col("wc_reco_nuvtxX") == -1.0)
+        & (pl.col("wc_reco_nuvtxY") == -1.0)
+        & (pl.col("wc_reco_nuvtxZ") == -1.0)
     )
-    return all_df
+    pelee_invalid = pl.col("pelee_reco_nu_vtx_sce_z") < -1.0
+    lantern_invalid = ~pl.col("lantern_foundVertex")
+
+    wc_pandora_distance = pl.sqrt(
+        (pl.col("wc_reco_nuvtxX") - pl.col("pelee_reco_nu_vtx_sce_x")) ** 2
+        + (pl.col("wc_reco_nuvtxY") - pl.col("pelee_reco_nu_vtx_sce_y")) ** 2
+        + (pl.col("wc_reco_nuvtxZ") - pl.col("pelee_reco_nu_vtx_sce_z")) ** 2
+    )
+    wc_lantern_distance = pl.sqrt(
+        (pl.col("wc_reco_nuvtxX") - pl.col("lantern_vtxX")) ** 2
+        + (pl.col("wc_reco_nuvtxY") - pl.col("lantern_vtxY")) ** 2
+        + (pl.col("wc_reco_nuvtxZ") - pl.col("lantern_vtxZ")) ** 2
+    )
+    lantern_pandora_distance = pl.sqrt(
+        (pl.col("lantern_vtxX") - pl.col("pelee_reco_nu_vtx_sce_x")) ** 2
+        + (pl.col("lantern_vtxY") - pl.col("pelee_reco_nu_vtx_sce_y")) ** 2
+        + (pl.col("lantern_vtxZ") - pl.col("pelee_reco_nu_vtx_sce_z")) ** 2
+    )
+
+    return all_df.with_columns(
+        pl.when(wc_invalid | pelee_invalid)
+        .then(-9999.0)
+        .otherwise(wc_pandora_distance)
+        .alias("wc_pandora_dist"),
+        pl.when(wc_invalid | lantern_invalid)
+        .then(-9999.0)
+        .otherwise(wc_lantern_distance)
+        .alias("wc_lantern_dist"),
+        pl.when(pelee_invalid | lantern_invalid)
+        .then(-9999.0)
+        .otherwise(lantern_pandora_distance)
+        .alias("lantern_pandora_dist"),
+    )
 
 def LoadFiles(files, filetype, su = False, gennu_only = False):
     #files: list of files
@@ -3376,7 +3372,7 @@ def GetVariableArrays(all_df, var, array_name, array_sig = [0,1,2,3,111], select
 
     y = all_df["true_event_type"].to_numpy(zero_copy_only=False)
     if isinstance(all_df, pl.LazyFrame):
-        num_evts = all_df.select(pl.len()).collect().item()
+        num_evts = all_df.select(pl.count("true_event_type")).collect().item()
     else:
         num_evts = all_df.height
     passed_sel = PassSelection(selection, all_df, -1)
@@ -3447,7 +3443,7 @@ def GetEffPur(all_df, selection, array_sig = [0,1,2,3,111], ignore_cat = []):
     
     y = all_df["true_event_type"].to_numpy(zero_copy_only=False)
     if isinstance(all_df, pl.LazyFrame):
-        num_evts = all_df.select(pl.len()).collect().item()
+        num_evts = all_df.select(pl.count("wc_run")).collect().item()
     else:
         num_evts = all_df.height
     
@@ -3495,7 +3491,7 @@ def GetEffPur(all_df, selection, array_sig = [0,1,2,3,111], ignore_cat = []):
 def GetSelectionTable(all_df, selections, array_sig = [0,1,2,3,111], ignore_cat = []):
     #return a table of efficiency and purity for multiple selections
     if isinstance(all_df, pl.LazyFrame):
-        num_evts = all_df.select(pl.len()).collect().item()
+        num_evts = all_df.select(pl.count("wc_run")).collect().item()
     else:
         num_evts = all_df.height  
     effs = []
@@ -3977,7 +3973,10 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
         #if i % 10000 == 0:
             print("weight for event %d: %.3e" % (i, w[i]))
                 
-    all_df = all_df.with_columns([pl.Series("weights", w)])
+    if is_lazy:
+        all_df = lazy_df.with_columns(pl.Series("weights", w))
+    else:
+        all_df = all_df.with_columns([pl.Series("weights", w)])
 
     return all_df, w
 
@@ -3991,7 +3990,7 @@ def PassSelection(selection, all_df, i):
     if (i < 0):
         p = []
         if isinstance(all_df, pl.LazyFrame):
-            num_evts = all_df.select(pl.len()).collect().item()
+            num_evts = all_df.select(pl.count("wc_run")).collect().item()
         else:
             num_evts = all_df.height
         if selection=="all":
@@ -7616,50 +7615,34 @@ def Get2Photons(all_df, reco):
     return output.select(pl.all())
 
 def GetMuons(all_df, reco):
-    nmuons_list = []
-    if isinstance(all_df, pl.LazyFrame):
-        num_evts = all_df.select(pl.len()).collect().item()
-    else:
-        num_evts = all_df.height
-
     if reco == "wc":
-        reco_pdg = all_df["wc_reco_pdg"].to_numpy(zero_copy_only=False)
-        for i in range(num_evts):
-            nmuon_wc = 0
-            for pdg in reco_pdg[i]:
-                if abs(pdg) == 13:
-                    nmuon_wc += 1
-            nmuons_list.append(nmuon_wc)
+        return all_df.with_columns(
+            pl.col("wc_reco_pdg")
+            .list.eval(pl.element().abs() == 13)
+            .list.sum()
+            .cast(pl.Int64)
+            .alias("nmuons_wc")
+        )
 
-        all_df = all_df.with_columns(pl.Series("nmuons_wc", nmuons_list))
-    
     if reco == "lantern":
-        trackPID = all_df["lantern_trackPID"].to_numpy(zero_copy_only=False)
-        for i in range(num_evts):
-            nmuon_lantern = 0
-            for pid in trackPID[i]:
-                if abs(pid) == 13:
-                    nmuon_lantern += 1
-            nmuons_list.append(nmuon_lantern)
-
-        all_df = all_df.with_columns(pl.Series("nmuons_lantern", nmuons_list))
+        return all_df.with_columns(
+            pl.col("lantern_trackPID")
+            .list.eval(pl.element().abs() == 13)
+            .list.sum()
+            .cast(pl.Int64)
+            .alias("nmuons_lantern")
+        )
 
     if reco == "pandora":
-        #pfng2mipfrac = all_df["pelee_pfng2mipfrac"].to_numpy(zero_copy_only=False)
-        pfng2semlbl = all_df["pelee_pfng2semlabel"].to_numpy(zero_copy_only=False)
-        for i in range(num_evts):
-            nmuon_pandora = 0
-            for pid in pfng2semlbl[i]:
-                if pid == 0:
-                    nmuon_pandora += 1
-            nmuons_list.append(nmuon_pandora)
+        return all_df.with_columns(
+            pl.col("pelee_pfng2semlabel")
+            .list.eval(pl.element() == 0)
+            .list.sum()
+            .cast(pl.Int64)
+            .alias("nmuons_pandora")
+        )
 
-        all_df = all_df.with_columns(pl.Series("nmuons_pandora", nmuons_list))
-
-    #if reco == "nugraph":
-
-
-    return all_df
+    raise ValueError(f"Unknown reconstruction: {reco}")
 
 
 
@@ -7723,7 +7706,7 @@ def CombinePhotonVars(all_df, var):
     
 
     if isinstance(all_df, pl.LazyFrame):
-        num_evts = all_df.select(pl.len()).collect().item()
+        num_evts = all_df.select(pl.count("wc_run")).collect().item()
     else:
         num_evts = all_df.height
 
@@ -7737,7 +7720,10 @@ def CombinePhotonVars(all_df, var):
         else:
             var_list.append(np.float32(-9999.))
 
-    all_df = all_df.with_columns(pl.Series(var, var_list))
+    if is_lazy:
+        all_df = lazy_df.with_columns(pl.Series(var, var_list))
+    else:
+        all_df = all_df.with_columns(pl.Series(var, var_list))
     
     return all_df, var_list
 
