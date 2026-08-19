@@ -4014,11 +4014,13 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
             print("weight for event %d: %.3e" % (i, w[i]))
                 
     if is_lazy:
-        all_df = lazy_df.with_columns(pl.Series("weights", w))
+        return lazy_df.with_columns(
+            pl.int_range(pl.len()).replace(range(len(w)), w).alias("weights")
+        ), w
     else:
-        all_df = all_df.with_columns([pl.Series("weights", w)])
+        return all_df.with_columns([pl.Series("weights", w)]), w
 
-    return all_df, w
+    # return all_df, w
 
 
 ###
