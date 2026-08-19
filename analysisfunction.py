@@ -47,6 +47,9 @@ def join_index(left, right, suffix=None, lsuffix=None, rsuffix=None, how='left')
         suffix = rsuffix if rsuffix else lsuffix
     if suffix:
         return left.join(right, on=idx_col, how=how, suffix=suffix).drop(idx_col)
+    # Drop columns already present in `left` so polars doesn't silently create "_right"-suffixed duplicates
+    dup_cols = [c for c in right.columns if c in left.columns and c != idx_col]
+    right = right.drop(dup_cols)
     return left.join(right, on=idx_col, how=how).drop(idx_col)
 
 
@@ -1503,6 +1506,182 @@ def LoadTreesData1(file1, su = False):
     else:
         return all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, all_df_in_eval_over
 
+###
+def LoadTreesDataLazy(files, su = False):
+    """Load and concatenate multiple data-like files as LazyFrames"""
+    i_run = 0
+    all_df_in_bdt_vec = []
+    all_df_in_pfeval_vec = []
+    all_df_in_kine_vec = []
+    all_df_in_eval_vec = []
+    all_df_in_time_vec = []
+    all_df_in_pelee_vec = []
+    all_df_in_glee_vec = []
+    all_df_in_lantern_vec = []
+
+    for file in files:
+        i_run += 1
+        if not file:
+            print(f"Skipping file {i_run}/{len(files)} because it is empty")
+            continue
+
+        print(f"Loading file {i_run}/{len(files)}: {file}")
+
+        if su:
+            (bdt_temp, pfeval_temp, kine_temp, eval_temp,
+             time_temp, pelee_temp, glee_temp, lantern_temp) = LoadTreesData1Lazy(file, su=su)
+
+            all_df_in_bdt_vec.append(bdt_temp)
+            all_df_in_pfeval_vec.append(pfeval_temp)
+            all_df_in_kine_vec.append(kine_temp)
+            all_df_in_eval_vec.append(eval_temp)
+            all_df_in_time_vec.append(time_temp)
+            all_df_in_pelee_vec.append(pelee_temp)
+            all_df_in_glee_vec.append(glee_temp)
+            all_df_in_lantern_vec.append(lantern_temp)
+        else:
+            (bdt_temp, pfeval_temp, kine_temp, eval_temp) = LoadTreesData1Lazy(file, su=su)
+
+            all_df_in_bdt_vec.append(bdt_temp)
+            all_df_in_pfeval_vec.append(pfeval_temp)
+            all_df_in_kine_vec.append(kine_temp)
+            all_df_in_eval_vec.append(eval_temp)
+
+        gc.collect()
+        print(f"Finished loading file {i_run}/{len(files)}: {file}")
+
+    print("Concatenating all dataframes (still lazy)...")
+
+    all_df_in_bdt_over = pl.concat(all_df_in_bdt_vec, how="vertical")
+    all_df_in_pfeval_over = pl.concat(all_df_in_pfeval_vec, how="vertical")
+    all_df_in_kine_over = pl.concat(all_df_in_kine_vec, how="vertical")
+    all_df_in_eval_over = pl.concat(all_df_in_eval_vec, how="vertical")
+
+    del all_df_in_bdt_vec
+    del all_df_in_pfeval_vec
+    del all_df_in_kine_vec
+    del all_df_in_eval_vec
+    gc.collect()
+
+    if su:
+        all_df_in_time_data = pl.concat(all_df_in_time_vec, how="vertical")
+        all_df_in_pelee_data = pl.concat(all_df_in_pelee_vec, how="vertical")
+        all_df_in_glee_data = pl.concat(all_df_in_glee_vec, how="vertical")
+        all_df_in_lantern_data = pl.concat(all_df_in_lantern_vec, how="vertical")
+
+        del all_df_in_time_vec
+        del all_df_in_pelee_vec
+        del all_df_in_glee_vec
+        del all_df_in_lantern_vec
+        gc.collect()
+
+        return (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over,
+                all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data,
+                all_df_in_glee_data, all_df_in_lantern_data)
+    else:
+        return (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over,
+                all_df_in_eval_over)
+
+def LoadTreesData1Lazy(file1, su = False):
+    import os
+    import subprocess
+    is_gpvm = False
+    rundir = os.getcwd()
+    cmd = ["hostname"]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    if "/exp/uboone" in rundir:
+        is_gpvm = True
+    elif "jupyter" in result.stdout:
+        is_gpvm = True
+
+    with uproot.open(file1)["wcpselection/T_BDTvars"] as f_in_bdt_over:
+        all_df_in_bdt_over = pl.from_pandas(f_in_bdt_over.arrays(bdt_variables, library="pd")).lazy()
+
+    with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_pfeval_over:
+        all_df_in_pfeval_over = pl.from_pandas(f_in_pfeval_over.arrays(pfeval_variables, library="pd")).lazy()
+
+    with uproot.open(file1)["wcpselection/T_KINEvars"] as f_in_kine_over:
+        all_df_in_kine_over = pl.from_pandas(f_in_kine_over.arrays(kine_variables, library="pd")).lazy()
+
+    with uproot.open(file1)["wcpselection/T_eval"] as f_in_eval_over:
+        all_df_in_eval_over = pl.from_pandas(f_in_eval_over.arrays(eval_variables, library="pd")).lazy()
+
+    run_number_val = -999
+    if is_gpvm:
+        if "run1_full_samples" in file1:
+            run_number_val = 1
+        elif "run2_full_samples" in file1:
+            run_number_val = 2
+        elif "run3_full_samples" in file1:
+            run_number_val = 3
+        elif "run4a_full_samples" in file1:
+            run_number_val = 41
+        elif "run4b_full_samples" in file1:
+            run_number_val = 42
+        elif "run4c_full_samples" in file1:
+            run_number_val = 43
+        elif "run4d_full_samples" in file1:
+            run_number_val = 44
+        elif "run4_full_samples" in file1:
+            run_number_val = 4
+        elif "run5_full_samples" in file1:
+            run_number_val = 5
+    else:
+        if "run1" in file1 or "Run1" in file1:
+            run_number_val = 1
+        elif "run2" in file1 or "Run2" in file1:
+            run_number_val = 2
+        elif "run3" in file1 or "Run3" in file1:
+            run_number_val = 3
+        elif "run4a" in file1 or "Run4a" in file1:
+            run_number_val = 41
+        elif "run4b" in file1 or "Run4b" in file1 or "run_4b" in file1.lower():
+            run_number_val = 42
+        elif "run4c" in file1 or "Run4c" in file1 or "run_4c" in file1.lower():
+            run_number_val = 43
+        elif "run4d" in file1 or "Run4d" in file1 or "run_4d" in file1.lower():
+            run_number_val = 44
+        elif "run4_" in file1 or "Run4_" in file1 or "run_4_" in file1.lower():
+            run_number_val = 4
+        elif "run5" in file1 or "Run5" in file1:
+            run_number_val = 5
+
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns([
+        pl.lit(run_number_val).alias("run_period"),
+        pl.lit(file1).alias("file_name")
+    ])
+
+    if su:
+        with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
+            all_df_in_time_data = pl.from_pandas(f_in_time_data.arrays(
+                time_variables + larpid_reco_variables,
+                library="pd"
+            )).lazy()
+
+        with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
+            all_df_in_pelee_data = pl.from_pandas(f_in_pelee_data.arrays(
+                pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables + pelee_time_variables,
+                library="pd"
+            )).lazy().select([pl.col("*").name.prefix("pelee_")])
+
+        with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
+            all_df_in_glee_data = pl.from_pandas(f_in_glee_data.arrays(
+                glee_reco_variables,
+                library="pd"
+            )).lazy().select([pl.col("*").name.prefix("glee_")])
+
+        with uproot.open(file1)["lantern/EventTree"] as f_in_lantern_data:
+            all_df_in_lantern_data = pl.from_pandas(f_in_lantern_data.arrays(
+                lantern_reco_variables,
+                library="pd"
+            )).lazy().select([pl.col("*").name.prefix("lantern_")])
+
+        return (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over,
+                all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data,
+                all_df_in_glee_data, all_df_in_lantern_data)
+    else:
+        return (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over,
+                all_df_in_eval_over)
 
 ###
 def LoadBNBOverlay(files, su = False, gennu_only = False):
@@ -2349,6 +2528,122 @@ def LoadDirt(files, su = False, gennu_only = False):
     return all_df_in_bdt_dirt
 
 ###
+def LoadDirtLazy(files, su = False, gennu_only = False):
+    print("Loading Dirt Overlay")
+    if su:
+        (all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt,
+         all_df_in_eval_dirt, all_df_in_time_dirt, all_df_in_pelee_dirt,
+         all_df_in_glee_dirt, all_df_in_lantern_dirt) = LoadTreesTruthLazy(files, su=su)
+    else:
+        (all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt,
+         all_df_in_eval_dirt) = LoadTreesTruthLazy(files, su=su)
+        all_df_in_time_dirt = None
+        all_df_in_pelee_dirt = None
+        all_df_in_glee_dirt = None
+        all_df_in_lantern_dirt = None
+
+    print("Processing with lazy evaluation")
+
+    frames = [all_df_in_bdt_dirt, all_df_in_pfeval_dirt,
+              all_df_in_kine_dirt, all_df_in_eval_dirt]
+    if su:
+        frames.extend([all_df_in_time_dirt, all_df_in_pelee_dirt,
+                       all_df_in_glee_dirt, all_df_in_lantern_dirt])
+    frames = [frame.with_row_index("__idx") for frame in frames]
+    (all_df_in_bdt_dirt, all_df_in_pfeval_dirt, all_df_in_kine_dirt,
+     all_df_in_eval_dirt) = frames[:4]
+
+    all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(
+        all_df_in_pfeval_dirt, on="__idx", how="left", suffix="_pfeval"
+    ).join(
+        all_df_in_kine_dirt, on="__idx", how="left", suffix="_kine"
+    ).join(
+        all_df_in_eval_dirt, on="__idx", how="left", suffix="_eval"
+    )
+
+    if su:
+        (all_df_in_time_dirt, all_df_in_pelee_dirt, all_df_in_glee_dirt,
+         all_df_in_lantern_dirt) = frames[4:]
+        all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(
+            all_df_in_time_dirt, on="__idx", how="left", suffix="_time"
+        )
+
+    all_df_in_bdt_dirt = all_df_in_bdt_dirt.with_columns([
+        pl.lit("dirt_overlay").alias("filetype"),
+        pl.lit(0).cast(pl.Int32).alias("is_sigoverlay"),
+        pl.lit(-9999.0).alias("time"),
+        pl.col("truth_showerMomentum").arr.get(0).alias("truth_showerMomentum0"),
+        pl.col("truth_showerMomentum").arr.get(1).alias("truth_showerMomentum1"),
+        pl.col("truth_showerMomentum").arr.get(2).alias("truth_showerMomentum2"),
+        pl.col("truth_showerMomentum").arr.get(3).alias("truth_showerMomentum3"),
+        pl.col("reco_showerMomentum").arr.get(0).alias("reco_showerMomentum0"),
+        pl.col("reco_showerMomentum").arr.get(1).alias("reco_showerMomentum1"),
+        pl.col("reco_showerMomentum").arr.get(2).alias("reco_showerMomentum2"),
+        pl.col("reco_showerMomentum").arr.get(3).alias("reco_showerMomentum3"),
+        pl.when(pl.col("single_photon_numu_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_numu_score")).alias("single_photon_numu_score"),
+        pl.when(pl.col("single_photon_other_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_other_score")).alias("single_photon_other_score"),
+        pl.when(pl.col("single_photon_ncpi0_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_ncpi0_score")).alias("single_photon_ncpi0_score"),
+        pl.when(pl.col("single_photon_nue_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_nue_score")).alias("single_photon_nue_score"),
+        pl.struct(["kine_energy_particle", "kine_particle_type"]).map_elements(
+            lambda row: sum(
+                abs(particle_type) == 2212 and particle_energy > 35
+                for particle_energy, particle_type in zip(
+                    row["kine_energy_particle"], row["kine_particle_type"]
+                )
+            ),
+            return_dtype=pl.Int64,
+        ).alias("N_protons"),
+        pl.struct([
+            "truth_Ntrack", "truth_pdg", "truth_mother", "truth_startMomentum"
+        ]).map_elements(
+            lambda row: sum(
+                abs(row["truth_pdg"][index]) == 2212
+                and row["truth_mother"][index] == 0
+                and row["truth_startMomentum"][index][3] - 0.938272 > 0.035
+                for index in range(row["truth_Ntrack"])
+            ),
+            return_dtype=pl.Int64,
+        ).alias("true_N_protons")
+    ])
+
+    # dirt has no signal categories, so events are either signal-like (out of FV, 111) or bkg (11)
+    signal = (
+        (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1)
+        & (pl.col("truth_single_photon") == 1)
+        & (
+            ~pl.col("truth_isCC")
+            | (
+                pl.col("truth_isCC")
+                & (pl.col("truth_nuPdg").abs() == 14)
+                & ((pl.col("truth_muonMomentum").arr.get(3) - 0.105658) < 0.1)
+            )
+        )
+    )
+    all_df_in_bdt_dirt = all_df_in_bdt_dirt.with_columns(
+        pl.when(signal).then(111).otherwise(11).alias("true_event_type")
+    )
+
+    all_df_in_bdt_dirt = all_df_in_bdt_dirt.rename(lambda col: f"wc_{col}" if col != "__idx" else col)
+    all_df_in_bdt_dirt = all_df_in_bdt_dirt.with_columns([
+        pl.col("wc_true_event_type").alias("true_event_type"),
+        pl.col("wc_filetype").alias("filetype")
+    ])
+    if su:
+        for frame, suffix in ((all_df_in_pelee_dirt, "pelee"),
+                              (all_df_in_glee_dirt, "glee"),
+                              (all_df_in_lantern_dirt, "lantern")):
+            all_df_in_bdt_dirt = all_df_in_bdt_dirt.join(
+                frame, on="__idx", how="left", suffix=f"_{suffix}"
+            )
+    all_df_in_bdt_dirt = all_df_in_bdt_dirt.drop("__idx")
+    if gennu_only:
+        print("Throwing away events that don't pass generic neutrino selection")
+        all_df_in_bdt_dirt = all_df_in_bdt_dirt.filter(pl.col("wc_kine_reco_Enu") >= 0)
+    print("Done loading Dirt Overlay (still lazy)")
+    return all_df_in_bdt_dirt
+
+
+###
 def LoadExtBnb(files, su = False, gennu_only = False):
     #all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext, all_df_in_eval_ext, all_df_in_time_ext = [], all_df_in_pelee_ext = [], all_df_in_glee_ext = [], all_df_in_lantern_ext = []):
     print("Loading EXTBNB")
@@ -2668,6 +2963,115 @@ def LoadExtBnb(files, su = False, gennu_only = False):
 
     print("done loading EXTBNB")
     return all_df_in_bdt_ext
+
+def LoadExtBnbLazy(files, su = False, gennu_only = False):
+    print("Loading EXTBNB")
+    if su:
+        (all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext,
+         all_df_in_eval_ext, all_df_in_time_ext, all_df_in_pelee_ext,
+         all_df_in_glee_ext, all_df_in_lantern_ext) = LoadTreesDataLazy(files, su=su)
+    else:
+        (all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext,
+         all_df_in_eval_ext) = LoadTreesDataLazy(files, su=su)
+        all_df_in_time_ext = None
+        all_df_in_pelee_ext = None
+        all_df_in_glee_ext = None
+        all_df_in_lantern_ext = None
+
+    print("Processing with lazy evaluation")
+
+    frames = [all_df_in_bdt_ext, all_df_in_pfeval_ext,
+              all_df_in_kine_ext, all_df_in_eval_ext]
+    if su:
+        frames.extend([all_df_in_time_ext, all_df_in_pelee_ext,
+                       all_df_in_glee_ext, all_df_in_lantern_ext])
+    frames = [frame.with_row_index("__idx") for frame in frames]
+    (all_df_in_bdt_ext, all_df_in_pfeval_ext, all_df_in_kine_ext,
+     all_df_in_eval_ext) = frames[:4]
+
+    all_df_in_bdt_ext = all_df_in_bdt_ext.join(
+        all_df_in_pfeval_ext, on="__idx", how="left", suffix="_pfeval"
+    ).join(
+        all_df_in_kine_ext, on="__idx", how="left", suffix="_kine"
+    ).join(
+        all_df_in_eval_ext, on="__idx", how="left", suffix="_eval"
+    )
+
+    if su:
+        (all_df_in_time_ext, all_df_in_pelee_ext, all_df_in_glee_ext,
+         all_df_in_lantern_ext) = frames[4:]
+        all_df_in_bdt_ext = all_df_in_bdt_ext.join(
+            all_df_in_time_ext, on="__idx", how="left", suffix="_time"
+        )
+
+    default_truth_list = [-9999.0, -9999.0, -9999.0, -9999.0]
+    all_df_in_bdt_ext = all_df_in_bdt_ext.with_columns([
+        pl.lit("ext").alias("filetype"),
+        pl.lit(12).alias("true_event_type"),
+        pl.lit(1.0).alias("weight_cv"),
+        pl.lit(1.0).alias("weight_spline"),
+        pl.lit(0).cast(pl.Int32).alias("is_sigoverlay"),
+        pl.lit(-9999.0).alias("time"),
+        (pl.lit(wc_em_charge_scale) * pl.col("shw_sp_energy")).alias("shw_sp_energy"),
+        pl.col("reco_showerMomentum").arr.get(0).alias("reco_showerMomentum0"),
+        pl.col("reco_showerMomentum").arr.get(1).alias("reco_showerMomentum1"),
+        pl.col("reco_showerMomentum").arr.get(2).alias("reco_showerMomentum2"),
+        pl.col("reco_showerMomentum").arr.get(3).alias("reco_showerMomentum3"),
+        pl.lit(-1.0).alias("truth_showerMomentum0"),
+        pl.lit(-1.0).alias("truth_showerMomentum1"),
+        pl.lit(-1.0).alias("truth_showerMomentum2"),
+        pl.lit(-1.0).alias("truth_showerMomentum3"),
+        pl.when(pl.col("single_photon_numu_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_numu_score")).alias("single_photon_numu_score"),
+        pl.when(pl.col("single_photon_other_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_other_score")).alias("single_photon_other_score"),
+        pl.when(pl.col("single_photon_ncpi0_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_ncpi0_score")).alias("single_photon_ncpi0_score"),
+        pl.when(pl.col("single_photon_nue_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_nue_score")).alias("single_photon_nue_score"),
+        pl.struct(["kine_energy_particle", "kine_particle_type"]).map_elements(
+            lambda row: sum(
+                abs(particle_type) == 2212 and particle_energy > 35
+                for particle_energy, particle_type in zip(
+                    row["kine_energy_particle"], row["kine_particle_type"]
+                )
+            ),
+            return_dtype=pl.Int64,
+        ).alias("N_protons"),
+    ])
+
+    # ext files have no truth information, so add placeholder truth columns matching LoadExtBnb
+    truth_placeholder_columns = []
+    for t in truth_variables:
+        if t in ("truth_id", "truth_pdg", "truth_process", "truth_mother"):
+            truth_placeholder_columns.append(pl.lit([-9999]).alias(t))
+        elif t in ("truth_startXYZT", "truth_endXYZT", "truth_startMomentum", "truth_endMomentum"):
+            truth_placeholder_columns.append(pl.lit([default_truth_list]).alias(t))
+        elif t in ("truth_single_photon", "truth_showerMother", "truth_Npi0", "truth_NCDelta"):
+            truth_placeholder_columns.append(pl.lit(-9999).cast(pl.Int32).alias(t))
+        elif t in ("truth_showerKE", "truth_energyInside", "truth_nuEnergy"):
+            truth_placeholder_columns.append(pl.lit(-9999.0).cast(pl.Float32).alias(t))
+        elif t == "truth_isCC":
+            truth_placeholder_columns.append(pl.lit(False).alias(t))
+        else:
+            truth_placeholder_columns.append(pl.lit(-9999.0).alias(t))
+    all_df_in_bdt_ext = all_df_in_bdt_ext.with_columns(truth_placeholder_columns)
+
+    all_df_in_bdt_ext = all_df_in_bdt_ext.rename(lambda col: f"wc_{col}" if col != "__idx" else col)
+    all_df_in_bdt_ext = all_df_in_bdt_ext.with_columns([
+        pl.col("wc_true_event_type").alias("true_event_type"),
+        pl.col("wc_filetype").alias("filetype")
+    ])
+    if su:
+        for frame, suffix in ((all_df_in_pelee_ext, "pelee"),
+                              (all_df_in_glee_ext, "glee"),
+                              (all_df_in_lantern_ext, "lantern")):
+            all_df_in_bdt_ext = all_df_in_bdt_ext.join(
+                frame, on="__idx", how="left", suffix=f"_{suffix}"
+            )
+    all_df_in_bdt_ext = all_df_in_bdt_ext.drop("__idx")
+    if gennu_only:
+        print("Throwing away events that don't pass generic neutrino selection")
+        all_df_in_bdt_ext = all_df_in_bdt_ext.filter(pl.col("wc_kine_reco_Enu") >= 0)
+    print("Done loading EXTBNB (still lazy)")
+    return all_df_in_bdt_ext
+
 
 ###
 def LoadBnb(files, su = False, gennu_only = False):
@@ -2998,6 +3402,116 @@ def LoadBnb(files, su = False, gennu_only = False):
 
     print("done loading BNB Data")
     return all_df_in_bdt_data
+
+###
+def LoadBnbLazy(files, su = False, gennu_only = False):
+    print("Loading BNB Data")
+    if su:
+        (all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data,
+         all_df_in_eval_data, all_df_in_time_data, all_df_in_pelee_data,
+         all_df_in_glee_data, all_df_in_lantern_data) = LoadTreesDataLazy(files, su=su)
+    else:
+        (all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data,
+         all_df_in_eval_data) = LoadTreesDataLazy(files, su=su)
+        all_df_in_time_data = None
+        all_df_in_pelee_data = None
+        all_df_in_glee_data = None
+        all_df_in_lantern_data = None
+
+    print("Processing with lazy evaluation")
+
+    frames = [all_df_in_bdt_data, all_df_in_pfeval_data,
+              all_df_in_kine_data, all_df_in_eval_data]
+    if su:
+        frames.extend([all_df_in_time_data, all_df_in_pelee_data,
+                       all_df_in_glee_data, all_df_in_lantern_data])
+    frames = [frame.with_row_index("__idx") for frame in frames]
+    (all_df_in_bdt_data, all_df_in_pfeval_data, all_df_in_kine_data,
+     all_df_in_eval_data) = frames[:4]
+
+    all_df_in_bdt_data = all_df_in_bdt_data.join(
+        all_df_in_pfeval_data, on="__idx", how="left", suffix="_pfeval"
+    ).join(
+        all_df_in_kine_data, on="__idx", how="left", suffix="_kine"
+    ).join(
+        all_df_in_eval_data, on="__idx", how="left", suffix="_eval"
+    )
+
+    if su:
+        (all_df_in_time_data, all_df_in_pelee_data, all_df_in_glee_data,
+         all_df_in_lantern_data) = frames[4:]
+        all_df_in_bdt_data = all_df_in_bdt_data.join(
+            all_df_in_time_data, on="__idx", how="left", suffix="_time"
+        )
+
+    default_truth_list = [-9999.0, -9999.0, -9999.0, -9999.0]
+    all_df_in_bdt_data = all_df_in_bdt_data.with_columns([
+        pl.lit("data").alias("filetype"),
+        pl.lit(13).alias("true_event_type"),
+        pl.lit(1.0).alias("weight_cv"),
+        pl.lit(1.0).alias("weight_spline"),
+        pl.lit(0).cast(pl.Int32).alias("is_sigoverlay"),
+        pl.lit(-1.0).alias("time"),
+        (pl.lit(wc_em_charge_scale) * pl.col("shw_sp_energy")).alias("shw_sp_energy"),
+        pl.col("reco_showerMomentum").arr.get(0).alias("reco_showerMomentum0"),
+        pl.col("reco_showerMomentum").arr.get(1).alias("reco_showerMomentum1"),
+        pl.col("reco_showerMomentum").arr.get(2).alias("reco_showerMomentum2"),
+        pl.col("reco_showerMomentum").arr.get(3).alias("reco_showerMomentum3"),
+        pl.lit(-1.0).alias("truth_showerMomentum0"),
+        pl.lit(-1.0).alias("truth_showerMomentum1"),
+        pl.lit(-1.0).alias("truth_showerMomentum2"),
+        pl.lit(-1.0).alias("truth_showerMomentum3"),
+        pl.when(pl.col("single_photon_numu_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_numu_score")).alias("single_photon_numu_score"),
+        pl.when(pl.col("single_photon_other_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_other_score")).alias("single_photon_other_score"),
+        pl.when(pl.col("single_photon_ncpi0_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_ncpi0_score")).alias("single_photon_ncpi0_score"),
+        pl.when(pl.col("single_photon_nue_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_nue_score")).alias("single_photon_nue_score"),
+        pl.struct(["kine_energy_particle", "kine_particle_type"]).map_elements(
+            lambda row: sum(
+                abs(particle_type) == 2212 and particle_energy > 35
+                for particle_energy, particle_type in zip(
+                    row["kine_energy_particle"], row["kine_particle_type"]
+                )
+            ),
+            return_dtype=pl.Int64,
+        ).alias("N_protons"),
+    ])
+
+    # data files have no truth information, so add placeholder truth columns matching LoadBnb
+    truth_placeholder_columns = []
+    for t in truth_variables:
+        if t in ("truth_id", "truth_pdg", "truth_process", "truth_mother"):
+            truth_placeholder_columns.append(pl.lit([-9999]).alias(t))
+        elif t in ("truth_startXYZT", "truth_endXYZT", "truth_startMomentum", "truth_endMomentum"):
+            truth_placeholder_columns.append(pl.lit([default_truth_list]).alias(t))
+        elif t in ("truth_single_photon", "truth_showerMother", "truth_Npi0", "truth_NCDelta"):
+            truth_placeholder_columns.append(pl.lit(-9999).cast(pl.Int32).alias(t))
+        elif t in ("truth_showerKE", "truth_energyInside", "truth_nuEnergy"):
+            truth_placeholder_columns.append(pl.lit(-9999.0).cast(pl.Float32).alias(t))
+        elif t == "truth_isCC":
+            truth_placeholder_columns.append(pl.lit(False).alias(t))
+        else:
+            truth_placeholder_columns.append(pl.lit(-9999.0).alias(t))
+    all_df_in_bdt_data = all_df_in_bdt_data.with_columns(truth_placeholder_columns)
+
+    all_df_in_bdt_data = all_df_in_bdt_data.rename(lambda col: f"wc_{col}" if col != "__idx" else col)
+    all_df_in_bdt_data = all_df_in_bdt_data.with_columns([
+        pl.col("wc_true_event_type").alias("true_event_type"),
+        pl.col("wc_filetype").alias("filetype")
+    ])
+    if su:
+        for frame, suffix in ((all_df_in_pelee_data, "pelee"),
+                              (all_df_in_glee_data, "glee"),
+                              (all_df_in_lantern_data, "lantern")):
+            all_df_in_bdt_data = all_df_in_bdt_data.join(
+                frame, on="__idx", how="left", suffix=f"_{suffix}"
+            )
+    all_df_in_bdt_data = all_df_in_bdt_data.drop("__idx")
+    if gennu_only:
+        print("Throwing away events that don't pass generic neutrino selection")
+        all_df_in_bdt_data = all_df_in_bdt_data.filter(pl.col("wc_kine_reco_Enu") >= 0)
+    print("Done loading BNB Data (still lazy)")
+    return all_df_in_bdt_data
+
 
 ###
 def LoadNCPi0Overlay(files, su = False, gennu_only = False):
