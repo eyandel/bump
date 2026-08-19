@@ -4011,14 +4011,14 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
         if w[i] <= 0. or w[i] > 30. or np.isnan(w[i]): # something went wrong with the saved weights.:
             w[i] =  POT_factor[i] * nueff_mu #0.83 * 
         #if i % 10000 == 0:
-            print("weight for event %d: %.3e" % (i, w[i]))
+            #print("weight for event %d: %.3e" % (i, w[i]))
                 
     if is_lazy:
-        return lazy_df.with_columns(
+        return lazy_df.drop("weights", strict=False).with_columns(
             pl.int_range(pl.len()).replace(range(len(w)), w).alias("weights")
         ), w
     else:
-        return all_df.with_columns([pl.Series("weights", w)]), w
+        return all_df.drop("weights", strict=False).with_columns([pl.Series("weights", w)]), w
 
     # return all_df, w
 
@@ -7770,11 +7770,11 @@ def CombinePhotonVars(all_df, var):
             var_list.append(np.float32(-9999.))
 
     if is_lazy:
-        all_df = lazy_df.with_columns(pl.Series(var, var_list))
+        return lazy_df.with_columns(pl.Series(var, var_list)), var_list
     else:
-        all_df = all_df.with_columns(pl.Series(var, var_list))
+        return all_df.with_columns(pl.Series(var, var_list)), var_list
     
-    return all_df, var_list
+    #return all_df, var_list
 
 
 ###
