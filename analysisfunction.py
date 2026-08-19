@@ -609,29 +609,27 @@ def AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill=1001):
         
         return all_df
     
-    # Complex photon counting categories - need to work with arrays
-    # These require accessing nested arrays, so we use efficient NumPy operations
-    
-    # Initialize result arrays
+    # Only rows with truth categories need heavy truth-array materialization.
     is_lazy = isinstance(all_df, pl.LazyFrame)
     if is_lazy:
         lazy_df = all_df
         available_columns = set(lazy_df.collect_schema().names())
-        required_columns = [
-            "true_event_type", "wc_truth_Ntrack", "wc_truth_pdg",
-            "wc_truth_startMomentum", "wc_truth_process", "wc_truth_mother",
-            "wc_truth_endXYZT"
-        ]
-        optional_columns = [
-            "wc_truth_isCC", "filetype", "true_event_type_name",
-            "true_event_type_color", "true_event_type_fill"
-        ]
-        selected_columns = required_columns + [
-            column for column in optional_columns if column in available_columns
-        ]
-        all_df = lazy_df.select(selected_columns).collect()
+    else:
+        available_columns = set(all_df.columns)
 
-    num_evts = all_df.height
+    meta_columns = ["__row_idx", "true_event_type"]
+    optional_columns = [
+        "wc_truth_isCC", "filetype", "true_event_type_name",
+        "true_event_type_color", "true_event_type_fill"
+    ]
+    meta_columns.extend([column for column in optional_columns if column in available_columns])
+
+    if is_lazy:
+        meta_df = lazy_df.with_row_index("__row_idx").select(meta_columns).collect()
+    else:
+        meta_df = all_df.with_row_index("__row_idx").select(meta_columns)
+
+    num_evts = meta_df.height
     newcat = []
     newcatname = []
     newcatcolor = []
@@ -644,20 +642,48 @@ def AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill=1001):
     photon1_mother = []
     photon2_mother = []
     
-    # Get required columns as NumPy arrays for efficient access
-    true_event_types = all_df["true_event_type"].to_numpy(zero_copy_only=False)
-    truth_Ntrack = all_df["wc_truth_Ntrack"].to_numpy(zero_copy_only=False)
-    truth_pdg = all_df["wc_truth_pdg"].to_numpy(zero_copy_only=False)
-    truth_startMomentum = all_df["wc_truth_startMomentum"].to_numpy(zero_copy_only=False)
-    truth_process = all_df["wc_truth_process"].to_numpy(zero_copy_only=False)
-    truth_mother = all_df["wc_truth_mother"].to_numpy(zero_copy_only=False)
-    truth_endXYZT = all_df["wc_truth_endXYZT"].to_numpy(zero_copy_only=False)
+    true_event_types = meta_df["true_event_type"].to_numpy(zero_copy_only=False)
+    row_indices = meta_df["__row_idx"].to_numpy(zero_copy_only=False)
+
+    truth_df = None
+    truth_pos = {}
+    truth_idx = row_indices[~np.isin(true_event_types, [12, 13])]
+    if truth_idx.size > 0:
+        heavy_columns = [
+            "wc_truth_Ntrack", "wc_truth_pdg", "wc_truth_startMomentum",
+            "wc_truth_process", "wc_truth_mother", "wc_truth_endXYZT",
+        ]
+        index_df = pl.DataFrame({"__row_idx": truth_idx.tolist()})
+        if is_lazy:
+            truth_df = (
+                lazy_df
+                .with_row_index("__row_idx")
+                .join(index_df.lazy(), on="__row_idx", how="inner")
+                .select(["__row_idx", *heavy_columns])
+                .collect()
+            )
+        else:
+            truth_df = (
+                all_df
+                .with_row_index("__row_idx")
+                .join(index_df, on="__row_idx", how="inner")
+                .select(["__row_idx", *heavy_columns])
+            )
+        truth_rows = truth_df["__row_idx"].to_numpy(zero_copy_only=False)
+        truth_pos = {int(row): idx for idx, row in enumerate(truth_rows)}
+        truth_Ntrack = truth_df["wc_truth_Ntrack"].to_numpy(zero_copy_only=False)
+        truth_pdg = truth_df["wc_truth_pdg"].to_numpy(zero_copy_only=False)
+        truth_startMomentum = truth_df["wc_truth_startMomentum"].to_numpy(zero_copy_only=False)
+        truth_process = truth_df["wc_truth_process"].to_numpy(zero_copy_only=False)
+        truth_mother = truth_df["wc_truth_mother"].to_numpy(zero_copy_only=False)
+        truth_endXYZT = truth_df["wc_truth_endXYZT"].to_numpy(zero_copy_only=False)
     
     # For categories that need previous category info
-    if "true_event_type_name" in all_df.columns:
-        true_event_type_name = all_df["true_event_type_name"].to_numpy(zero_copy_only=False)
-        true_event_type_color = all_df["true_event_type_color"].to_numpy(zero_copy_only=False)
-        true_event_type_fill = all_df["true_event_type_fill"].to_numpy(zero_copy_only=False)
+    has_prev_cat = "true_event_type_name" in meta_df.columns
+    if has_prev_cat:
+        true_event_type_name = meta_df["true_event_type_name"].to_numpy(zero_copy_only=False)
+        true_event_type_color = meta_df["true_event_type_color"].to_numpy(zero_copy_only=False)
+        true_event_type_fill = meta_df["true_event_type_fill"].to_numpy(zero_copy_only=False)
     
     default_list = np.array([-9999., -9999., -9999., -9999.], dtype='float32')
     
@@ -697,25 +723,41 @@ def AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill=1001):
             photon2_mother.append(np.int32(-9999))
             continue
         
+        row_idx = int(row_indices[i])
+        pos = truth_pos.get(row_idx)
+        if pos is None:
+            newcat.append(true_event_types[i])
+            newcatname.append("old cat")
+            newcatcolor.append(ROOT.kWhite)
+            photon1_mom.append(default_list.copy())
+            photon2_mom.append(default_list.copy())
+            photon1_process.append("none")
+            photon2_process.append("none")
+            photon1_XYZT.append(default_list.copy())
+            photon2_XYZT.append(default_list.copy())
+            photon1_mother.append(np.int32(-9999))
+            photon2_mother.append(np.int32(-9999))
+            continue
+
         # Count photons for this event
         nphotons = 0
         photon1_found = False
         photon2_found = False
         
         # Vectorized approach where possible - get masks for all tracks at once
-        n_tracks = int(truth_Ntrack[i])
+        n_tracks = int(truth_Ntrack[pos])
         
         for j in range(n_tracks):
             # Get position
-            ex, ey, ez = truth_endXYZT[i][j][:3]
+            ex, ey, ez = truth_endXYZT[pos][j][:3]
             
             # Check if this is a photon
-            is_photon = (truth_pdg[i][j] == 22 and 
-                        truth_startMomentum[i][j][3] > energy_threshold)
+            is_photon = (truth_pdg[pos][j] == 22 and 
+                        truth_startMomentum[pos][j][3] > energy_threshold)
             
             # Check process
-            process_ok = (truth_process[i][j] != "eBrem" and 
-                         truth_process[i][j] != "annihil")
+            process_ok = (truth_process[pos][j] != "eBrem" and 
+                         truth_process[pos][j] != "annihil")
             
             # Check fiducial volume if required
             in_fv = True
@@ -728,16 +770,16 @@ def AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill=1001):
                 nphotons += 1
                 if not photon1_found:
                     photon1_found = True
-                    photon1_mom.append(truth_startMomentum[i][j].copy())
-                    photon1_process.append(truth_process[i][j])
-                    photon1_XYZT.append(truth_endXYZT[i][j].copy())
-                    photon1_mother.append(truth_mother[i][j])
+                    photon1_mom.append(truth_startMomentum[pos][j].copy())
+                    photon1_process.append(truth_process[pos][j])
+                    photon1_XYZT.append(truth_endXYZT[pos][j].copy())
+                    photon1_mother.append(truth_mother[pos][j])
                 elif not photon2_found:
                     photon2_found = True
-                    photon2_mom.append(truth_startMomentum[i][j].copy())
-                    photon2_process.append(truth_process[i][j])
-                    photon2_XYZT.append(truth_endXYZT[i][j].copy())
-                    photon2_mother.append(truth_mother[i][j])
+                    photon2_mom.append(truth_startMomentum[pos][j].copy())
+                    photon2_process.append(truth_process[pos][j])
+                    photon2_XYZT.append(truth_endXYZT[pos][j].copy())
+                    photon2_mother.append(truth_mother[pos][j])
         
         # Determine new category based on photon count and conditions
         if "all energies" in catname or "no FV" in catname:
@@ -748,8 +790,12 @@ def AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill=1001):
                 newcatcolor.append(catcolor)
             else:
                 newcat.append(true_event_types[i])
-                newcatname.append(true_event_type_name[i])
-                newcatcolor.append(true_event_type_color[i])
+                if has_prev_cat:
+                    newcatname.append(true_event_type_name[i])
+                    newcatcolor.append(true_event_type_color[i])
+                else:
+                    newcatname.append("old cat")
+                    newcatcolor.append(ROOT.kWhite)
         else:
             # Standard "2 true photons" category
             if nphotons == 2:
@@ -774,10 +820,10 @@ def AddTruthCatLazy(all_df, catname, catnum, catcolor, Fill=1001):
             photon2_mother.append(np.int32(-9999))
     
     # Initialize fill style if needed
-    if "true_event_type_fill" not in all_df.columns:
+    if "true_event_type_fill" not in meta_df.columns:
         newcatfill = [1001 for _ in range(num_evts)]
     else:
-        newcatfill = all_df["true_event_type_fill"].to_list()
+        newcatfill = meta_df["true_event_type_fill"].to_list()
     
     computed_columns = [
         pl.Series("true_event_type", newcat),
