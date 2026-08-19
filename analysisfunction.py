@@ -4614,6 +4614,11 @@ def PassSelectionLazyAll(selection, df):
                 (pl.col("nphotons_lantern") == 2)
             )
 
+        if selection=="2photon_wclantern_wpdist":
+            return (PassSelectionLazyAll("2photon_wclantern", df) & 
+                (pl.col("wc_pandora_dist") < 5.0)
+            )
+        
         if selection == "2photon_wcnugraph":
                     return (
                         (pl.col("wc_kine_reco_Enu") > 0.0) &
@@ -4662,6 +4667,41 @@ def PassSelectionLazyAll(selection, df):
                 (pl.col("wc_kine_reco_Enu") > 0.0) &
                 (pl.col("wc_pandora_dist") < 5.0) &
                 (pl.col("wc_lantern_dist") < 5.0) &
+                (pl.col("lantern_pandora_dist") < 5.0) &
+                PassSelectionLazyAll("2photon_any", df)
+            )
+
+        if selection == "2photon_any_wpdist":
+            # Check if distance columns exist
+            if "wc_pandora_dist" not in df.columns:
+                print("Warning: Distance columns don't exist. Run AddRecoVars() first.")
+                return pl.lit(False)
+            
+            return (
+                (pl.col("wc_kine_reco_Enu") > 0.0) &
+                (pl.col("wc_pandora_dist") < 5.0) &
+                PassSelectionLazyAll("2photon_any", df)
+            )
+
+        if selection == "2photon_any_wldist":
+            # Check if distance columns exist
+            if "wc_pandora_dist" not in df.columns:
+                print("Warning: Distance columns don't exist. Run AddRecoVars() first.")
+                return pl.lit(False)
+            
+            return (
+                (pl.col("wc_lantern_dist") < 5.0) &
+                PassSelectionLazyAll("2photon_any", df)
+            )
+
+        if selection == "2photon_any_lpdist":
+            # Check if distance columns exist
+            if "wc_pandora_dist" not in df.columns:
+                print("Warning: Distance columns don't exist. Run AddRecoVars() first.")
+                return pl.lit(False)
+            
+            return (
+                (pl.col("wc_kine_reco_Enu") > 0.0) &
                 (pl.col("lantern_pandora_dist") < 5.0) &
                 PassSelectionLazyAll("2photon_any", df)
             )
