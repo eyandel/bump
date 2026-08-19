@@ -34,6 +34,7 @@ warnings.filterwarnings('ignore')
 import itertools
 
 wc_em_charge_scale = 1.0 #0.95
+RECHUNK_AFTER_CAST = False
 
 def join_index(left, right, suffix=None, lsuffix=None, rsuffix=None, how='left'):
     idx_col = '__join_index_temp__'
@@ -53,15 +54,18 @@ def join_index(left, right, suffix=None, lsuffix=None, rsuffix=None, how='left')
     return left.join(right, on=idx_col, how=how).drop(idx_col)
 
 
-def _collect_and_shrink(df):
+def _collect_and_shrink(df, do_rechunk=None):
     # uproot reads are already fully in memory, so collect+downcast now instead of deferring across files
     if isinstance(df, pl.LazyFrame):
         df = df.collect()
-    return df.with_columns([
+    df = df.with_columns([
         pl.col(pl.Float64).cast(pl.Float32),
         pl.col(pl.Int64).cast(pl.Int32),
         pl.col(pl.UInt64).cast(pl.UInt32),
-    ]).rechunk()
+    ])
+    if do_rechunk is None:
+        do_rechunk = RECHUNK_AFTER_CAST
+    return df.rechunk() if do_rechunk else df
 
 
 import matplotlib as mpl
@@ -933,11 +937,7 @@ def LoadFiles(files, filetype, su = False, gennu_only = False):
         else:
             print("NOT A SUPPORTED FILE TYPE")
             break
-        df_temp = df_temp.with_columns([
-                                pl.col(pl.Float64).cast(pl.Float32),
-                                pl.col(pl.Int64).cast(pl.Int32),
-                                pl.col(pl.UInt64).cast(pl.UInt32),
-                            ]).rechunk()
+        df_temp = _collect_and_shrink(df_temp)
         dfs.append(df_temp)
         gc.collect()
     
@@ -976,12 +976,7 @@ def LoadFilesLazy(files, filetype, su = False, gennu_only = False):
         gc.collect()
 
     # each df_temp above is already collected/downcast per-file, so this is a cheap final materialization
-    all_df = pl.concat(dfs, how="vertical").collect()
-    all_df = all_df.with_columns([
-        pl.col(pl.Float64).cast(pl.Float32),
-        pl.col(pl.Int64).cast(pl.Int32),
-        pl.col(pl.UInt64).cast(pl.UInt32),
-    ]).rechunk()
+    all_df = _collect_and_shrink(pl.concat(dfs, how="vertical").collect())
     return all_df.lazy()
 
 
@@ -8371,43 +8366,75 @@ def Get2Photons(all_df, reco):
         raise ValueError(f"Unknown reconstruction: {reco}")
     if reco == "lantern":
         return_dtype = pl.Struct([
-            pl.Field("nphotons_lantern", pl.Int64),
-            pl.Field("photon1_mom_lantern", pl.List(pl.Float64)),
-            pl.Field("photon2_mom_lantern", pl.List(pl.Float64)),
-            pl.Field("photon1_XYZT_lantern", pl.List(pl.Float64)),
-            pl.Field("photon2_XYZT_lantern", pl.List(pl.Float64)),
+            pl.Field("nphotons_lantern", pl.Int32),
+            pl.Field("photon1_mom_lantern", pl.List(pl.Float32)),
+            pl.Field("photon2_mom_lantern", pl.List(pl.Float32)),
+            pl.Field("photon1_XYZT_lantern", pl.List(pl.Float32)),
+            pl.Field("photon2_XYZT_lantern", pl.List(pl.Float32)),
             pl.Field("photon1_process_lantern", pl.String),
             pl.Field("photon2_process_lantern", pl.String),
-            pl.Field("photon_inv_mass_lantern", pl.Float64),
+            pl.Field("photon_inv_mass_lantern", pl.Float32),
         ])
     elif reco == "pandora":
         return_dtype = pl.Struct([
-            pl.Field("nphotons_pandora", pl.Int64),
-            pl.Field("nphotons_nugraph", pl.Int64),
-            pl.Field("photon1_mom_pandora", pl.List(pl.Float64)),
-            pl.Field("photon2_mom_pandora", pl.List(pl.Float64)),
-            pl.Field("photon1_XYZT_pandora", pl.List(pl.Float64)),
-            pl.Field("photon2_XYZT_pandora", pl.List(pl.Float64)),
-            pl.Field("photon1_process_pandora", pl.Int64),
-            pl.Field("photon2_process_pandora", pl.Int64),
-            pl.Field("photon_inv_mass_pandora", pl.Float64),
+            pl.Field("nphotons_pandora", pl.Int32),
+            pl.Field("nphotons_nugraph", pl.Int32),
+            pl.Field("photon1_mom_pandora", pl.List(pl.Float32)),
+            pl.Field("photon2_mom_pandora", pl.List(pl.Float32)),
+            pl.Field("photon1_XYZT_pandora", pl.List(pl.Float32)),
+            pl.Field("photon2_XYZT_pandora", pl.List(pl.Float32)),
+            pl.Field("photon1_process_pandora", pl.Int32),
+            pl.Field("photon2_process_pandora", pl.Int32),
+            pl.Field("photon_inv_mass_pandora", pl.Float32),
         ])
     else:
         return_dtype = pl.Struct([
-            pl.Field("nphotons_wc", pl.Int64),
-            pl.Field("photon1_mom_wc", pl.List(pl.Float64)),
-            pl.Field("photon2_mom_wc", pl.List(pl.Float64)),
-            pl.Field("photon1_XYZT_wc", pl.List(pl.Float64)),
-            pl.Field("photon2_XYZT_wc", pl.List(pl.Float64)),
-            pl.Field("photon1_mother_wc", pl.Int64),
-            pl.Field("photon2_mother_wc", pl.Int64),
-            pl.Field("photon_inv_mass_wc", pl.Float64),
+            pl.Field("nphotons_wc", pl.Int32),
+            pl.Field("photon1_mom_wc", pl.List(pl.Float32)),
+            pl.Field("photon2_mom_wc", pl.List(pl.Float32)),
+            pl.Field("photon1_XYZT_wc", pl.List(pl.Float32)),
+            pl.Field("photon2_XYZT_wc", pl.List(pl.Float32)),
+            pl.Field("photon1_mother_wc", pl.Int32),
+            pl.Field("photon2_mother_wc", pl.Int32),
+            pl.Field("photon_inv_mass_wc", pl.Float32),
         ])
     output = all_df.with_columns(
         pl.struct(required[reco]).map_elements(
             photon_row, return_dtype=return_dtype
         ).alias("__photons")
     ).unnest("__photons")
+    if reco == "lantern":
+        output = output.with_columns([
+            pl.col("nphotons_lantern").cast(pl.Int32),
+            pl.col("photon1_mom_lantern").cast(pl.List(pl.Float32)),
+            pl.col("photon2_mom_lantern").cast(pl.List(pl.Float32)),
+            pl.col("photon1_XYZT_lantern").cast(pl.List(pl.Float32)),
+            pl.col("photon2_XYZT_lantern").cast(pl.List(pl.Float32)),
+            pl.col("photon_inv_mass_lantern").cast(pl.Float32),
+        ])
+    elif reco == "pandora":
+        output = output.with_columns([
+            pl.col("nphotons_pandora").cast(pl.Int32),
+            pl.col("nphotons_nugraph").cast(pl.Int32),
+            pl.col("photon1_mom_pandora").cast(pl.List(pl.Float32)),
+            pl.col("photon2_mom_pandora").cast(pl.List(pl.Float32)),
+            pl.col("photon1_XYZT_pandora").cast(pl.List(pl.Float32)),
+            pl.col("photon2_XYZT_pandora").cast(pl.List(pl.Float32)),
+            pl.col("photon1_process_pandora").cast(pl.Int32),
+            pl.col("photon2_process_pandora").cast(pl.Int32),
+            pl.col("photon_inv_mass_pandora").cast(pl.Float32),
+        ])
+    else:
+        output = output.with_columns([
+            pl.col("nphotons_wc").cast(pl.Int32),
+            pl.col("photon1_mom_wc").cast(pl.List(pl.Float32)),
+            pl.col("photon2_mom_wc").cast(pl.List(pl.Float32)),
+            pl.col("photon1_XYZT_wc").cast(pl.List(pl.Float32)),
+            pl.col("photon2_XYZT_wc").cast(pl.List(pl.Float32)),
+            pl.col("photon1_mother_wc").cast(pl.Int32),
+            pl.col("photon2_mother_wc").cast(pl.Int32),
+            pl.col("photon_inv_mass_wc").cast(pl.Float32),
+        ])
     return output.select(pl.all())
 
 def GetMuons(all_df, reco):
