@@ -53,6 +53,17 @@ def join_index(left, right, suffix=None, lsuffix=None, rsuffix=None, how='left')
     return left.join(right, on=idx_col, how=how).drop(idx_col)
 
 
+def _collect_and_shrink(df):
+    # uproot reads are already fully in memory, so collect+downcast now instead of deferring across files
+    if isinstance(df, pl.LazyFrame):
+        df = df.collect()
+    return df.with_columns([
+        pl.col(pl.Float64).cast(pl.Float32),
+        pl.col(pl.Int64).cast(pl.Int32),
+        pl.col(pl.UInt64).cast(pl.UInt32),
+    ]).rechunk()
+
+
 import matplotlib as mpl
 import matplotlib.lines as mlines
 
@@ -915,15 +926,17 @@ def LoadFilesLazy(files, filetype, su = False, gennu_only = False):
         else:
             print("NOT A SUPPORTED FILE TYPE")
             break
-        #df_temp = df_temp.with_columns([
-        #                        pl.col(pl.Float64).cast(pl.Float32),
-        #                        pl.col(pl.Int64).cast(pl.Int32),
-        #                        pl.col(pl.UInt64).cast(pl.UInt32),
-        #                    ]).rechunk()
         dfs.append(df_temp)
         gc.collect()
-    
-    return pl.concat(dfs, how="vertical")            
+
+    # each df_temp above is already collected/downcast per-file, so this is a cheap final materialization
+    all_df = pl.concat(dfs, how="vertical").collect()
+    all_df = all_df.with_columns([
+        pl.col(pl.Float64).cast(pl.Float32),
+        pl.col(pl.Int64).cast(pl.Int32),
+        pl.col(pl.UInt64).cast(pl.UInt32),
+    ]).rechunk()
+    return all_df.lazy()
 
 
 def LoadTreesTruth(files, su = False):
@@ -1076,9 +1089,9 @@ def LoadTreesTruthLazy(files, su = False):
         gc.collect()
         print(f"Finished loading file {i_run}/{len(files)}: {file}")
 
-    print("Concatenating all dataframes (still lazy)...")
-    
-    # Concatenate LazyFrames - this is still lazy!
+    print("Concatenating all dataframes...")
+
+    # Per-file frames are already collected/downcast, so this concat is cheap
     all_df_in_bdt_over = pl.concat(all_df_in_bdt_vec, how="vertical")
     all_df_in_pfeval_over = pl.concat(all_df_in_pfeval_vec, how="vertical")
     all_df_in_kine_over = pl.concat(all_df_in_kine_vec, how="vertical")
@@ -1103,12 +1116,13 @@ def LoadTreesTruthLazy(files, su = False):
         del all_df_in_lantern_vec
         gc.collect()
         
-        return (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, 
-                all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, 
-                all_df_in_glee_data, all_df_in_lantern_data)
+        # wrap in .lazy() only now, for downstream API compatibility - data itself is already materialized
+        return (all_df_in_bdt_over.lazy(), all_df_in_pfeval_over.lazy(), all_df_in_kine_over.lazy(), 
+                all_df_in_eval_over.lazy(), all_df_in_time_data.lazy(), all_df_in_pelee_data.lazy(), 
+                all_df_in_glee_data.lazy(), all_df_in_lantern_data.lazy())
     else:
-        return (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, 
-                all_df_in_eval_over)
+        return (all_df_in_bdt_over.lazy(), all_df_in_pfeval_over.lazy(), all_df_in_kine_over.lazy(), 
+                all_df_in_eval_over.lazy())
 
 ###
 def LoadTreesTruth1(file1, su = False):
@@ -1214,20 +1228,19 @@ def LoadTreesTruth1Lazy(file1, su = False):
     elif "jupyter" in result.stdout:
         is_gpvm = True
 
-    # Load as LazyFrames immediately
+    # Collect + downcast each tree immediately instead of deferring across the whole batch of files
     with uproot.open(file1)["wcpselection/T_BDTvars"] as f_in_bdt_over:
-        all_df_in_bdt_over = pl.from_pandas(f_in_bdt_over.arrays(bdt_variables, library="pd")).lazy()
+        all_df_in_bdt_over = _collect_and_shrink(pl.from_pandas(f_in_bdt_over.arrays(bdt_variables, library="pd")))
 
     with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_pfeval_over:
-        all_df_in_pfeval_over = pl.from_pandas(f_in_pfeval_over.arrays(pfeval_variables + truth_variables, library="pd")).lazy()
+        all_df_in_pfeval_over = _collect_and_shrink(pl.from_pandas(f_in_pfeval_over.arrays(pfeval_variables + truth_variables, library="pd")))
 
     with uproot.open(file1)["wcpselection/T_KINEvars"] as f_in_kine_over:
-        all_df_in_kine_over = pl.from_pandas(f_in_kine_over.arrays(kine_variables, library="pd")).lazy()
+        all_df_in_kine_over = _collect_and_shrink(pl.from_pandas(f_in_kine_over.arrays(kine_variables, library="pd")))
 
     with uproot.open(file1)["wcpselection/T_eval"] as f_in_eval_over:
-        all_df_in_eval_over = pl.from_pandas(f_in_eval_over.arrays(eval_variables + eval_truth_variables, library="pd")).lazy()
+        all_df_in_eval_over = _collect_and_shrink(pl.from_pandas(f_in_eval_over.arrays(eval_variables + eval_truth_variables, library="pd")))
 
-    # Determine run number using Polars expressions (still lazy)
     run_number_val = -999
     if is_gpvm:
         if "run1_full_samples" in file1:
@@ -1268,7 +1281,6 @@ def LoadTreesTruth1Lazy(file1, su = False):
         elif "run5" in file1 or "Run5" in file1 or "run_5" in file1.lower():
             run_number_val = 5
     
-    # Add columns using lazy operations
     all_df_in_bdt_over = all_df_in_bdt_over.with_columns([
         pl.lit(run_number_val).alias("run_period"),
         pl.lit(file1).alias("file_name")
@@ -1276,28 +1288,28 @@ def LoadTreesTruth1Lazy(file1, su = False):
 
     if su:
         with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data = pl.from_pandas(f_in_time_data.arrays(
+            all_df_in_time_data = _collect_and_shrink(pl.from_pandas(f_in_time_data.arrays(
                 time_variables + time_truth_variables + larpid_reco_variables + larpid_truth_variables, 
                 library="pd"
-            )).lazy()
+            )))
         
         with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
-            all_df_in_pelee_data = pl.from_pandas(f_in_pelee_data.arrays(
+            all_df_in_pelee_data = _collect_and_shrink(pl.from_pandas(f_in_pelee_data.arrays(
                 pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables + pelee_time_variables, 
                 library="pd"
-            )).lazy().select([pl.col("*").name.prefix("pelee_")])
+            ))).select(pl.col("*").name.prefix("pelee_"))
         
         with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
-            all_df_in_glee_data = pl.from_pandas(f_in_glee_data.arrays(
+            all_df_in_glee_data = _collect_and_shrink(pl.from_pandas(f_in_glee_data.arrays(
                 glee_reco_variables, 
                 library="pd"
-            )).lazy().select([pl.col("*").name.prefix("glee_")])
+            ))).select(pl.col("*").name.prefix("glee_"))
         
         with uproot.open(file1)["lantern/EventTree"] as f_in_lantern_data:
-            all_df_in_lantern_data = pl.from_pandas(f_in_lantern_data.arrays(
+            all_df_in_lantern_data = _collect_and_shrink(pl.from_pandas(f_in_lantern_data.arrays(
                 lantern_reco_variables, 
                 library="pd"
-            )).lazy().select([pl.col("*").name.prefix("lantern_")])
+            ))).select(pl.col("*").name.prefix("lantern_"))
         
         return (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, 
                 all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data, 
@@ -1550,8 +1562,9 @@ def LoadTreesDataLazy(files, su = False):
         gc.collect()
         print(f"Finished loading file {i_run}/{len(files)}: {file}")
 
-    print("Concatenating all dataframes (still lazy)...")
+    print("Concatenating all dataframes...")
 
+    # Per-file frames are already collected/downcast, so this concat is cheap
     all_df_in_bdt_over = pl.concat(all_df_in_bdt_vec, how="vertical")
     all_df_in_pfeval_over = pl.concat(all_df_in_pfeval_vec, how="vertical")
     all_df_in_kine_over = pl.concat(all_df_in_kine_vec, how="vertical")
@@ -1575,12 +1588,13 @@ def LoadTreesDataLazy(files, su = False):
         del all_df_in_lantern_vec
         gc.collect()
 
-        return (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over,
-                all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data,
-                all_df_in_glee_data, all_df_in_lantern_data)
+        # wrap in .lazy() only now, for downstream API compatibility - data itself is already materialized
+        return (all_df_in_bdt_over.lazy(), all_df_in_pfeval_over.lazy(), all_df_in_kine_over.lazy(),
+                all_df_in_eval_over.lazy(), all_df_in_time_data.lazy(), all_df_in_pelee_data.lazy(),
+                all_df_in_glee_data.lazy(), all_df_in_lantern_data.lazy())
     else:
-        return (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over,
-                all_df_in_eval_over)
+        return (all_df_in_bdt_over.lazy(), all_df_in_pfeval_over.lazy(), all_df_in_kine_over.lazy(),
+                all_df_in_eval_over.lazy())
 
 def LoadTreesData1Lazy(file1, su = False):
     import os
@@ -1594,17 +1608,18 @@ def LoadTreesData1Lazy(file1, su = False):
     elif "jupyter" in result.stdout:
         is_gpvm = True
 
+    # Collect + downcast each tree immediately instead of deferring across the whole batch of files
     with uproot.open(file1)["wcpselection/T_BDTvars"] as f_in_bdt_over:
-        all_df_in_bdt_over = pl.from_pandas(f_in_bdt_over.arrays(bdt_variables, library="pd")).lazy()
+        all_df_in_bdt_over = _collect_and_shrink(pl.from_pandas(f_in_bdt_over.arrays(bdt_variables, library="pd")))
 
     with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_pfeval_over:
-        all_df_in_pfeval_over = pl.from_pandas(f_in_pfeval_over.arrays(pfeval_variables, library="pd")).lazy()
+        all_df_in_pfeval_over = _collect_and_shrink(pl.from_pandas(f_in_pfeval_over.arrays(pfeval_variables, library="pd")))
 
     with uproot.open(file1)["wcpselection/T_KINEvars"] as f_in_kine_over:
-        all_df_in_kine_over = pl.from_pandas(f_in_kine_over.arrays(kine_variables, library="pd")).lazy()
+        all_df_in_kine_over = _collect_and_shrink(pl.from_pandas(f_in_kine_over.arrays(kine_variables, library="pd")))
 
     with uproot.open(file1)["wcpselection/T_eval"] as f_in_eval_over:
-        all_df_in_eval_over = pl.from_pandas(f_in_eval_over.arrays(eval_variables, library="pd")).lazy()
+        all_df_in_eval_over = _collect_and_shrink(pl.from_pandas(f_in_eval_over.arrays(eval_variables, library="pd")))
 
     run_number_val = -999
     if is_gpvm:
@@ -1653,28 +1668,28 @@ def LoadTreesData1Lazy(file1, su = False):
 
     if su:
         with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data = pl.from_pandas(f_in_time_data.arrays(
+            all_df_in_time_data = _collect_and_shrink(pl.from_pandas(f_in_time_data.arrays(
                 time_variables + larpid_reco_variables,
                 library="pd"
-            )).lazy()
+            )))
 
         with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
-            all_df_in_pelee_data = pl.from_pandas(f_in_pelee_data.arrays(
+            all_df_in_pelee_data = _collect_and_shrink(pl.from_pandas(f_in_pelee_data.arrays(
                 pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables + pelee_time_variables,
                 library="pd"
-            )).lazy().select([pl.col("*").name.prefix("pelee_")])
+            ))).select(pl.col("*").name.prefix("pelee_"))
 
         with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
-            all_df_in_glee_data = pl.from_pandas(f_in_glee_data.arrays(
+            all_df_in_glee_data = _collect_and_shrink(pl.from_pandas(f_in_glee_data.arrays(
                 glee_reco_variables,
                 library="pd"
-            )).lazy().select([pl.col("*").name.prefix("glee_")])
+            ))).select(pl.col("*").name.prefix("glee_"))
 
         with uproot.open(file1)["lantern/EventTree"] as f_in_lantern_data:
-            all_df_in_lantern_data = pl.from_pandas(f_in_lantern_data.arrays(
+            all_df_in_lantern_data = _collect_and_shrink(pl.from_pandas(f_in_lantern_data.arrays(
                 lantern_reco_variables,
                 library="pd"
-            )).lazy().select([pl.col("*").name.prefix("lantern_")])
+            ))).select(pl.col("*").name.prefix("lantern_"))
 
         return (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over,
                 all_df_in_eval_over, all_df_in_time_data, all_df_in_pelee_data,
@@ -2181,7 +2196,9 @@ def LoadBNBOverlayLazy(files, su = False, gennu_only = False):
     if gennu_only:
         print("Throwing away events that don't pass generic neutrino selection")
         all_df_in_bdt_over = all_df_in_bdt_over.filter(pl.col("wc_kine_reco_Enu") >= 0)
-    print("Done loading BNB Overlay (still lazy)")
+    # materialize the join now instead of deferring it onto the next category's frames
+    all_df_in_bdt_over = all_df_in_bdt_over.collect().lazy()
+    print("Done loading BNB Overlay")
     return all_df_in_bdt_over
 
 ###
@@ -2639,7 +2656,9 @@ def LoadDirtLazy(files, su = False, gennu_only = False):
     if gennu_only:
         print("Throwing away events that don't pass generic neutrino selection")
         all_df_in_bdt_dirt = all_df_in_bdt_dirt.filter(pl.col("wc_kine_reco_Enu") >= 0)
-    print("Done loading Dirt Overlay (still lazy)")
+    # materialize the join now instead of deferring it onto the next category's frames
+    all_df_in_bdt_dirt = all_df_in_bdt_dirt.collect().lazy()
+    print("Done loading Dirt Overlay")
     return all_df_in_bdt_dirt
 
 
@@ -3069,7 +3088,9 @@ def LoadExtBnbLazy(files, su = False, gennu_only = False):
     if gennu_only:
         print("Throwing away events that don't pass generic neutrino selection")
         all_df_in_bdt_ext = all_df_in_bdt_ext.filter(pl.col("wc_kine_reco_Enu") >= 0)
-    print("Done loading EXTBNB (still lazy)")
+    # materialize the join now instead of deferring it onto the next category's frames
+    all_df_in_bdt_ext = all_df_in_bdt_ext.collect().lazy()
+    print("Done loading EXTBNB")
     return all_df_in_bdt_ext
 
 
@@ -3509,7 +3530,9 @@ def LoadBnbLazy(files, su = False, gennu_only = False):
     if gennu_only:
         print("Throwing away events that don't pass generic neutrino selection")
         all_df_in_bdt_data = all_df_in_bdt_data.filter(pl.col("wc_kine_reco_Enu") >= 0)
-    print("Done loading BNB Data (still lazy)")
+    # materialize the join now instead of deferring it onto the next category's frames
+    all_df_in_bdt_data = all_df_in_bdt_data.collect().lazy()
+    print("Done loading BNB Data")
     return all_df_in_bdt_data
 
 
@@ -4014,7 +4037,9 @@ def LoadNCPi0OverlayLazy(files, su = False, gennu_only = False):
     if gennu_only:
         print("Throwing away events that don't pass generic neutrino selection")
         all_df_in_bdt_over = all_df_in_bdt_over.filter(pl.col("wc_kine_reco_Enu") >= 0)
-    print("Done loading NC Pi0 Overlay (still lazy)")
+    # materialize the join now instead of deferring it onto the next category's frames
+    all_df_in_bdt_over = all_df_in_bdt_over.collect().lazy()
+    print("Done loading NC Pi0 Overlay")
     return all_df_in_bdt_over
 
 
