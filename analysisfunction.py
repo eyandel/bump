@@ -3383,6 +3383,127 @@ def LoadNCPi0Overlay(files, su = False, gennu_only = False):
     print("done loading NC Pi0 Overlay")
     return all_df_in_bdt_over
 
+
+###
+def LoadNCPi0OverlayLazy(files, su = False, gennu_only = False):
+    print("Loading NC Pi0 Overlay")
+    if su:
+        (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, 
+         all_df_in_eval_over, all_df_in_time_over, all_df_in_pelee_over, 
+         all_df_in_glee_over, all_df_in_lantern_over) = LoadTreesTruthLazy(files, su=su)
+    else:
+        (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over, 
+         all_df_in_eval_over) = LoadTreesTruthLazy(files, su=su)
+        all_df_in_time_over = None
+        all_df_in_pelee_over = None
+        all_df_in_glee_over = None
+        all_df_in_lantern_over = None
+
+    print("Processing with lazy evaluation")
+
+    frames = [all_df_in_bdt_over, all_df_in_pfeval_over,
+              all_df_in_kine_over, all_df_in_eval_over]
+    if su:
+        frames.extend([all_df_in_time_over, all_df_in_pelee_over,
+                       all_df_in_glee_over, all_df_in_lantern_over])
+    frames = [frame.with_row_index("__idx") for frame in frames]
+    (all_df_in_bdt_over, all_df_in_pfeval_over, all_df_in_kine_over,
+     all_df_in_eval_over) = frames[:4]
+
+    all_df_in_bdt_over = all_df_in_bdt_over.join(
+        all_df_in_pfeval_over, on="__idx", how="left", suffix="_pfeval"
+    ).join(
+        all_df_in_kine_over, on="__idx", how="left", suffix="_kine"
+    ).join(
+        all_df_in_eval_over, on="__idx", how="left", suffix="_eval"
+    )
+
+    if su:
+        (all_df_in_time_over, all_df_in_pelee_over, all_df_in_glee_over,
+         all_df_in_lantern_over) = frames[4:]
+        all_df_in_bdt_over = all_df_in_bdt_over.join(
+            all_df_in_time_over, on="__idx", how="left", suffix="_time"
+        )
+
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns([
+        pl.lit("nc_pi0_overlay").alias("filetype"),
+        pl.lit(0).cast(pl.Int32).alias("is_sigoverlay"),
+        pl.lit(-9999.0).alias("time"),
+        pl.col("truth_showerMomentum").arr.get(0).alias("truth_showerMomentum0"),
+        pl.col("truth_showerMomentum").arr.get(1).alias("truth_showerMomentum1"),
+        pl.col("truth_showerMomentum").arr.get(2).alias("truth_showerMomentum2"),
+        pl.col("truth_showerMomentum").arr.get(3).alias("truth_showerMomentum3"),
+        pl.col("reco_showerMomentum").arr.get(0).alias("reco_showerMomentum0"),
+        pl.col("reco_showerMomentum").arr.get(1).alias("reco_showerMomentum1"),
+        pl.col("reco_showerMomentum").arr.get(2).alias("reco_showerMomentum2"),
+        pl.col("reco_showerMomentum").arr.get(3).alias("reco_showerMomentum3"),
+        pl.when(pl.col("single_photon_numu_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_numu_score")).alias("single_photon_numu_score"),
+        pl.when(pl.col("single_photon_other_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_other_score")).alias("single_photon_other_score"),
+        pl.when(pl.col("single_photon_ncpi0_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_ncpi0_score")).alias("single_photon_ncpi0_score"),
+        pl.when(pl.col("single_photon_nue_score").is_nan()).then(-99999.0).otherwise(pl.col("single_photon_nue_score")).alias("single_photon_nue_score"),
+        pl.struct(["kine_energy_particle", "kine_particle_type"]).map_elements(
+            lambda row: sum(
+                abs(particle_type) == 2212 and particle_energy > 35
+                for particle_energy, particle_type in zip(
+                    row["kine_energy_particle"], row["kine_particle_type"]
+                )
+            ),
+            return_dtype=pl.Int64,
+        ).alias("N_protons"),
+        pl.struct([
+            "truth_Ntrack", "truth_pdg", "truth_mother", "truth_startMomentum"
+        ]).map_elements(
+            lambda row: sum(
+                abs(row["truth_pdg"][index]) == 2212
+                and row["truth_mother"][index] == 0
+                and row["truth_startMomentum"][index][3] - 0.938272 > 0.035
+                for index in range(row["truth_Ntrack"])
+            ),
+            return_dtype=pl.Int64,
+        ).alias("true_N_protons")
+    ])
+
+    # true_event_type is always -3 for NC Pi0 overlay; true_event_type_sub carries the same
+    # signal/background categorization used as true_event_type in LoadBNBOverlayLazy
+    signal = ((pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) & (pl.col("truth_single_photon") == 1))
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns(
+        pl.lit(-3).alias("true_event_type"),
+        pl.when(signal & ~pl.col("truth_isCC") & ~pl.col("truth_vtxInside")).then(111)
+        .when(signal & ~pl.col("truth_isCC") & (pl.col("truth_NCDelta") == 1)).then(2)
+        .when(signal & ~pl.col("truth_isCC") & (pl.col("truth_showerMother") == 111)).then(3)
+        .when(signal & ~pl.col("truth_isCC")).then(1)
+        .when(signal & pl.col("truth_isCC") & (pl.col("truth_nuPdg").abs() == 14) & ((pl.col("truth_muonMomentum").arr.get(3) - 0.105658) < 0.1) & pl.col("truth_vtxInside")).then(0)
+        .when(signal & pl.col("truth_isCC") & (pl.col("truth_nuPdg").abs() == 14) & ((pl.col("truth_muonMomentum").arr.get(3) - 0.105658) < 0.1)).then(111)
+        .when((pl.col("truth_energyInside") != 0) & (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) & pl.col("truth_isCC") & (pl.col("truth_nuPdg").abs() == 14) & pl.col("truth_vtxInside") & (pl.col("truth_Npi0") > 0)).then(8)
+        .when((pl.col("truth_energyInside") != 0) & (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) & pl.col("truth_isCC") & (pl.col("truth_nuPdg").abs() == 14) & pl.col("truth_vtxInside")).then(7)
+        .when((pl.col("truth_energyInside") != 0) & (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) & ~pl.col("truth_isCC") & pl.col("truth_vtxInside") & (pl.col("truth_Npi0") > 0)).then(6)
+        .when((pl.col("truth_energyInside") != 0) & (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) & ~pl.col("truth_isCC") & pl.col("truth_vtxInside")).then(5)
+        .when((pl.col("truth_energyInside") != 0) & (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) & pl.col("truth_isCC") & (pl.col("truth_nuPdg").abs() == 12) & pl.col("truth_vtxInside")).then(4)
+        .when((pl.col("truth_energyInside") != 0) & (pl.col("match_completeness_energy") / pl.col("truth_energyInside") > 0.1) & ~pl.col("truth_vtxInside")).then(9)
+        .otherwise(10).alias("true_event_type_sub")
+    )
+
+    all_df_in_bdt_over = all_df_in_bdt_over.rename(lambda col: f"wc_{col}" if col != "__idx" else col)
+    all_df_in_bdt_over = all_df_in_bdt_over.with_columns([
+        pl.col("wc_true_event_type").alias("true_event_type"),
+        pl.col("wc_true_event_type_sub").alias("true_event_type_sub"),
+        pl.col("wc_filetype").alias("filetype")
+    ])
+    if su:
+        for frame, suffix in ((all_df_in_pelee_over, "pelee"),
+                              (all_df_in_glee_over, "glee"),
+                              (all_df_in_lantern_over, "lantern")):
+            all_df_in_bdt_over = all_df_in_bdt_over.join(
+                frame, on="__idx", how="left", suffix=f"_{suffix}"
+            )
+    all_df_in_bdt_over = all_df_in_bdt_over.drop("__idx")
+    if gennu_only:
+        print("Throwing away events that don't pass generic neutrino selection")
+        all_df_in_bdt_over = all_df_in_bdt_over.filter(pl.col("wc_kine_reco_Enu") >= 0)
+    print("Done loading NC Pi0 Overlay (still lazy)")
+    return all_df_in_bdt_over
+
+
 ###
 def GetVariableArrays(all_df, var, array_name, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = []):
     #read in the variable with name var from the root file and make it into sig, bkg, and data arrays called
@@ -4492,6 +4613,13 @@ def PassSelectionLazyAll(selection, df):
                 (pl.col("lantern_vtxIsFiducial") > -1) &
                 (pl.col("nphotons_lantern") == 2)
             )
+
+        if selection == "2photon_wcnugraph":
+                    return (
+                        (pl.col("wc_kine_reco_Enu") > 0.0) &
+                        (pl.col("nphotons_wc") == 2) &
+                        (pl.col("nphotons_nugraph") == 2)
+                    )
 
         if selection == "2photon_wclanternnugraph":
             return (
