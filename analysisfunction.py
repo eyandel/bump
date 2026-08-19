@@ -3444,12 +3444,9 @@ def GetVariableArraysLazy(all_df, var, array_name, array_sig=[0,1,2,3,111], sele
     # Apply filters using Polars expressions
     df_filtered = all_df.filter(passed_sel)
     
-    # Collect only the final filtered result
-    df_collected = df_filtered.select([
-        var,
-        "true_event_type",
-        "weights"
-    ]).collect()
+    # Collect only the final filtered result (dedupe in case var == "true_event_type"/"weights")
+    select_cols = list(dict.fromkeys([var, "true_event_type", "weights"]))
+    df_collected = df_filtered.select(select_cols).collect()
     
     # Now convert to arrays
     var_array = df_collected[var].to_numpy()
