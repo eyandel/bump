@@ -3064,7 +3064,7 @@ def LoadExtBnbLazy(files, su = False, gennu_only = False):
             all_df_in_time_ext, on="__idx", how="left", suffix="_time"
         )
 
-    default_truth_list = [-9999.0, -9999.0, -9999.0, -9999.0]
+    default_truth_list = [np.float32(-9999.0)] * 4
     all_df_in_bdt_ext = all_df_in_bdt_ext.with_columns([
         pl.lit("ext").alias("filetype"),
         pl.lit(12).alias("true_event_type"),
@@ -3304,7 +3304,7 @@ def LoadBnb(files, su = False, gennu_only = False):
         if t=="truth_id" or t=="truth_pdg" or t=="truth_process" or t=="truth_mother":
             cols_to_add.append(pl.Series(t, [[-9999]] * len(true_event_types)))
         elif t=="truth_startXYZT" or t=="truth_endXYZT" or t=="truth_startMomentum" or t=="truth_endMomentum" or t=="truth_daughters":
-            cols_to_add.append(pl.Series(t, [[np.array([-9999.0, -9999.0, -9999.0, -9999.0])] ] * len(true_event_types)))
+            cols_to_add.append(pl.Series(t, [[np.array([-9999.0, -9999.0, -9999.0, -9999.0], dtype=np.float32)] ] * len(true_event_types)))
         #elif t == "truth_muonMomentum" or t == "truth_showerMomentum":
         #    cols_to_add.append(pl.Series(t, np.full((len(true_event_types), 4), -9999.0)))
         elif t=="truth_single_photon" or t=="truth_showerMother" or t=="truth_Npi0" or t=="truth_NCDelta":
@@ -3314,7 +3314,7 @@ def LoadBnb(files, su = False, gennu_only = False):
         elif t=="truth_isCC":
             cols_to_add.append(pl.Series(t, [False] * len(true_event_types)))
         else:
-            cols_to_add.append(pl.Series(t, [-9999.0] * len(true_event_types)))
+            cols_to_add.append(pl.Series(t, [-9999.0] * len(true_event_types), dtype=pl.Float32))
     if cols_to_add:
         all_df_in_pfeval_data = all_df_in_pfeval_data.with_columns(*cols_to_add)
 
