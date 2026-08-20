@@ -8460,13 +8460,13 @@ def Get2Photons(all_df, reco):
         return_dtype = pl.Struct([
             pl.Field("nphotons_pandora", pl.Int32),
             pl.Field("nphotons_nugraph", pl.Int32),
-            pl.Field("photon1_mom_pandora", pl.List(pl.Float32)),
-            pl.Field("photon2_mom_pandora", pl.List(pl.Float32)),
-            pl.Field("photon1_XYZT_pandora", pl.List(pl.Float32)),
-            pl.Field("photon2_XYZT_pandora", pl.List(pl.Float32)),
+            pl.Field("photon1_mom_pandora", pl.List(pl.Float64)),
+            pl.Field("photon2_mom_pandora", pl.List(pl.Float64)),
+            pl.Field("photon1_XYZT_pandora", pl.List(pl.Float64)),
+            pl.Field("photon2_XYZT_pandora", pl.List(pl.Float644)),
             pl.Field("photon1_process_pandora", pl.Int32),
             pl.Field("photon2_process_pandora", pl.Int32),
-            pl.Field("photon_inv_mass_pandora", pl.Float32),
+            pl.Field("photon_inv_mass_pandora", pl.Float64),
         ])
     else:
         return_dtype = pl.Struct([
@@ -9367,7 +9367,7 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
 
 
 ###
-def MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = [], sig_scale = 1.0):
+def MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = [], sig_scale = 1.0, profit=False, cov=None):
     #make input arrays for bump hunter
     print("Making bump hunter inputs")
     sig_no, bkg, data = GetVariableArrays(all_df, var, var, [], selection, ignore_cat)
@@ -9382,6 +9382,8 @@ def MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig = [0,
     sig = np.array(sig)
     bkg = np.array(bkg)
     data = np.array(data)
+
+    if profit:
 
     F = plt.figure(figsize=(12,8))
     plt.title("Test distribution")
@@ -9404,7 +9406,7 @@ def MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig = [0,
 
 ###
 def ArrayBumpScan(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = [], sig_scale = 1.0, profit=False, cov=None):
-    sig, bkg, data, w_sig, w_bkg, w_data, sig_no, bkg_sig, data_sig, w_sig_in, w_bkg_sig, w_data_sig = MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig, selection, ignore_cat, sig_scale)
+    sig, bkg, data, w_sig, w_bkg, w_data, sig_no, bkg_sig, data_sig, w_sig_in, w_bkg_sig, w_data_sig = MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig, selection, ignore_cat, sig_scale, profit, cov)
     print("Creating BumpHunter 1D class instance")
     hunter = BH.BumpHunter1D(
             rang=rang,
