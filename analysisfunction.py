@@ -32,6 +32,22 @@ from scipy.stats import chi2
 import warnings
 warnings.filterwarnings('ignore')
 import itertools
+from datetime import datetime
+
+is_gpvm = False
+rundir = os.getcwd()
+cmd = ["hostname"]
+result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+if "/exp/uboone" in rundir:
+    is_gpvm = True
+elif "jupyter" in result.stdout:
+    is_gpvm = True
+if is_gpvm:
+    bumppath = "/exp/uboone/app/users/eyandel/bump/bump"
+else:
+    bumppath = "/Users/eyandel/Documents/MicroBooNE/bump/"
+sys.path.insert(0, bumppath)
+import pyBumpHunter as BH
 
 wc_em_charge_scale = 1.0 #0.95
 RECHUNK_AFTER_CAST = False
@@ -8225,47 +8241,110 @@ def Get2Photons(all_df, reco):
         def empty_photon():
             return list(default), list(default), -9999
 
+        #if reco == "wc":
+        #    momenta = []
+        #    positions = []
+        #    mothers = []
+        #    nphotons = 0
+        #    is_data = row["true_event_type"] in (12, 13)
+        #    for index in range(int(row["wc_reco_Ntrack"])):
+        #        position = np.asarray(row["wc_reco_startXYZT"][index], dtype=np.float32).tolist()
+        #        mother = FindWCMother(
+        #            row["wc_reco_mother"][index],
+        #            row["wc_reco_Ntrack"],
+        #            row["wc_reco_id"],
+        #            row["wc_reco_pdg"],
+        #        )
+        #        momentum = np.asarray(row["wc_reco_startMomentum"][index], dtype=np.float32).copy() * 1000.0
+        #        if is_data:
+        #            momentum *= 1.0
+        #        if (
+        #            row["wc_reco_pdg"][index] == 22
+        #            and mother not in (11, 22)
+        #            and momentum[3] > 20.0
+        #            and 3.0 < position[0] < 253.0
+        #            and -113.0 < position[1] < 114.0
+        #            and 3.0 < position[2] < 1034.0
+        #        ):
+        #            nphotons += 1
+        #            if len(momenta) < 2:
+        #                momenta.append(momentum.tolist())
+        #                positions.append(position)
+        #                mothers.append(row["wc_reco_mother"][index])
+        #    while len(momenta) < 2:
+        #        empty_momentum, empty_position, empty_mother = empty_photon()
+        #        momenta.append(empty_momentum)
+        #        positions.append(empty_position)
+        #        mothers.append(empty_mother)
+        #    mass = GetInvariantMass(momenta[0], momenta[1]) if nphotons >= 2 else np.float32(-9999.0)
+        #    return {
+        #        "nphotons_wc": nphotons,
+        #        "photon1_mom_wc": momenta[0], "photon2_mom_wc": momenta[1],
+        #        "photon1_XYZT_wc": positions[0], "photon2_XYZT_wc": positions[1],
+        #        "photon1_mother_wc": mothers[0], "photon2_mother_wc": mothers[1],
+        #        "photon_inv_mass_wc": mass,
+        #    }
+
         if reco == "wc":
             momenta = []
             positions = []
             mothers = []
             nphotons = 0
             is_data = row["true_event_type"] in (12, 13)
+
             for index in range(int(row["wc_reco_Ntrack"])):
-                position = np.asarray(row["wc_reco_startXYZT"][index], dtype=np.float32).tolist()
+                position_arr = np.asarray(row["wc_reco_startXYZT"][index], dtype=np.float32)
+                position = [np.float32(x) for x in position_arr]
+
                 mother = FindWCMother(
                     row["wc_reco_mother"][index],
                     row["wc_reco_Ntrack"],
                     row["wc_reco_id"],
                     row["wc_reco_pdg"],
                 )
-                momentum = np.asarray(row["wc_reco_startMomentum"][index], dtype=np.float32).copy() * 1000.0
+
+                momentum_arr = np.asarray(
+                    row["wc_reco_startMomentum"][index], dtype=np.float32
+                ).copy()
+                momentum_arr *= np.float32(1000.0)
+
                 if is_data:
-                    momentum *= 1.0
+                    momentum_arr *= np.float32(1.0)
+
                 if (
                     row["wc_reco_pdg"][index] == 22
                     and mother not in (11, 22)
-                    and momentum[3] > 20.0
-                    and 3.0 < position[0] < 253.0
-                    and -113.0 < position[1] < 114.0
-                    and 3.0 < position[2] < 1034.0
+                    and momentum_arr[3] > np.float32(20.0)
+                    and np.float32(3.0) < position[0] < np.float32(253.0)
+                    and np.float32(-113.0) < position[1] < np.float32(114.0)
+                    and np.float32(3.0) < position[2] < np.float32(1034.0)
                 ):
                     nphotons += 1
                     if len(momenta) < 2:
-                        momenta.append(momentum.tolist())
+                        momenta.append([np.float32(x) for x in momentum_arr])
                         positions.append(position)
-                        mothers.append(row["wc_reco_mother"][index])
+                        mothers.append(np.int32(row["wc_reco_mother"][index]))
+
             while len(momenta) < 2:
                 empty_momentum, empty_position, empty_mother = empty_photon()
-                momenta.append(empty_momentum)
-                positions.append(empty_position)
-                mothers.append(empty_mother)
-            mass = GetInvariantMass(momenta[0], momenta[1]) if nphotons >= 2 else np.float32(-9999.0)
+                momenta.append([np.float32(x) for x in empty_momentum])
+                positions.append([np.float32(x) for x in empty_position])
+                mothers.append(np.int32(empty_mother))
+
+            mass = (
+                np.float32(GetInvariantMass(momenta[0], momenta[1]))
+                if nphotons >= 2
+                else np.float32(-9999.0)
+            )
+
             return {
-                "nphotons_wc": nphotons,
-                "photon1_mom_wc": momenta[0], "photon2_mom_wc": momenta[1],
-                "photon1_XYZT_wc": positions[0], "photon2_XYZT_wc": positions[1],
-                "photon1_mother_wc": mothers[0], "photon2_mother_wc": mothers[1],
+                "nphotons_wc": np.int32(nphotons),
+                "photon1_mom_wc": momenta[0],
+                "photon2_mom_wc": momenta[1],
+                "photon1_XYZT_wc": positions[0],
+                "photon2_XYZT_wc": positions[1],
+                "photon1_mother_wc": np.int32(mothers[0]),
+                "photon2_mother_wc": np.int32(mothers[1]),
                 "photon_inv_mass_wc": mass,
             }
 
@@ -9289,6 +9368,7 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
 ###
 def MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = [], sig_scale = 1.0):
     #make input arrays for bump hunter
+    print("Making bump hunter inputs")
     sig_no, bkg, data = GetVariableArrays(all_df, var, var, [], selection, ignore_cat)
 
     sig_raw, bkg_sig, data_sig = GetVariableArrays(all_df, var, var, array_sig, selection, ignore_cat)
@@ -9322,14 +9402,34 @@ def MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig = [0,
     return sig, bkg, data, w_sig, w_bkg, w_data, sig_no, bkg_sig, data_sig, w_sig_in, w_bkg_sig, w_data_sig
 
 ###
-def ArrayBumpScan(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = [], sig_scale = 1.0):
-    MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig, selection, ignore_cat, sig_scale)
+def ArrayBumpScan(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = [], sig_scale = 1.0, profit=False, cov=None):
+    sig, bkg, data, w_sig, w_bkg, w_data, sig_no, bkg_sig, data_sig, w_sig_in, w_bkg_sig, w_data_sig = MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig, selection, ignore_cat, sig_scale)
+    print("Creating BumpHunter 1D class instance")
+    hunter = BH.BumpHunter1D(
+            rang=rang,
+            width_min=1,
+            width_max=10,
+            width_step=1,
+            scan_step=1,
+            npe=400000,
+            nworker=1,
+            seed=666,
+            bins=binnum,
+            weights=w_bkg,
+        )
+    print('####bump_scan call####')
+    begin = datetime.now()
+    hunter.bump_scan(data, bkg, is_hist=False, cov = cov)
+    end = datetime.now()
+    print(f'time={end - begin}')
+    print('')
 
 
 
 
 ###
 def HistBumpScan():
+    print("Not implemented yet")
     return 0
 
 
