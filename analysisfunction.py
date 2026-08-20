@@ -9391,13 +9391,12 @@ def MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig = [0,
     elif profit:
         print("Using PROfit covariance matrix")
         hmc = ROOT.TH1D("hmc", "hmc", binnum, rang[0], rang[1])
-        for i_sig in sig:
-            hmc.Fill(i_sig)
+        #for i_sig in sig:
+        #    hmc.Fill(i_sig)
         for i_bkg in bkg:
             hmc.Fill(i_bkg)
         # absolute cov matrix
-        matrix_frac_cov_TH2D = MakePROfitCovMatrix(plot_folder, all_df, files, selection, var, x_label, num_bins, start_edge, end_edge, str(POT), subchannel_map=None, include_detvar=include_detvar, remake=remake_profit)
-        matrix_absolute_cov = np.array([[]])#matrix_frac_cov.Clone("matrix_absolute_cov")
+        matrix_frac_cov_TH2D = MakePROfitCovMatrix(plot_folder, all_df, files, selection, var, var, binnum, rang[0], rang[1], "1.0", subchannel_map=None, include_detvar=include_detvar, remake=remake_profit)
 
         vec_pred = np.array([])
         matrix_frac_cov = []
@@ -9441,23 +9440,24 @@ def MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig = [0,
     plt.xticks(fontsize='xx-large')
     plt.yticks(fontsize='xx-large')
     plt.show()
-    F.savefig(plot_folder+'/bumphunter/distribution_input.png', format='png',facecolor='white', transparent=False)
+    F.savefig(plot_folder+'/bumphunter/'+selection+var+'_distribution_input.png', format='png',facecolor='white', transparent=False)
 
     return sig, bkg, data, w_sig, w_bkg, w_data, sig_no, bkg_sig, data_sig, w_sig_in, w_bkg_sig, w_data_sig, matrix_absolute_cov
 
 ###
-def ArrayBumpScan(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = [], sig_scale = 1.0, profit=False, cov=None):
-    sig, bkg, data, w_sig, w_bkg, w_data, sig_no, bkg_sig, data_sig, w_sig_in, w_bkg_sig, w_data_sig = MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig, selection, ignore_cat, sig_scale, profit, cov)
+def ArrayBumpScan(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = [], sig_scale = 1.0, 
+                  profit=False, cov=None, scan_step=1, width_step=1, npe=400000, nworker=1, seed=666):
+    sig, bkg, data, w_sig, w_bkg, w_data, sig_no, bkg_sig, data_sig, w_sig_in, w_bkg_sig, w_data_sig, mat_cov = MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig, selection, ignore_cat, sig_scale, profit, cov)
     print("Creating BumpHunter 1D class instance")
     hunter = BH.BumpHunter1D(
             rang=rang,
-            width_min=1,
-            width_max=10,
-            width_step=1,
-            scan_step=1,
-            npe=400000,
-            nworker=1,
-            seed=666,
+            width_min=rang[0],
+            width_max=rang[1],
+            width_step=width_step,
+            scan_step=scan_step,
+            npe=npe,
+            nworker=nworker,
+            seed=seed,
             bins=binnum,
             weights=w_bkg,
         )
@@ -9468,13 +9468,100 @@ def ArrayBumpScan(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,1
     print(f'time={end - begin}')
     print('')
 
+    with open(plot_folder+'/bumphunter/'+selection+var+'_bump_scan.txt', 'w') as f:
+        f.write(hunter.bump_info(data))
+    print(hunter.bump_info(data))
 
+    hunter.plot_bump(data, bkg, is_hist=False, filename=plot_folder+'/bumphunter/'+selection+var+'_bump_scan.png')
+    hunter.plot_bump(data, bkg, is_hist=False)
 
+    hunter.plot_stat(show_Pval=True)
+
+    return 0
 
 ###
 def HistBumpScan():
     print("Not implemented yet")
     return 0
+
+###
+def BumpSignalInjection(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = [], 
+                        sig_scale = 1.0, scan_step=1, width_step=1, npe=400000, nworker=1, seed=666,
+                        sig_limit=4.0, str_min = 0.00101, str_step = 0.0005, str_scale = 'lin', npe_inject=2000):
+    sig, bkg, data, w_sig, w_bkg, w_data, sig_no, bkg_sig, data_sig, w_sig_in, w_bkg_sig, w_data_sig, mat_cov = MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig, selection, ignore_cat, sig_scale)
+    print("Creating BumpHunter 1D class instance")
+    hunter = BH.BumpHunter1D(
+            rang=rang,
+            width_min=rang[0],
+            width_max=rang[1],
+            width_step=width_step,
+            scan_step=scan_step,
+            npe=npe,
+            nworker=nworker,
+            seed=seed,
+            bins=binnum,
+            weights=w_bkg,
+        )
+    F = plt.figure(figsize=(12,8))
+    plt.title("Test Injection Distribution")
+    plt.hist(
+        [bkg, sig],
+        bins=binnum,
+        histtype="step",
+        range=rang,
+        label=["background", "injected signal"],
+        linewidth=2,
+        weights=[w_bkg, w_sig_in],
+    )
+    plt.legend(fontsize='xx-large')
+    plt.xticks(fontsize='xx-large')
+    plt.yticks(fontsize='xx-large')
+    plt.show()
+    F.savefig(plot_folder+'/bumphunter/distribution_inject_'+str(sig_scale)+'.png', format='png',facecolor='white', transparent=False)
+
+    # We have to set additionnal parameters specific to the signal injection.
+    # All the parameters defined previously are kept.
+    hunter.sigma_limit = sig_limit
+    hunter.str_min = str_min # if str_scale='log', the real starting value is 10**str_min
+    hunter.str_step = str_step
+    hunter.str_scale = str_scale #'lin' or 'log'
+    hunter.signal_exp = len(sig) #150 # Correspond the the real number of signal events generated when making the data
+    hunter.npe_inject = npe_inject # Number of pseudo-experiments to generate for the signal injection
+
+    print('####signal_inject call####')
+    begin = datetime.now()
+    hunter.signal_inject(sig,bkg,is_hist=False)
+    end = datetime.now()
+    print(f'time={end - begin}')
+    print('')
+
+    # Get the injection plot (with linear and log scale axis)
+    hunter.plot_inject()
+    hunter.plot_inject(filename = plot_folder+'/bumphunter/signal_inject_sig_'+str(sig_scale)+'.png')
+
+    # Plot the signal injected distribution
+    F = plt.figure(figsize=(12,8))
+    plt.title(str(sig_limit) + " Sigma Distribution (" + str(hunter.signal_min) + " injected events), " + str(sig_scale) + "* " + var)
+    # Since bkg and data are already arrays of bin contents, use bar plot to show them
+    bin_edges = np.linspace(rang[0], rang[1], len(hunter.data_inject)+1)
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+    plt.bar(bin_centers, hunter.data_inject, width=bin_edges[1]-bin_edges[0], align='center', alpha=0.5, label='bkg + injected signal', color='C4', edgecolor='C4')
+    #plt.errorbar(bin_centers, sig, yerr=np.sqrt(sig), fmt='o', label='injected signal', color='C1')
+    plt.hist(
+            [bkg],
+            bins=binnum,
+            histtype="step",
+            range=rang,
+            label=["background"],
+            linewidth=2,
+            weights=[w_bkg],
+        )
+    plt.legend(fontsize='xx-large')
+    plt.xticks(fontsize='xx-large')
+    plt.yticks(fontsize='xx-large')
+    plt.show()
+    F.savefig(plot_folder+'/mc_only/signal_inject_'+str(sig_scale)+'.png', format='png',facecolor='white', transparent=False)
 
 
 
