@@ -3064,7 +3064,7 @@ def LoadExtBnbLazy(files, su = False, gennu_only = False):
             all_df_in_time_ext, on="__idx", how="left", suffix="_time"
         )
 
-    default_truth_list = [-9999.0, -9999.0, -9999.0, -9999.0]
+    default_truth_list = [np.float32(-9999.0)] * 4
     all_df_in_bdt_ext = all_df_in_bdt_ext.with_columns([
         pl.lit("ext").alias("filetype"),
         pl.lit(12).alias("true_event_type"),
@@ -3304,7 +3304,7 @@ def LoadBnb(files, su = False, gennu_only = False):
         if t=="truth_id" or t=="truth_pdg" or t=="truth_process" or t=="truth_mother":
             cols_to_add.append(pl.Series(t, [[-9999]] * len(true_event_types)))
         elif t=="truth_startXYZT" or t=="truth_endXYZT" or t=="truth_startMomentum" or t=="truth_endMomentum" or t=="truth_daughters":
-            cols_to_add.append(pl.Series(t, [[np.array([-9999.0, -9999.0, -9999.0, -9999.0])] ] * len(true_event_types)))
+            cols_to_add.append(pl.Series(t, [[np.array([-9999.0, -9999.0, -9999.0, -9999.0], dtype=np.float32)] ] * len(true_event_types)))
         #elif t == "truth_muonMomentum" or t == "truth_showerMomentum":
         #    cols_to_add.append(pl.Series(t, np.full((len(true_event_types), 4), -9999.0)))
         elif t=="truth_single_photon" or t=="truth_showerMother" or t=="truth_Npi0" or t=="truth_NCDelta":
@@ -3314,7 +3314,7 @@ def LoadBnb(files, su = False, gennu_only = False):
         elif t=="truth_isCC":
             cols_to_add.append(pl.Series(t, [False] * len(true_event_types)))
         else:
-            cols_to_add.append(pl.Series(t, [-9999.0] * len(true_event_types)))
+            cols_to_add.append(pl.Series(t, [-9999.0] * len(true_event_types), dtype=pl.Float32))
     if cols_to_add:
         all_df_in_pfeval_data = all_df_in_pfeval_data.with_columns(*cols_to_add)
 
@@ -8219,7 +8219,7 @@ def FindWCMother(p, Ntrack, id, pdg):
     return m
 
 def Get2Photons(all_df, reco):
-    default = [-9999.0, -9999.0, -9999.0, -9999.0]
+    default = [np.float32(-9999.0)] * 4
 
     def photon_row(row):
         def empty_photon():
@@ -8232,7 +8232,7 @@ def Get2Photons(all_df, reco):
             nphotons = 0
             is_data = row["true_event_type"] in (12, 13)
             for index in range(int(row["wc_reco_Ntrack"])):
-                position = list(row["wc_reco_startXYZT"][index])
+                position = np.asarray(row["wc_reco_startXYZT"][index], dtype=np.float32).tolist()
                 mother = FindWCMother(
                     row["wc_reco_mother"][index],
                     row["wc_reco_Ntrack"],
@@ -8279,19 +8279,19 @@ def Get2Photons(all_df, reco):
                     continue
                 nphotons += 1
                 if len(momenta) < 2:
-                    energy = row["lantern_showerRecoE"][index]
-                    direction = [
+                    energy = np.float32(row["lantern_showerRecoE"][index])
+                    direction = np.asarray([
                         row["lantern_showerStartDirX"][index],
                         row["lantern_showerStartDirY"][index],
                         row["lantern_showerStartDirZ"][index],
-                    ]
-                    momenta.append([energy * component for component in direction] + [energy])
-                    positions.append([
+                    ], dtype=np.float32)
+                    momenta.append((energy * direction).tolist() + [energy.item()])
+                    positions.append(np.asarray([
                         row["lantern_showerStartPosX"][index],
                         row["lantern_showerStartPosY"][index],
                         row["lantern_showerStartPosZ"][index],
                         energy,
-                    ])
+                    ], dtype=np.float32).tolist())
                     processes.append(str(row["lantern_showerProcess"][index]))
             while len(momenta) < 2:
                 empty_momentum, empty_position, empty_process = empty_photon()
@@ -8314,12 +8314,12 @@ def Get2Photons(all_df, reco):
             positions = []
             if energy1 > 0.0:
                 momenta.append([
-                    energy1 * row["pelee_pi0_dir1_x"], energy1 * row["pelee_pi0_dir1_y"],
-                    energy1 * row["pelee_pi0_dir1_z"], energy1,
+                    np.float32(energy1 * row["pelee_pi0_dir1_x"]), np.float32(energy1 * row["pelee_pi0_dir1_y"]),
+                    np.float32(energy1 * row["pelee_pi0_dir1_z"]), np.float32(energy1),
                 ])
-                direction = [row["pelee_pi0_dir1_x"], row["pelee_pi0_dir1_y"], row["pelee_pi0_dir1_z"]]
-                vertex = [row["pelee_pi0_rc_vtx_x"], row["pelee_pi0_rc_vtx_y"], row["pelee_pi0_rc_vtx_z"]]
-                radius = row["pelee_pi0_radlen1"]
+                direction = [np.float32(row["pelee_pi0_dir1_x"]), np.float32(row["pelee_pi0_dir1_y"]), np.float32(row["pelee_pi0_dir1_z"])]
+                vertex = [np.float32(row["pelee_pi0_rc_vtx_x"]), np.float32(row["pelee_pi0_rc_vtx_y"]), np.float32(row["pelee_pi0_rc_vtx_z"])]
+                radius = np.float32(row["pelee_pi0_radlen1"])
                 norm = sum(component * component for component in direction)
                 projection = (-0.5 * np.sqrt(
                     (-2.0 * sum(a * b for a, b in zip(direction, vertex))) ** 2
@@ -8328,17 +8328,18 @@ def Get2Photons(all_df, reco):
                 positions.append([projection * component for component in direction] + [projection])
             if energy2 > 0.0:
                 momenta.append([
-                    energy2 * row["pelee_pi0_dir2_x"], energy2 * row["pelee_pi0_dir2_y"],
-                    energy2 * row["pelee_pi0_dir2_z"], energy2,
+                    np.float32(energy2 * row["pelee_pi0_dir2_x"]), np.float32(energy2 * row["pelee_pi0_dir2_y"]),
+                    np.float32(energy2 * row["pelee_pi0_dir2_z"]), np.float32(energy2),
                 ])
-                direction = [row["pelee_pi0_dir2_x"], row["pelee_pi0_dir2_y"], row["pelee_pi0_dir2_z"]]
-                vertex = [row["pelee_pi0_rc_vtx_x"], row["pelee_pi0_rc_vtx_y"], row["pelee_pi0_rc_vtx_z"]]
-                radius = row["pelee_pi0_radlen2"]
+                direction = [np.float32(row["pelee_pi0_dir2_x"]), np.float32(row["pelee_pi0_dir2_y"]), np.float32(row["pelee_pi0_dir2_z"])]
+                vertex = [np.float32(row["pelee_pi0_rc_vtx_x"]), np.float32(row["pelee_pi0_rc_vtx_y"]), np.float32(row["pelee_pi0_rc_vtx_z"])]
+                radius = np.float32(row["pelee_pi0_radlen2"])
                 norm = sum(component * component for component in direction)
                 projection = (-0.5 * np.sqrt(
                     (-2.0 * sum(a * b for a, b in zip(direction, vertex))) ** 2
                     - 4.0 * norm * (norm - radius ** 2)
                 ) + sum(a * b for a, b in zip(direction, vertex))) / norm
+                projection = np.float32(projection)
                 positions.append([projection * component for component in direction] + [projection])
             while len(momenta) < 2:
                 empty_momentum, empty_position, _ = empty_photon()
@@ -9285,6 +9286,50 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
 
 
 
+###
+def MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = [], sig_scale = 1.0):
+    #make input arrays for bump hunter
+    sig_no, bkg, data = GetVariableArrays(all_df, var, var, [], selection, ignore_cat)
+
+    sig_raw, bkg_sig, data_sig = GetVariableArrays(all_df, var, var, array_sig, selection, ignore_cat)
+    w_sig_in, w_bkg_sig, w_data_sig = GetVariableArrays(all_df, "weights", "w", array_sig, selection, ignore_cat)
+
+    sig = [x * sig_scale for x in sig_raw]
+
+    w_sig, w_bkg, w_data = GetVariableArrays(all_df, "weights", "w", [], selection, ignore_cat)
+
+    sig = np.array(sig)
+    bkg = np.array(bkg)
+    data = np.array(data)
+
+    F = plt.figure(figsize=(12,8))
+    plt.title("Test distribution")
+    plt.hist(
+        [bkg, data],
+        bins=binnum,
+        histtype="step",
+        range=rang,
+        label=["background", "data"],
+        linewidth=2,
+        weights=[w_bkg, w_data],
+    )
+    plt.legend(fontsize='xx-large')
+    plt.xticks(fontsize='xx-large')
+    plt.yticks(fontsize='xx-large')
+    plt.show()
+    F.savefig(plot_folder+'/bumphunter/distribution_input.png', format='png',facecolor='white', transparent=False)
+
+    return sig, bkg, data, w_sig, w_bkg, w_data, sig_no, bkg_sig, data_sig, w_sig_in, w_bkg_sig, w_data_sig
+
+###
+def ArrayBumpScan(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = [], sig_scale = 1.0):
+    MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig, selection, ignore_cat, sig_scale)
+
+
+
+
+###
+def HistBumpScan():
 
 
 
