@@ -9330,7 +9330,7 @@ def ArrayBumpScan(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,1
 
 ###
 def HistBumpScan():
-
+    return 0
 
 
 
