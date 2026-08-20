@@ -8448,13 +8448,13 @@ def Get2Photons(all_df, reco):
     if reco == "lantern":
         return_dtype = pl.Struct([
             pl.Field("nphotons_lantern", pl.Int32),
-            pl.Field("photon1_mom_lantern", pl.List(pl.Float32)),
-            pl.Field("photon2_mom_lantern", pl.List(pl.Float32)),
-            pl.Field("photon1_XYZT_lantern", pl.List(pl.Float32)),
-            pl.Field("photon2_XYZT_lantern", pl.List(pl.Float32)),
+            pl.Field("photon1_mom_lantern", pl.List(pl.Float64)),
+            pl.Field("photon2_mom_lantern", pl.List(pl.Float64)),
+            pl.Field("photon1_XYZT_lantern", pl.List(pl.Float64)),
+            pl.Field("photon2_XYZT_lantern", pl.List(pl.Float64)),
             pl.Field("photon1_process_lantern", pl.String),
             pl.Field("photon2_process_lantern", pl.String),
-            pl.Field("photon_inv_mass_lantern", pl.Float32),
+            pl.Field("photon_inv_mass_lantern", pl.Float64),
         ])
     elif reco == "pandora":
         return_dtype = pl.Struct([
