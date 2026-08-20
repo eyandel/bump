@@ -8225,7 +8225,7 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     #return c,h_data,h_ext,h_dirt,h_cos,h_outFV,h_numuCCpi0,h_numuCC,h_NCpi0,h_NC,h_nueCC,h_NCpi1g,h_NCdel,h_NCother,h_numuCC1g
 
 def FindWCMother(p, Ntrack, id, pdg):
-    m = -9999.
+    m = -9999
     if p == 0:
         m = 0
     else:
@@ -8322,8 +8322,8 @@ def Get2Photons(all_df, reco):
                 ):
                     nphotons += 1
                     if len(momenta) < 2:
-                        momenta.append([np.float32(x) for x in momentum_arr])
-                        positions.append(position)
+                        momenta.append(momentum_arr.copy())
+                        positions.append(position.copy())
                         mothers.append(np.int32(row["wc_reco_mother"][index]))
 
             while len(momenta) < 2:
@@ -8471,13 +8471,13 @@ def Get2Photons(all_df, reco):
     else:
         return_dtype = pl.Struct([
             pl.Field("nphotons_wc", pl.Int32),
-            pl.Field("photon1_mom_wc", pl.List(pl.Float32)),
-            pl.Field("photon2_mom_wc", pl.List(pl.Float32)),
-            pl.Field("photon1_XYZT_wc", pl.List(pl.Float32)),
-            pl.Field("photon2_XYZT_wc", pl.List(pl.Float32)),
+            pl.Field("photon1_mom_wc", pl.List(pl.Float64)),
+            pl.Field("photon2_mom_wc", pl.List(pl.Float64)),
+            pl.Field("photon1_XYZT_wc", pl.List(pl.Float64)),
+            pl.Field("photon2_XYZT_wc", pl.List(pl.Float64)),
             pl.Field("photon1_mother_wc", pl.Int32),
             pl.Field("photon2_mother_wc", pl.Int32),
-            pl.Field("photon_inv_mass_wc", pl.Float32),
+            pl.Field("photon_inv_mass_wc", pl.Float64),
         ])
     output = all_df.with_columns(
         pl.struct(required[reco]).map_elements(
