@@ -8463,7 +8463,7 @@ def Get2Photons(all_df, reco):
             pl.Field("photon1_mom_pandora", pl.List(pl.Float64)),
             pl.Field("photon2_mom_pandora", pl.List(pl.Float64)),
             pl.Field("photon1_XYZT_pandora", pl.List(pl.Float64)),
-            pl.Field("photon2_XYZT_pandora", pl.List(pl.Float644)),
+            pl.Field("photon2_XYZT_pandora", pl.List(pl.Float64)),
             pl.Field("photon1_process_pandora", pl.Int32),
             pl.Field("photon2_process_pandora", pl.Int32),
             pl.Field("photon_inv_mass_pandora", pl.Float64),
@@ -9367,7 +9367,8 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
 
 
 ###
-def MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = [], sig_scale = 1.0, profit=False, cov=None):
+def MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = [], sig_scale = 1.0, 
+                         profit=False, include_detvar=False, files=default_file_dicts, remake_profit=False, cov=None):
     #make input arrays for bump hunter
     print("Making bump hunter inputs")
     sig_no, bkg, data = GetVariableArrays(all_df, var, var, [], selection, ignore_cat)
@@ -9383,12 +9384,40 @@ def MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig = [0,
     bkg = np.array(bkg)
     data = np.array(data)
 
-    if profit:
+    matrix_absolute_cov = np.array([[]])
+    if cov:
+        print("Using user-provided covariance matrix")
+        matrix_absolute_cov = cov
+    elif profit:
         print("Using PROfit covariance matrix")
+        hmc = ROOT.TH1D("hmc", "hmc", binnum, rang[0], rang[1])
+        for i_sig in sig:
+            hmc.Fill(i_sig)
+        for i_bkg in bkg:
+            hmc.Fill(i_bkg)
+        # absolute cov matrix
+        matrix_frac_cov_TH2D = MakePROfitCovMatrix(plot_folder, all_df, files, selection, var, x_label, num_bins, start_edge, end_edge, str(POT), subchannel_map=None, include_detvar=include_detvar, remake=remake_profit)
+        matrix_absolute_cov = np.array([[]])#matrix_frac_cov.Clone("matrix_absolute_cov")
+
+        vec_pred = np.array([])
+        matrix_frac_cov = []
+        for i in range(binnum):
+            vec_pred = np.append(vec_pred,[hmc.GetBinContent(i+1)])
+            matrix_frac_cov_row = np.array([])
+            for j in range(hmc.GetNbinsX()):
+                matrix_frac_cov_row = np.append(matrix_frac_cov_row, [matrix_frac_cov_TH2D.GetBinContent(i+1,j+1)])
+            matrix_frac_cov.append(matrix_frac_cov_row)
+
+        matrix_absolute_cov = np.array(matrix_absolute_cov)
+        pred_outer = np.outer(vec_pred, vec_pred)
+        #print(matrix_frac_cov)
+        #print(pred_outer)
+        matrix_absolute_cov = matrix_frac_cov * pred_outer
+
 
     F = plt.figure(figsize=(12,8))
     plt.title("Test distribution")
-    plt.hist(
+    bkg_counts, bin_edges, _ = plt.hist(
         [bkg, data],
         bins=binnum,
         histtype="step",
@@ -9397,13 +9426,24 @@ def MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig = [0,
         linewidth=2,
         weights=[w_bkg, w_data],
     )
+    if matrix_absolute_cov is not None:
+        bkg_errors = np.sqrt(np.clip(np.diag(matrix_absolute_cov), 0, None))
+        bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+        plt.errorbar(
+            bin_centers,
+            bkg_counts[0],
+            yerr=bkg_errors,
+            fmt="none",
+            ecolor="C0",
+            capsize=2,
+        )
     plt.legend(fontsize='xx-large')
     plt.xticks(fontsize='xx-large')
     plt.yticks(fontsize='xx-large')
     plt.show()
     F.savefig(plot_folder+'/bumphunter/distribution_input.png', format='png',facecolor='white', transparent=False)
 
-    return sig, bkg, data, w_sig, w_bkg, w_data, sig_no, bkg_sig, data_sig, w_sig_in, w_bkg_sig, w_data_sig
+    return sig, bkg, data, w_sig, w_bkg, w_data, sig_no, bkg_sig, data_sig, w_sig_in, w_bkg_sig, w_data_sig, matrix_absolute_cov
 
 ###
 def ArrayBumpScan(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = [], sig_scale = 1.0, profit=False, cov=None):
