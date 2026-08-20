@@ -9384,6 +9384,7 @@ def MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig = [0,
     data = np.array(data)
 
     if profit:
+        print("Using PROfit covariance matrix")
 
     F = plt.figure(figsize=(12,8))
     plt.title("Test distribution")
