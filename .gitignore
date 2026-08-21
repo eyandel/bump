@@ -8,3 +8,7 @@ __pycache__/analysisfunction.cpython-313.pyc
 tests/process.log
 tests/
 xml/
+uv.lock
+pyproject.toml
+README.md
+main.py

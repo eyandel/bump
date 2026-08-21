@@ -7079,8 +7079,11 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
                                                  weights=selected_w_bkg)
 
     #sumw2 error for mc
-    bins_mc_error = np.digitize(selected_var_sig+selected_var_bkg, bin_edges)
-    selected_w_mc = selected_w_sig+selected_w_bkg
+    bins_mc_error = np.digitize(
+        np.concatenate((selected_var_sig, selected_var_bkg)),
+        bin_edges,
+    )
+    selected_w_mc = np.concatenate((selected_w_sig, selected_w_bkg))
     error_mc = []
     # access elements
     for i_bin in range(len(bin_edges)-1):
@@ -8636,32 +8639,33 @@ def CombinePhotonVars(all_df, var):
 
 
 ###
-def MakeCovMatrix(all_df, selname, var, bin_width, start_edge, end_edge):
-    bins = np.arange(start_edge, end_edge + bin_width, bin_width)
-    passed_sel = PassSelection(selname, all_df, -1)
-    all_df = all_df.with_columns(pl.lit(passed_sel).alias("passed_sel"))
-    pred_sel_df = all_df.filter((pl.col("passed_sel") == True) & (pl.col("filetype") != "data"))
-    rw_sys_frac_cov_dic = get_rw_sys_frac_cov_matrices(
-            pred_sel_df.filter(pl.col("filetype") != "ext"), selname, var, bins, dont_load_rw_from_systematic_cache=dont_load_rw_from_systematic_cache, weights_df=None
-        )
-    combined_rw_sys_frac_cov = np.zeros((len(bins)-1, len(bins)-1))
-    for rw_sys_frac_cov_name, rw_sys_frac_cov in rw_sys_frac_cov_dic.items():
-        combined_rw_sys_frac_cov += rw_sys_frac_cov
-    combined_rw_sys_cov = combined_rw_sys_frac_cov * np.outer(mc_pred_counts, mc_pred_counts) # fractional uncertainty on the MC pred, not including EXT
-    data_stat_cov = get_data_stat_cov(data_counts, pred_counts)
-    pred_stat_cov = get_pred_stat_cov(get_vals(pred_sel_df, var), pred_sel_df.get_column("wc_net_weight").to_numpy(zero_copy_only=False), bins)
-    nodetvar_sys_cov = combined_rw_sys_cov + data_stat_cov + pred_stat_cov
-    denom = np.outer(pred_counts, pred_counts)
-    nodetvar_sys_frac_cov = np.divide(nodetvar_sys_cov, denom, out=np.zeros_like(nodetvar_sys_cov), where=(denom != 0))
-    nodetvar_sys_frac_cov = np.nan_to_num(nodetvar_sys_frac_cov, nan=0, posinf=0, neginf=0)
-    nodetvar_pred_sys_cov = combined_rw_sys_cov + pred_stat_cov
-    nodetvar_pred_sys_frac_cov = np.divide(nodetvar_pred_sys_cov, denom, out=np.zeros_like(nodetvar_pred_sys_cov), where=(denom != 0))
-    nodetvar_pred_sys_frac_cov = np.nan_to_num(nodetvar_pred_sys_frac_cov, nan=0, posinf=0, neginf=0)
-    nodetvar_pred_sys_frac_errors = np.sqrt(np.diag(nodetvar_pred_sys_frac_cov))
-
-    cov_matrix = nodetvar_pred_sys_frac_cov
-
-    return cov_matrix
+#def MakeCovMatrix(all_df, selname, var, bin_width, start_edge, end_edge):
+#    #use Lee's NGEM code for a cov matrix. Has been adandoned for now to use PROfit instead
+#    bins = np.arange(start_edge, end_edge + bin_width, bin_width)
+#    passed_sel = PassSelection(selname, all_df, -1)
+#    all_df = all_df.with_columns(pl.lit(passed_sel).alias("passed_sel"))
+#    pred_sel_df = all_df.filter((pl.col("passed_sel") == True) & (pl.col("filetype") != "data"))
+#    rw_sys_frac_cov_dic = get_rw_sys_frac_cov_matrices(
+#            pred_sel_df.filter(pl.col("filetype") != "ext"), selname, var, bins, dont_load_rw_from_systematic_cache=dont_load_rw_from_systematic_cache, weights_df=None
+#        )
+#    combined_rw_sys_frac_cov = np.zeros((len(bins)-1, len(bins)-1))
+#    for rw_sys_frac_cov_name, rw_sys_frac_cov in rw_sys_frac_cov_dic.items():
+#        combined_rw_sys_frac_cov += rw_sys_frac_cov
+#    combined_rw_sys_cov = combined_rw_sys_frac_cov * np.outer(mc_pred_counts, mc_pred_counts) # fractional uncertainty on the MC pred, not including EXT
+#    data_stat_cov = get_data_stat_cov(data_counts, pred_counts)
+#    pred_stat_cov = get_pred_stat_cov(get_vals(pred_sel_df, var), pred_sel_df.get_column("wc_net_weight").to_numpy(zero_copy_only=False), bins)
+#    nodetvar_sys_cov = combined_rw_sys_cov + data_stat_cov + pred_stat_cov
+#    denom = np.outer(pred_counts, pred_counts)
+#    nodetvar_sys_frac_cov = np.divide(nodetvar_sys_cov, denom, out=np.zeros_like(nodetvar_sys_cov), where=(denom != 0))
+#    nodetvar_sys_frac_cov = np.nan_to_num(nodetvar_sys_frac_cov, nan=0, posinf=0, neginf=0)
+#    nodetvar_pred_sys_cov = combined_rw_sys_cov + pred_stat_cov
+#    nodetvar_pred_sys_frac_cov = np.divide(nodetvar_pred_sys_cov, denom, out=np.zeros_like(nodetvar_pred_sys_cov), where=(denom != 0))
+#    nodetvar_pred_sys_frac_cov = np.nan_to_num(nodetvar_pred_sys_frac_cov, nan=0, posinf=0, neginf=0)
+#    nodetvar_pred_sys_frac_errors = np.sqrt(np.diag(nodetvar_pred_sys_frac_cov))
+#
+#    cov_matrix = nodetvar_pred_sys_frac_cov
+#
+#    return cov_matrix
 
 
 def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
@@ -9364,7 +9368,14 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
 
     return collapsed_total_cov
 
-
+###
+def ReweightPions():
+    #reweighting of pion FSI; based on code from https://github.com/leehagaman/uboone_ngem/blob/main/src/pion_fsi_reweighting.py
+    import triangle as _triangle # pyright: ignore[reportMissingImports]
+    from matplotlib.tri import Triangulation as _Triangulation
+    from matplotlib.tri import LinearTriInterpolator as _LinearTriInterp
+    from scipy.interpolate import LinearNDInterpolator as _LinearND
+    from scipy.interpolate import CloughTocher2DInterpolator as _CloughTocher
 
 ###
 def MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = [], sig_scale = 1.0, 
