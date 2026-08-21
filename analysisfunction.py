@@ -4,14 +4,14 @@ from ast import For
 import matplotlib.pyplot as plt
 import uproot as uproot # type: ignore
 import polars as pl # type: ignore
-import pandas as pd
+import pandas as pd # pyright: ignore[reportMissingModuleSource]
 import numpy as np
 #from sklearn.model_selection import train_test_split
 #from sklearn.metrics import roc_curve, auc
 import shutil
 from array import array
 import math
-from tqdm import tqdm
+from tqdm import tqdm # pyright: ignore[reportMissingModuleSource]
 import subprocess
 import shlex
 import gc
@@ -28,7 +28,7 @@ ROOT.gStyle.SetLegendFont(62)
 ROOT.gStyle.SetLabelFont(62)
 import os
 from math import sqrt, isnan
-from scipy.stats import chi2
+from scipy.stats import chi2 # pyright: ignore[reportMissingModuleSource]
 import warnings
 warnings.filterwarnings('ignore')
 import itertools
