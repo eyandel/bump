@@ -6837,181 +6837,99 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     selected_new_w = []
 
 
-    for i in range(len(selected_var_bkg)):
-        if selected_true_event_type_bkg[i]==12:
-            selected_ext_var.append(selected_var_bkg[i])
-            selected_ext_w.append(selected_w_bkg[i])
-            h_ext.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==11:
-            selected_dirt_var.append(selected_var_bkg[i])
-            selected_dirt_w.append(selected_w_bkg[i])
-            h_dirt.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==10:
-            selected_cos_var.append(selected_var_bkg[i])
-            selected_cos_w.append(selected_w_bkg[i])
-            h_cos.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==9:
-            selected_outFV_var.append(selected_var_bkg[i])
-            selected_outFV_w.append(selected_w_bkg[i])
-            h_outFV.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==8: 
-            selected_numuCCpi0_var.append(selected_var_bkg[i])
-            selected_numuCCpi0_w.append(selected_w_bkg[i])
-            h_numuCCpi0.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==7:
-            selected_numuCC_var.append(selected_var_bkg[i])
-            selected_numuCC_w.append(selected_w_bkg[i])
-            h_numuCC.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==6 or selected_true_event_type_bkg[i]==-3:
-            selected_NCpi0_var.append(selected_var_bkg[i])
-            selected_NCpi0_w.append(selected_w_bkg[i])
-            h_NCpi0.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==5:
-            selected_NC_var.append(selected_var_bkg[i])
-            selected_NC_w.append(selected_w_bkg[i])
-            h_NC.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==4: 
-            selected_nueCC_var.append(selected_var_bkg[i])
-            selected_nueCC_w.append(selected_w_bkg[i])
-            h_nueCC.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif not cat5 and (selected_true_event_type_bkg[i]==3 or selected_true_event_type_bkg[i]==2 or selected_true_event_type_bkg[i]==1 or selected_true_event_type_bkg[i]==0 or selected_true_event_type_bkg[i]==111):
-            selected_1g_var.append(selected_var_bkg[i])
-            selected_1g_w.append(selected_w_bkg[i])
-            h_1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif cat5 and selected_true_event_type_bkg[i]==3: 
-            selected_NCpi1g_var.append(selected_var_bkg[i])
-            selected_NCpi1g_w.append(selected_w_bkg[i])
-            h_NCpi1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif cat5 and selected_true_event_type_bkg[i]==2: 
-            selected_NCdel_var.append(selected_var_bkg[i])
-            selected_NCdel_w.append(selected_w_bkg[i])
-            h_NCdel.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif cat5 and selected_true_event_type_bkg[i]==1: 
-            selected_NCother_var.append(selected_var_bkg[i])
-            selected_NCother_w.append(selected_w_bkg[i])
-            h_NCother.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif cat5 and selected_true_event_type_bkg[i]==0: 
-            selected_numuCC1g_var.append(selected_var_bkg[i])
-            selected_numuCC1g_w.append(selected_w_bkg[i])
-            h_numuCC1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif cat5 and selected_true_event_type_bkg[i]==111: 
-            selected_out1g_var.append(selected_var_bkg[i])
-            selected_out1g_w.append(selected_w_bkg[i])
-            h_out1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        else:
-            #print("There is an unknown additional background type")
-            #print(selected_true_event_type_bkg[i])
-            if (selected_true_event_type_bkg[i] not in seen_new_type):
-                print("There is a new background type")
-                print(selected_true_event_type_bkg[i])
-                if newcatsadded:
-                    seen_new_type.append(selected_true_event_type_bkg[i])
-                    seen_new_cat.append(selected_true_event_type_name_bkg[i])
-                    seen_new_color.append(int(selected_true_event_type_color_bkg[i]))
-                    seen_new_fill.append(int(selected_true_event_type_fill_bkg[i]))
-                    h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}")
-                    if h_tmp:
-                        h_tmp.Delete()
-                    h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
-                    new_var = []
-                    new_w = []
-                    selected_new_var.append(new_var)
-                    selected_new_w.append(new_w)
-                else:
-                    print("No additional background categories defined, so not adding this category to the plot")
-            if newcatsadded: 
-                index = seen_new_type.index(selected_true_event_type_bkg[i])
-                selected_new_var[index].append(selected_var_bkg[i])
-                selected_new_w[index].append(selected_w_bkg[i])
-                h_new[index].Fill(selected_var_bkg[i],selected_w_bkg[i])
+    # bulk-classify via numpy masks + TH1::FillN instead of a per-event Python Fill/append loop
+    def _fill_category(type_arr, var_arr, w_arr, mask, hist, var_list, w_list):
+        v = var_arr[mask]
+        w = w_arr[mask]
+        if len(v):
+            hist.FillN(len(v), v.astype(np.float64), w.astype(np.float64))
+            var_list.extend(v.tolist())
+            w_list.extend(w.tolist())
+        return mask
 
-    for i in range(len(selected_var_sig)):
-        if selected_true_event_type_sig[i]==12:
-            selected_ext_var.append(selected_var_sig[i])
-            selected_ext_w.append(selected_w_sig[i])
-            h_ext.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==11:
-            selected_dirt_var.append(selected_var_sig[i])
-            selected_dirt_w.append(selected_w_sig[i])
-            h_dirt.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==10:
-            selected_cos_var.append(selected_var_sig[i])
-            selected_cos_w.append(selected_w_sig[i])
-            h_cos.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==9:
-            selected_outFV_var.append(selected_var_sig[i])
-            selected_outFV_w.append(selected_w_sig[i])
-            h_outFV.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==8: 
-            selected_numuCCpi0_var.append(selected_var_sig[i])
-            selected_numuCCpi0_w.append(selected_w_sig[i])
-            h_numuCCpi0.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==7:
-            selected_numuCC_var.append(selected_var_sig[i])
-            selected_numuCC_w.append(selected_w_sig[i])
-            h_numuCC.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==6 or selected_true_event_type_sig[i]==-3:
-            selected_NCpi0_var.append(selected_var_sig[i])
-            selected_NCpi0_w.append(selected_w_sig[i])
-            h_NCpi0.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==5:
-            selected_NC_var.append(selected_var_sig[i])
-            selected_NC_w.append(selected_w_sig[i])
-            h_NC.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==4: 
-            selected_nueCC_var.append(selected_var_sig[i])
-            selected_nueCC_w.append(selected_w_sig[i])
-            h_nueCC.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif not cat5 and (selected_true_event_type_sig[i]==3 or selected_true_event_type_sig[i]==2 or selected_true_event_type_sig[i]==1 or selected_true_event_type_sig[i]==0 or selected_true_event_type_sig[i]==111):
-            selected_1g_var.append(selected_var_sig[i])
-            selected_1g_w.append(selected_w_sig[i])
-            h_1g.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif cat5 and selected_true_event_type_sig[i]==3: 
-            selected_NCpi1g_var.append(selected_var_sig[i])
-            selected_NCpi1g_w.append(selected_w_sig[i])
-            h_NCpi1g.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif cat5 and selected_true_event_type_sig[i]==2: 
-            selected_NCdel_var.append(selected_var_sig[i])
-            selected_NCdel_w.append(selected_w_sig[i])
-            h_NCdel.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif cat5 and selected_true_event_type_sig[i]==1: 
-            selected_NCother_var.append(selected_var_sig[i])
-            selected_NCother_w.append(selected_w_sig[i])
-            h_NCother.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif cat5 and selected_true_event_type_sig[i]==0: 
-            selected_numuCC1g_var.append(selected_var_sig[i])
-            selected_numuCC1g_w.append(selected_w_sig[i])
-            h_numuCC1g.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif cat5 and selected_true_event_type_sig[i]==111: 
-            selected_out1g_var.append(selected_var_sig[i])
-            selected_out1g_w.append(selected_w_sig[i])
-            h_out1g.Fill(selected_var_sig[i],selected_w_sig[i])
+    def _classify_bulk(type_arr, var_arr, w_arr):
+        classified = np.zeros(len(type_arr), dtype=bool)
+        classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 12, h_ext, selected_ext_var, selected_ext_w)
+        classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 11, h_dirt, selected_dirt_var, selected_dirt_w)
+        classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 10, h_cos, selected_cos_var, selected_cos_w)
+        classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 9, h_outFV, selected_outFV_var, selected_outFV_w)
+        classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 8, h_numuCCpi0, selected_numuCCpi0_var, selected_numuCCpi0_w)
+        classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 7, h_numuCC, selected_numuCC_var, selected_numuCC_w)
+        classified |= _fill_category(type_arr, var_arr, w_arr, (type_arr == 6) | (type_arr == -3), h_NCpi0, selected_NCpi0_var, selected_NCpi0_w)
+        classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 5, h_NC, selected_NC_var, selected_NC_w)
+        classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 4, h_nueCC, selected_nueCC_var, selected_nueCC_w)
+        if not cat5:
+            classified |= _fill_category(type_arr, var_arr, w_arr, np.isin(type_arr, [3, 2, 1, 0, 111]), h_1g, selected_1g_var, selected_1g_w)
         else:
-            if (selected_true_event_type_sig[i] not in seen_new_type):
-                print("There is a new signal type")
-                print(selected_true_event_type_sig[i])
-                if newcatsadded:
-                    seen_new_type.append(selected_true_event_type_sig[i])
-                    seen_new_cat.append(selected_true_event_type_name_sig[i])
-                    seen_new_color.append(int(selected_true_event_type_color_sig[i]))
-                    seen_new_fill.append(int(selected_true_event_type_fill_sig[i]))
-                    h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}")
-                    if h_tmp:
-                        h_tmp.Delete()
-                    h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
-                    new_var = []
-                    new_w = []
-                    selected_new_var.append(new_var)
-                    selected_new_w.append(new_w)
-                else:
-                    print("No additional signal categories defined, so not adding this category to the plot")
+            classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 3, h_NCpi1g, selected_NCpi1g_var, selected_NCpi1g_w)
+            classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 2, h_NCdel, selected_NCdel_var, selected_NCdel_w)
+            classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 1, h_NCother, selected_NCother_var, selected_NCother_w)
+            classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 0, h_numuCC1g, selected_numuCC1g_var, selected_numuCC1g_w)
+            classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 111, h_out1g, selected_out1g_var, selected_out1g_w)
+        return classified
+
+    event_type_bkg_arr = np.asarray(selected_true_event_type_bkg)
+    var_bkg_arr = np.asarray(selected_var_bkg)
+    w_bkg_arr = np.asarray(selected_w_bkg)
+    classified_bkg = _classify_bulk(event_type_bkg_arr, var_bkg_arr, w_bkg_arr)
+
+    # only unseen/new categories still need per-event handling (rare, so a loop here is fine)
+    for i in np.nonzero(~classified_bkg)[0]:
+        if (selected_true_event_type_bkg[i] not in seen_new_type):
+            print("There is a new background type")
+            print(selected_true_event_type_bkg[i])
             if newcatsadded:
-                index = seen_new_type.index(selected_true_event_type_sig[i])
-                selected_new_var[index].append(selected_var_sig[i])
-                selected_new_w[index].append(selected_w_sig[i])
-                h_new[index].Fill(selected_var_sig[i],selected_w_sig[i])
-            
-            
+                seen_new_type.append(selected_true_event_type_bkg[i])
+                seen_new_cat.append(selected_true_event_type_name_bkg[i])
+                seen_new_color.append(int(selected_true_event_type_color_bkg[i]))
+                seen_new_fill.append(int(selected_true_event_type_fill_bkg[i]))
+                h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}")
+                if h_tmp:
+                    h_tmp.Delete()
+                h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
+                new_var = []
+                new_w = []
+                selected_new_var.append(new_var)
+                selected_new_w.append(new_w)
+            else:
+                print("No additional background categories defined, so not adding this category to the plot")
+        if newcatsadded: 
+            index = seen_new_type.index(selected_true_event_type_bkg[i])
+            selected_new_var[index].append(selected_var_bkg[i])
+            selected_new_w[index].append(selected_w_bkg[i])
+            h_new[index].Fill(selected_var_bkg[i],selected_w_bkg[i])
+
+    event_type_sig_arr = np.asarray(selected_true_event_type_sig)
+    var_sig_arr = np.asarray(selected_var_sig)
+    w_sig_arr = np.asarray(selected_w_sig)
+    classified_sig = _classify_bulk(event_type_sig_arr, var_sig_arr, w_sig_arr)
+
+    for i in np.nonzero(~classified_sig)[0]:
+        if (selected_true_event_type_sig[i] not in seen_new_type):
+            print("There is a new signal type")
+            print(selected_true_event_type_sig[i])
+            if newcatsadded:
+                seen_new_type.append(selected_true_event_type_sig[i])
+                seen_new_cat.append(selected_true_event_type_name_sig[i])
+                seen_new_color.append(int(selected_true_event_type_color_sig[i]))
+                seen_new_fill.append(int(selected_true_event_type_fill_sig[i]))
+                h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}")
+                if h_tmp:
+                    h_tmp.Delete()
+                h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
+                new_var = []
+                new_w = []
+                selected_new_var.append(new_var)
+                selected_new_w.append(new_w)
+            else:
+                print("No additional signal categories defined, so not adding this category to the plot")
+        if newcatsadded:
+            index = seen_new_type.index(selected_true_event_type_sig[i])
+            selected_new_var[index].append(selected_var_sig[i])
+            selected_new_w[index].append(selected_w_sig[i])
+            h_new[index].Fill(selected_var_sig[i],selected_w_sig[i])
+
+
     root_hists = [h_cos, h_ext, h_dirt, h_outFV, h_NCpi0, h_numuCCpi0, h_NC,h_numuCC, h_nueCC, 
                   h_1g]
     if cat5:
