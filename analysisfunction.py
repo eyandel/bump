@@ -50,6 +50,23 @@ else:
 sys.path.insert(0, bumppath)
 import pyBumpHunter as BH
 
+if is_gpvm:
+    sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '/exp/uboone/app/users/eyandel/bump/uboone_ngem')))
+else:
+    sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '../../uboone_ngem')))
+
+from src.signal_categories import topological_category_labels, topological_category_colors, topological_category_labels_latex, topological_category_hatches, topological_categories_dic                 # pyright: ignore[reportMissingImports]
+from src.signal_categories import filetype_category_labels, filetype_category_colors, filetype_category_hatches# pyright: ignore[reportMissingImports]
+from src.signal_categories import del1g_detailed_category_labels, del1g_detailed_category_colors, del1g_detailed_category_labels_latex, del1g_detailed_category_hatches, del1g_detailed_categories_dic # pyright: ignore[reportMissingImports]
+from src.signal_categories import del1g_simple_category_labels, del1g_simple_category_colors, del1g_simple_category_labels_latex, del1g_simple_category_hatches, del1g_simple_categories_dic# pyright: ignore[reportMissingImports]
+from src.signal_categories import train_category_labels, train_category_labels_latex# pyright: ignore[reportMissingImports]
+from src.file_locations import intermediate_files_location # pyright: ignore[reportMissingImports]
+from src.plot_helpers import make_histogram_plot# pyright: ignore[reportMissingImports]
+from src.ntuple_variables.variables import combined_training_vars# pyright: ignore[reportMissingImports]
+from src.systematics import *# pyright: ignore[reportMissingImports]
+from src.pyroot_loading import get_rw_sys_weights_dic# pyright: ignore[reportMissingImports]
+from pion_fsi_reweighting import compute_pion_fsi_weights_from_arrays# pyright: ignore[reportMissingImports]
+
 wc_em_charge_scale = 1.0 #0.95
 RECHUNK_AFTER_CAST = False
 
@@ -1356,6 +1373,8 @@ def LoadTreesTruth1Lazy(file1, su = False):
                 pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables + pelee_time_variables, 
                 library="pd"
             ))).select(pl.col("*").name.prefix("pelee_"))
+            pirw_df = ReweightPions(file1)
+            all_df_in_pelee_data = all_df_in_pelee_data.join(pirw_df, on="pelee_event", how="left")
         
         with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
             all_df_in_glee_data = _collect_and_shrink(pl.from_pandas(f_in_glee_data.arrays(
@@ -1736,6 +1755,8 @@ def LoadTreesData1Lazy(file1, su = False):
                 pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables + pelee_time_variables,
                 library="pd"
             ))).select(pl.col("*").name.prefix("pelee_"))
+            pirw_df = ReweightPions(file1)
+            all_df_in_pelee_data = all_df_in_pelee_data.join(pirw_df, on="pelee_event", how="left")
 
         with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
             all_df_in_glee_data = _collect_and_shrink(pl.from_pandas(f_in_glee_data.arrays(
@@ -4504,14 +4525,12 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
     if is_lazy:
         lazy_df = all_df  
         # Collect only the final filtered result
-        all_df = lazy_df.select([
-            "wc_weight_cv",
-            "wc_weight_spline",
-            "true_event_type",
-            "wc_is_sigoverlay",
-            "filetype",
-            "wc_run_period"
-        ]).collect()
+        weight_vars = ["wc_weight_cv", "wc_weight_spline", "true_event_type", "wc_is_sigoverlay", "filetype", "wc_run_period"]
+        if "hA2025_w" in lazy_df.columns:
+            print("Applying pion interpolation weights")
+            weight_vars.append("hA2025_w")
+            weight_vars.append("additional_hA2025c_w")
+        all_df = lazy_df.select(weight_vars).collect()
     
     weight_cv = all_df["wc_weight_cv"].to_numpy(zero_copy_only=False)
     weight_spline = all_df["wc_weight_spline"].to_numpy(zero_copy_only=False)
@@ -4525,6 +4544,12 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
     is_modpi0 = (all_df["filetype"].to_numpy(zero_copy_only=False) == "modpi0_overlay")
     has_muon = (all_df["wc_is_sigoverlay"].to_numpy(zero_copy_only=False) == 0)# (all_df["reco_muonMomentum"].to_numpy(zero_copy_only=False) > 0)
     run_number = all_df["wc_run_period"].to_numpy(zero_copy_only=False)
+    if "hA2025_w" in all_df.columns:
+        hA2025_w = all_df["hA2025_w"].to_numpy(zero_copy_only=False)
+        additional_hA2025c_w = all_df["additional_hA2025c_w"].to_numpy(zero_copy_only=False)
+    else:
+        hA2025_w = np.ones(len(weight_cv))
+        additional_hA2025c_w = np.ones(len(weight_cv))
 
     POT_factor = []
     for i in range(len(is_ext)):
@@ -4713,6 +4738,10 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
     
     w = []
     for i in range(len(is_ext)):
+        pion_weight = hA2025_w[i] * additional_hA2025c_w[i]
+        if pion_weight != 1.0:
+            print(f"Event {i} has pion weight: {pion_weight}")
+        POT_factor[i] *= pion_weight
         if is_ext[i]:
             w.append(POT_factor[i] * (1.0 - cosrej)) #0.5*
         elif is_mccosmic[i]:
@@ -5976,7 +6005,10 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
                                                  weights=selected_w_bkg)
 
     #sumw2 error for mc
-    bins_mc_error = np.digitize(selected_var_sig+selected_var_bkg, bin_edges)
+    bins_mc_error = np.digitize(
+            np.concatenate((selected_var_sig, selected_var_bkg)),
+            bin_edges,
+        )
     selected_w_mc = selected_w_sig+selected_w_bkg
     error_mc = []
     # access elements
@@ -6805,181 +6837,99 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     selected_new_w = []
 
 
-    for i in range(len(selected_var_bkg)):
-        if selected_true_event_type_bkg[i]==12:
-            selected_ext_var.append(selected_var_bkg[i])
-            selected_ext_w.append(selected_w_bkg[i])
-            h_ext.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==11:
-            selected_dirt_var.append(selected_var_bkg[i])
-            selected_dirt_w.append(selected_w_bkg[i])
-            h_dirt.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==10:
-            selected_cos_var.append(selected_var_bkg[i])
-            selected_cos_w.append(selected_w_bkg[i])
-            h_cos.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==9:
-            selected_outFV_var.append(selected_var_bkg[i])
-            selected_outFV_w.append(selected_w_bkg[i])
-            h_outFV.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==8: 
-            selected_numuCCpi0_var.append(selected_var_bkg[i])
-            selected_numuCCpi0_w.append(selected_w_bkg[i])
-            h_numuCCpi0.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==7:
-            selected_numuCC_var.append(selected_var_bkg[i])
-            selected_numuCC_w.append(selected_w_bkg[i])
-            h_numuCC.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==6 or selected_true_event_type_bkg[i]==-3:
-            selected_NCpi0_var.append(selected_var_bkg[i])
-            selected_NCpi0_w.append(selected_w_bkg[i])
-            h_NCpi0.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==5:
-            selected_NC_var.append(selected_var_bkg[i])
-            selected_NC_w.append(selected_w_bkg[i])
-            h_NC.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==4: 
-            selected_nueCC_var.append(selected_var_bkg[i])
-            selected_nueCC_w.append(selected_w_bkg[i])
-            h_nueCC.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif not cat5 and (selected_true_event_type_bkg[i]==3 or selected_true_event_type_bkg[i]==2 or selected_true_event_type_bkg[i]==1 or selected_true_event_type_bkg[i]==0 or selected_true_event_type_bkg[i]==111):
-            selected_1g_var.append(selected_var_bkg[i])
-            selected_1g_w.append(selected_w_bkg[i])
-            h_1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif cat5 and selected_true_event_type_bkg[i]==3: 
-            selected_NCpi1g_var.append(selected_var_bkg[i])
-            selected_NCpi1g_w.append(selected_w_bkg[i])
-            h_NCpi1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif cat5 and selected_true_event_type_bkg[i]==2: 
-            selected_NCdel_var.append(selected_var_bkg[i])
-            selected_NCdel_w.append(selected_w_bkg[i])
-            h_NCdel.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif cat5 and selected_true_event_type_bkg[i]==1: 
-            selected_NCother_var.append(selected_var_bkg[i])
-            selected_NCother_w.append(selected_w_bkg[i])
-            h_NCother.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif cat5 and selected_true_event_type_bkg[i]==0: 
-            selected_numuCC1g_var.append(selected_var_bkg[i])
-            selected_numuCC1g_w.append(selected_w_bkg[i])
-            h_numuCC1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        elif cat5 and selected_true_event_type_bkg[i]==111: 
-            selected_out1g_var.append(selected_var_bkg[i])
-            selected_out1g_w.append(selected_w_bkg[i])
-            h_out1g.Fill(selected_var_bkg[i],selected_w_bkg[i])
-        else:
-            #print("There is an unknown additional background type")
-            #print(selected_true_event_type_bkg[i])
-            if (selected_true_event_type_bkg[i] not in seen_new_type):
-                print("There is a new background type")
-                print(selected_true_event_type_bkg[i])
-                if newcatsadded:
-                    seen_new_type.append(selected_true_event_type_bkg[i])
-                    seen_new_cat.append(selected_true_event_type_name_bkg[i])
-                    seen_new_color.append(int(selected_true_event_type_color_bkg[i]))
-                    seen_new_fill.append(int(selected_true_event_type_fill_bkg[i]))
-                    h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}")
-                    if h_tmp:
-                        h_tmp.Delete()
-                    h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
-                    new_var = []
-                    new_w = []
-                    selected_new_var.append(new_var)
-                    selected_new_w.append(new_w)
-                else:
-                    print("No additional background categories defined, so not adding this category to the plot")
-            if newcatsadded: 
-                index = seen_new_type.index(selected_true_event_type_bkg[i])
-                selected_new_var[index].append(selected_var_bkg[i])
-                selected_new_w[index].append(selected_w_bkg[i])
-                h_new[index].Fill(selected_var_bkg[i],selected_w_bkg[i])
+    # bulk-classify via numpy masks + TH1::FillN instead of a per-event Python Fill/append loop
+    def _fill_category(type_arr, var_arr, w_arr, mask, hist, var_list, w_list):
+        v = var_arr[mask]
+        w = w_arr[mask]
+        if len(v):
+            hist.FillN(len(v), v.astype(np.float64), w.astype(np.float64))
+            var_list.extend(v.tolist())
+            w_list.extend(w.tolist())
+        return mask
 
-    for i in range(len(selected_var_sig)):
-        if selected_true_event_type_sig[i]==12:
-            selected_ext_var.append(selected_var_sig[i])
-            selected_ext_w.append(selected_w_sig[i])
-            h_ext.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==11:
-            selected_dirt_var.append(selected_var_sig[i])
-            selected_dirt_w.append(selected_w_sig[i])
-            h_dirt.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==10:
-            selected_cos_var.append(selected_var_sig[i])
-            selected_cos_w.append(selected_w_sig[i])
-            h_cos.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==9:
-            selected_outFV_var.append(selected_var_sig[i])
-            selected_outFV_w.append(selected_w_sig[i])
-            h_outFV.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==8: 
-            selected_numuCCpi0_var.append(selected_var_sig[i])
-            selected_numuCCpi0_w.append(selected_w_sig[i])
-            h_numuCCpi0.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==7:
-            selected_numuCC_var.append(selected_var_sig[i])
-            selected_numuCC_w.append(selected_w_sig[i])
-            h_numuCC.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==6 or selected_true_event_type_sig[i]==-3:
-            selected_NCpi0_var.append(selected_var_sig[i])
-            selected_NCpi0_w.append(selected_w_sig[i])
-            h_NCpi0.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==5:
-            selected_NC_var.append(selected_var_sig[i])
-            selected_NC_w.append(selected_w_sig[i])
-            h_NC.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==4: 
-            selected_nueCC_var.append(selected_var_sig[i])
-            selected_nueCC_w.append(selected_w_sig[i])
-            h_nueCC.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif not cat5 and (selected_true_event_type_sig[i]==3 or selected_true_event_type_sig[i]==2 or selected_true_event_type_sig[i]==1 or selected_true_event_type_sig[i]==0 or selected_true_event_type_sig[i]==111):
-            selected_1g_var.append(selected_var_sig[i])
-            selected_1g_w.append(selected_w_sig[i])
-            h_1g.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif cat5 and selected_true_event_type_sig[i]==3: 
-            selected_NCpi1g_var.append(selected_var_sig[i])
-            selected_NCpi1g_w.append(selected_w_sig[i])
-            h_NCpi1g.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif cat5 and selected_true_event_type_sig[i]==2: 
-            selected_NCdel_var.append(selected_var_sig[i])
-            selected_NCdel_w.append(selected_w_sig[i])
-            h_NCdel.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif cat5 and selected_true_event_type_sig[i]==1: 
-            selected_NCother_var.append(selected_var_sig[i])
-            selected_NCother_w.append(selected_w_sig[i])
-            h_NCother.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif cat5 and selected_true_event_type_sig[i]==0: 
-            selected_numuCC1g_var.append(selected_var_sig[i])
-            selected_numuCC1g_w.append(selected_w_sig[i])
-            h_numuCC1g.Fill(selected_var_sig[i],selected_w_sig[i])
-        elif cat5 and selected_true_event_type_sig[i]==111: 
-            selected_out1g_var.append(selected_var_sig[i])
-            selected_out1g_w.append(selected_w_sig[i])
-            h_out1g.Fill(selected_var_sig[i],selected_w_sig[i])
+    def _classify_bulk(type_arr, var_arr, w_arr):
+        classified = np.zeros(len(type_arr), dtype=bool)
+        classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 12, h_ext, selected_ext_var, selected_ext_w)
+        classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 11, h_dirt, selected_dirt_var, selected_dirt_w)
+        classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 10, h_cos, selected_cos_var, selected_cos_w)
+        classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 9, h_outFV, selected_outFV_var, selected_outFV_w)
+        classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 8, h_numuCCpi0, selected_numuCCpi0_var, selected_numuCCpi0_w)
+        classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 7, h_numuCC, selected_numuCC_var, selected_numuCC_w)
+        classified |= _fill_category(type_arr, var_arr, w_arr, (type_arr == 6) | (type_arr == -3), h_NCpi0, selected_NCpi0_var, selected_NCpi0_w)
+        classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 5, h_NC, selected_NC_var, selected_NC_w)
+        classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 4, h_nueCC, selected_nueCC_var, selected_nueCC_w)
+        if not cat5:
+            classified |= _fill_category(type_arr, var_arr, w_arr, np.isin(type_arr, [3, 2, 1, 0, 111]), h_1g, selected_1g_var, selected_1g_w)
         else:
-            if (selected_true_event_type_sig[i] not in seen_new_type):
-                print("There is a new signal type")
-                print(selected_true_event_type_sig[i])
-                if newcatsadded:
-                    seen_new_type.append(selected_true_event_type_sig[i])
-                    seen_new_cat.append(selected_true_event_type_name_sig[i])
-                    seen_new_color.append(int(selected_true_event_type_color_sig[i]))
-                    seen_new_fill.append(int(selected_true_event_type_fill_sig[i]))
-                    h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}")
-                    if h_tmp:
-                        h_tmp.Delete()
-                    h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
-                    new_var = []
-                    new_w = []
-                    selected_new_var.append(new_var)
-                    selected_new_w.append(new_w)
-                else:
-                    print("No additional signal categories defined, so not adding this category to the plot")
+            classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 3, h_NCpi1g, selected_NCpi1g_var, selected_NCpi1g_w)
+            classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 2, h_NCdel, selected_NCdel_var, selected_NCdel_w)
+            classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 1, h_NCother, selected_NCother_var, selected_NCother_w)
+            classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 0, h_numuCC1g, selected_numuCC1g_var, selected_numuCC1g_w)
+            classified |= _fill_category(type_arr, var_arr, w_arr, type_arr == 111, h_out1g, selected_out1g_var, selected_out1g_w)
+        return classified
+
+    event_type_bkg_arr = np.asarray(selected_true_event_type_bkg)
+    var_bkg_arr = np.asarray(selected_var_bkg)
+    w_bkg_arr = np.asarray(selected_w_bkg)
+    classified_bkg = _classify_bulk(event_type_bkg_arr, var_bkg_arr, w_bkg_arr)
+
+    # only unseen/new categories still need per-event handling (rare, so a loop here is fine)
+    for i in np.nonzero(~classified_bkg)[0]:
+        if (selected_true_event_type_bkg[i] not in seen_new_type):
+            print("There is a new background type")
+            print(selected_true_event_type_bkg[i])
             if newcatsadded:
-                index = seen_new_type.index(selected_true_event_type_sig[i])
-                selected_new_var[index].append(selected_var_sig[i])
-                selected_new_w[index].append(selected_w_sig[i])
-                h_new[index].Fill(selected_var_sig[i],selected_w_sig[i])
-            
-            
+                seen_new_type.append(selected_true_event_type_bkg[i])
+                seen_new_cat.append(selected_true_event_type_name_bkg[i])
+                seen_new_color.append(int(selected_true_event_type_color_bkg[i]))
+                seen_new_fill.append(int(selected_true_event_type_fill_bkg[i]))
+                h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}")
+                if h_tmp:
+                    h_tmp.Delete()
+                h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
+                new_var = []
+                new_w = []
+                selected_new_var.append(new_var)
+                selected_new_w.append(new_w)
+            else:
+                print("No additional background categories defined, so not adding this category to the plot")
+        if newcatsadded: 
+            index = seen_new_type.index(selected_true_event_type_bkg[i])
+            selected_new_var[index].append(selected_var_bkg[i])
+            selected_new_w[index].append(selected_w_bkg[i])
+            h_new[index].Fill(selected_var_bkg[i],selected_w_bkg[i])
+
+    event_type_sig_arr = np.asarray(selected_true_event_type_sig)
+    var_sig_arr = np.asarray(selected_var_sig)
+    w_sig_arr = np.asarray(selected_w_sig)
+    classified_sig = _classify_bulk(event_type_sig_arr, var_sig_arr, w_sig_arr)
+
+    for i in np.nonzero(~classified_sig)[0]:
+        if (selected_true_event_type_sig[i] not in seen_new_type):
+            print("There is a new signal type")
+            print(selected_true_event_type_sig[i])
+            if newcatsadded:
+                seen_new_type.append(selected_true_event_type_sig[i])
+                seen_new_cat.append(selected_true_event_type_name_sig[i])
+                seen_new_color.append(int(selected_true_event_type_color_sig[i]))
+                seen_new_fill.append(int(selected_true_event_type_fill_sig[i]))
+                h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}")
+                if h_tmp:
+                    h_tmp.Delete()
+                h_new.append(ROOT.TH1F(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}", title, bin_num, start_edge, end_edge))
+                new_var = []
+                new_w = []
+                selected_new_var.append(new_var)
+                selected_new_w.append(new_w)
+            else:
+                print("No additional signal categories defined, so not adding this category to the plot")
+        if newcatsadded:
+            index = seen_new_type.index(selected_true_event_type_sig[i])
+            selected_new_var[index].append(selected_var_sig[i])
+            selected_new_w[index].append(selected_w_sig[i])
+            h_new[index].Fill(selected_var_sig[i],selected_w_sig[i])
+
+
     root_hists = [h_cos, h_ext, h_dirt, h_outFV, h_NCpi0, h_numuCCpi0, h_NC,h_numuCC, h_nueCC, 
                   h_1g]
     if cat5:
@@ -9369,13 +9319,46 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
     return collapsed_total_cov
 
 ###
-def ReweightPions():
+def ReweightPions(file):
     #reweighting of pion FSI; based on code from https://github.com/leehagaman/uboone_ngem/blob/main/src/pion_fsi_reweighting.py
-    import triangle as _triangle # pyright: ignore[reportMissingImports]
-    from matplotlib.tri import Triangulation as _Triangulation
-    from matplotlib.tri import LinearTriInterpolator as _LinearTriInterp
-    from scipy.interpolate import LinearNDInterpolator as _LinearND
-    from scipy.interpolate import CloughTocher2DInterpolator as _CloughTocher
+    hasweights = "mc_generator_pdg" in file["nuselection"]["NeutrinoSelectionFilter"].keys()
+    mc_vars = ["run", "subrun", "event"]
+    if hasweights:
+        mc_vars = mc_vars + ["mc_generator_pdg", "mc_generator_mother", "mc_generator_rescatter",
+                "mc_generator_statuscode", "mc_generator_E", "mc_generator_px",
+                "mc_generator_py", "mc_generator_pz"]
+        #with uproot.open(file)["wcpselection/T_BDTvars"] as f_in_bdt_over:
+        #        all_df_in_bdt_over = _collect_and_shrink(pl.from_pandas(f_in_bdt_over.arrays(bdt_variables, library="pd")))
+        
+        mcg = file["nuselection"]["NeutrinoSelectionFilter"].arrays( mc_vars, library="np")
+        # one pass returns both the hA2025 weight and the additional hA2025c
+        # factor.  hA2025_pion_fsi_rw_weight is the default (folded into
+        # wc_net_weight below; includes the hN charge correction); multiply it
+        # by additional_hA2025c_weight to get the hA2025c variant (table ratio
+        # x our nucleon counting charge correction, WITHOUT the hN charge
+        # correction -- an alternative, not a stacked correction).  Both stored
+        # separately -- additional_hA2025c_weight is NOT folded into
+        # wc_net_weight.
+        hA2025_w, additional_hA2025c_w = compute_pion_fsi_weights_from_arrays(
+            mcg["mc_generator_pdg"], mcg["mc_generator_mother"],
+            mcg["mc_generator_rescatter"], mcg["mc_generator_statuscode"],
+            mcg["mc_generator_E"], mcg["mc_generator_px"],
+            mcg["mc_generator_py"], mcg["mc_generator_pz"])
+    else:
+        mcg = file["nuselection"]["NeutrinoSelectionFilter"].arrays( mc_vars, library="np")
+        hA2025_w = np.ones(len(mcg["run"]))
+        additional_hA2025c_w = np.ones(len(mcg["run"]))
+
+    df = pl.DataFrame()
+    df = df.with_columns([
+        pl.Series("pelee_run", mcg["run"]),
+        pl.Series("pelee_subrun", mcg["subrun"]),
+        pl.Series("pelee_event", mcg["event"]),
+        pl.Series("hA2025_pion_fsi_rw_weight", hA2025_w),
+        pl.Series("additional_hA2025c_weight", additional_hA2025c_w),
+    ])
+    del mcg
+    return df.lazy()
 
 ###
 def MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = [], sig_scale = 1.0, 
