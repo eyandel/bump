@@ -9358,7 +9358,7 @@ def ReweightPions(file):
         pl.Series("additional_hA2025c_weight", additional_hA2025c_w),
     ])
     del mcg
-    return df.lazy()
+    return df
 
 ###
 def MakeBumpHunterInputs(all_df, var, rang, binnum, plot_folder, array_sig = [0,1,2,3,111], selection = "all", ignore_cat = [], sig_scale = 1.0, 
