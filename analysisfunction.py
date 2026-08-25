@@ -34,6 +34,7 @@ warnings.filterwarnings('ignore')
 import itertools
 from datetime import datetime
 import sys
+import triangle  # pyright: ignore[reportMissingImports]
 
 is_gpvm = False
 rundir = os.getcwd()
@@ -9321,6 +9322,7 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
 ###
 def ReweightPions(file):
     #reweighting of pion FSI; based on code from https://github.com/leehagaman/uboone_ngem/blob/main/src/pion_fsi_reweighting.py
+    print("Reweighting pions")
     mc_vars = ["run", "sub", "evt"]
     hasweights = "mc_generator_pdg" in file.keys()
     if hasweights:
@@ -9358,6 +9360,7 @@ def ReweightPions(file):
         pl.Series("additional_hA2025c_weight", additional_hA2025c_w),
     ])
     del mcg
+    print("Reweighting complete")
     return df
 
 ###
