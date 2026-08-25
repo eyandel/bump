@@ -65,7 +65,7 @@ from src.plot_helpers import make_histogram_plot# pyright: ignore[reportMissingI
 from src.ntuple_variables.variables import combined_training_vars# pyright: ignore[reportMissingImports]
 from src.systematics import *# pyright: ignore[reportMissingImports]
 from src.pyroot_loading import get_rw_sys_weights_dic# pyright: ignore[reportMissingImports]
-from pion_fsi_reweighting import compute_pion_fsi_weights_from_arrays# pyright: ignore[reportMissingImports]
+from src.pion_fsi_reweighting import compute_pion_fsi_weights_from_arrays# pyright: ignore[reportMissingImports]
 
 wc_em_charge_scale = 1.0 #0.95
 RECHUNK_AFTER_CAST = False
