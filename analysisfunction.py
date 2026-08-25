@@ -5214,7 +5214,7 @@ def PassSelectionLazyAll(selection, df):
         )
     
     # 2 photon selections - check if photon columns exist
-    if "2photon" in selection:
+    elif "2photon" in selection:
         # Ensure photon counting columns exist
         if "nphotons_wc" not in df.columns:
             print("Warning: Photon counting columns don't exist. Run Get2Photons() first.")
