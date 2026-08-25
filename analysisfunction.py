@@ -1375,7 +1375,9 @@ def LoadTreesTruth1Lazy(file1, su = False):
                 library="pd"
             ))).select(pl.col("*").name.prefix("pelee_"))
             pirw_df = ReweightPions(f_in_pelee_data)
-            all_df_in_pelee_data = all_df_in_pelee_data.join(pirw_df, on="pelee_evt", how="left")
+            print("Joining Pion Reweighting DataFrame with Pelee DataFrame...")
+            all_df_in_pelee_data = all_df_in_pelee_data.join(pirw_df, on="__idx", how="left")
+            print("Finished joining Pion Reweighting DataFrame with Pelee DataFrame.")
         
         with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
             all_df_in_glee_data = _collect_and_shrink(pl.from_pandas(f_in_glee_data.arrays(
@@ -1757,7 +1759,7 @@ def LoadTreesData1Lazy(file1, su = False):
                 library="pd"
             ))).select(pl.col("*").name.prefix("pelee_"))
             pirw_df = ReweightPions(f_in_pelee_data)
-            all_df_in_pelee_data = all_df_in_pelee_data.join(pirw_df, on="pelee_evt", how="left")
+            all_df_in_pelee_data = all_df_in_pelee_data.join(pirw_df, on="__idx", how="left")
 
         with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
             all_df_in_glee_data = _collect_and_shrink(pl.from_pandas(f_in_glee_data.arrays(
