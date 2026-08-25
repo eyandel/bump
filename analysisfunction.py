@@ -4772,9 +4772,19 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs, reweight_
             #print("weight for event %d: %.3e" % (i, w[i]))
                 
     if is_lazy:
-        return lazy_df.drop("weights", strict=False).with_columns(
-            pl.int_range(pl.len()).replace(range(len(w)), w).alias("weights")
-        ), w
+        # For lazy frames, we already collected the necessary columns above
+        # Now add the weights back to the original lazy frame by creating a new LazyFrame
+        # with an index column for joining
+        weights_df = pl.DataFrame({
+            "row_nr": range(len(w)),
+            "weights": w
+        }).lazy()  # Convert to LazyFrame for joining
+
+        # Add row number to lazy frame and join with weights
+        result_df = lazy_df.with_row_index("row_nr").join(
+            weights_df, on="row_nr", how="left"
+        ).drop("row_nr")
+        return result_df, w
     else:
         return all_df.drop("weights", strict=False).with_columns([pl.Series("weights", w)]), w
 
