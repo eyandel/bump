@@ -4775,9 +4775,10 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs, reweight_
         # For lazy frames, we already collected the necessary columns above
         # Now add the weights back to the original lazy frame by creating a new LazyFrame
         # with an index column for joining
+        # Cast weights to Float32 to match the schema of other columns
         weights_df = pl.DataFrame({
-            "row_nr": range(len(w)),
-            "weights": w
+            "row_nr": pl.Series(range(len(w)), dtype=pl.UInt32),
+            "weights": pl.Series(w, dtype=pl.Float32)
         }).lazy()  # Convert to LazyFrame for joining
 
         # Add row number to lazy frame and join with weights
