@@ -34,6 +34,7 @@ warnings.filterwarnings('ignore')
 import itertools
 from datetime import datetime
 import sys
+import triangle  # pyright: ignore[reportMissingImports]
 
 is_gpvm = False
 rundir = os.getcwd()
