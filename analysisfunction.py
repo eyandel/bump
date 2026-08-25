@@ -1373,7 +1373,7 @@ def LoadTreesTruth1Lazy(file1, su = False):
                 pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables + pelee_time_variables, 
                 library="pd"
             ))).select(pl.col("*").name.prefix("pelee_"))
-            pirw_df = ReweightPions(file1)
+            pirw_df = ReweightPions(f_in_pelee_data)
             all_df_in_pelee_data = all_df_in_pelee_data.join(pirw_df, on="pelee_event", how="left")
         
         with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
@@ -1755,7 +1755,7 @@ def LoadTreesData1Lazy(file1, su = False):
                 pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables + pelee_time_variables,
                 library="pd"
             ))).select(pl.col("*").name.prefix("pelee_"))
-            pirw_df = ReweightPions(file1)
+            pirw_df = ReweightPions(f_in_pelee_data)
             all_df_in_pelee_data = all_df_in_pelee_data.join(pirw_df, on="pelee_event", how="left")
 
         with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
@@ -9321,8 +9321,8 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
 ###
 def ReweightPions(file):
     #reweighting of pion FSI; based on code from https://github.com/leehagaman/uboone_ngem/blob/main/src/pion_fsi_reweighting.py
-    hasweights = "mc_generator_pdg" in file["nuselection"]["NeutrinoSelectionFilter"].keys()
-    mc_vars = ["run", "subrun", "event"]
+    mc_vars = ["run", "sub", "evt"]
+    hasweights = "mc_generator_pdg" in file.keys()
     if hasweights:
         mc_vars = mc_vars + ["mc_generator_pdg", "mc_generator_mother", "mc_generator_rescatter",
                 "mc_generator_statuscode", "mc_generator_E", "mc_generator_px",
@@ -9330,7 +9330,7 @@ def ReweightPions(file):
         #with uproot.open(file)["wcpselection/T_BDTvars"] as f_in_bdt_over:
         #        all_df_in_bdt_over = _collect_and_shrink(pl.from_pandas(f_in_bdt_over.arrays(bdt_variables, library="pd")))
         
-        mcg = file["nuselection"]["NeutrinoSelectionFilter"].arrays( mc_vars, library="np")
+        mcg = file.arrays( mc_vars, library="np")
         # one pass returns both the hA2025 weight and the additional hA2025c
         # factor.  hA2025_pion_fsi_rw_weight is the default (folded into
         # wc_net_weight below; includes the hN charge correction); multiply it
@@ -9352,8 +9352,8 @@ def ReweightPions(file):
     df = pl.DataFrame()
     df = df.with_columns([
         pl.Series("pelee_run", mcg["run"]),
-        pl.Series("pelee_subrun", mcg["subrun"]),
-        pl.Series("pelee_event", mcg["event"]),
+        pl.Series("pelee_sub", mcg["sub"]),
+        pl.Series("pelee_evt", mcg["evt"]),
         pl.Series("hA2025_pion_fsi_rw_weight", hA2025_w),
         pl.Series("additional_hA2025c_weight", additional_hA2025c_w),
     ])
