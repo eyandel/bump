@@ -1001,7 +1001,7 @@ def LoadFilesLazy(files, filetype, su = False, gennu_only = False):
         elif filetype.lower() == "data" or filetype.lower() == "bnb":
             df_temp = LoadBnbLazy([file], su = su, gennu_only = gennu_only)
         elif filetype.lower() == "ncpi0":
-            df_temp = LoadNCPi0OverlayLazy([file], su = su)
+            df_temp = LoadNCPi0OverlayLazy([file], su = su, gennu_only = gennu_only)
         elif filetype.lower() == "modpi0":
             df_temp = LoadBNBOverlayLazy([file], su = su, gennu_only = gennu_only)
         else:
