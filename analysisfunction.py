@@ -4463,12 +4463,21 @@ def GetPOT(file, inputPOT = -1.0):
     return p
 
 ###
-def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
+def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs, reweight_pions = True):
     # for calculating the weight
     #returns w: array filled with weights
-    
+
     if runs==0:
         runs = [1,2,3,41,42,43,44,4,5]
+
+    # Convert runs to numpy array for proper element-wise comparison
+    runs = np.array(runs)
+
+    # Convert POT vectors to numpy arrays if they're lists
+    if isinstance(dataPOTvec, list):
+        dataPOTvec = np.array(dataPOTvec)
+    if isinstance(ExtBnbPOTvec, list):
+        ExtBnbPOTvec = np.array(ExtBnbPOTvec)
 
     print("Calculating weights for runs: " + str(runs))
 
@@ -4549,7 +4558,7 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs):
     is_modpi0 = (all_df["filetype"].to_numpy(zero_copy_only=False) == "modpi0_overlay")
     has_muon = (all_df["wc_is_sigoverlay"].to_numpy(zero_copy_only=False) == 0)# (all_df["reco_muonMomentum"].to_numpy(zero_copy_only=False) > 0)
     run_number = all_df["wc_run_period"].to_numpy(zero_copy_only=False)
-    if "hA2025_w" in all_df.columns:
+    if "hA2025_w" in all_df.columns and reweight_pions:
         hA2025_w = all_df["hA2025_w"].to_numpy(zero_copy_only=False)
         additional_hA2025c_w = all_df["additional_hA2025c_w"].to_numpy(zero_copy_only=False)
     else:
