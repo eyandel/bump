@@ -4540,10 +4540,10 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs, reweight_
         lazy_df = all_df  
         # Collect only the final filtered result
         weight_vars = ["wc_weight_cv", "wc_weight_spline", "true_event_type", "wc_is_sigoverlay", "filetype", "wc_run_period"]
-        if "hA2025_w" in lazy_df.columns:
+        if "hA2025_pion_fsi_rw_weight" in lazy_df.columns:
             print("Applying pion interpolation weights")
-            weight_vars.append("hA2025_w")
-            weight_vars.append("additional_hA2025c_w")
+            weight_vars.append("hA2025_pion_fsi_rw_weight")
+            weight_vars.append("additional_hA2025c_weight")
         all_df = lazy_df.select(weight_vars).collect()
     
     weight_cv = all_df["wc_weight_cv"].to_numpy(zero_copy_only=False)
@@ -4558,9 +4558,9 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs, reweight_
     is_modpi0 = (all_df["filetype"].to_numpy(zero_copy_only=False) == "modpi0_overlay")
     has_muon = (all_df["wc_is_sigoverlay"].to_numpy(zero_copy_only=False) == 0)# (all_df["reco_muonMomentum"].to_numpy(zero_copy_only=False) > 0)
     run_number = all_df["wc_run_period"].to_numpy(zero_copy_only=False)
-    if "hA2025_w" in all_df.columns and reweight_pions:
-        hA2025_w = all_df["hA2025_w"].to_numpy(zero_copy_only=False)
-        additional_hA2025c_w = all_df["additional_hA2025c_w"].to_numpy(zero_copy_only=False)
+    if "hA2025_pion_fsi_rw_weight" in all_df.columns and reweight_pions:
+        hA2025_w = all_df["hA2025_pion_fsi_rw_weight"].to_numpy(zero_copy_only=False)
+        additional_hA2025c_w = all_df["additional_hA2025c_weight"].to_numpy(zero_copy_only=False)
     else:
         hA2025_w = np.ones(len(weight_cv))
         additional_hA2025c_w = np.ones(len(weight_cv))
