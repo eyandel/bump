@@ -9371,7 +9371,12 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
     profit_dir = f"{plot_folder}/profit"
     os.makedirs(profit_dir, exist_ok=True)
     # Read the ROOT file and extract the TH2D
-    root_filename = f"{selname}_{var}_v001_PROplot.root"
+    plot_version = "v001"
+    if remake:
+        plot_version = "v002"
+    if type(remake) == str:
+        plot_version = remake
+    root_filename = f"{selname}_{var}_{plot_version}_PROplot.root"
     already_made = False
     if os.path.isfile(profit_dir+"/"+root_filename):
         already_made = True
@@ -9385,9 +9390,6 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
         xml_name = MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bin_min, bin_max, pot, subchannel_map=subchannel_map, include_detvar=include_detvar)
         # Build and run PROfit command with xml path and -t tag taken from variables
         xml_abs = plot_folder + "/xml/" + xml_name
-        plot_version = "v001"
-        if remake:
-            plot_version = "v002"
         #os.path.abspath(xml_name)
         os.chdir(profit_dir)
         if is_gpvm:
