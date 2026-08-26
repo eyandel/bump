@@ -8805,17 +8805,19 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
         is_lazy = isinstance(all_df, pl.LazyFrame)
         if is_lazy:
             lazy_df = all_df
-            passed_vec = PassSelectionLazy(selection, lazy_df, -1)    
+            passed_vec = PassSelectionLazy(selection, lazy_df, -1)   
+            select_list =[ var,
+                            "wc_run",
+                            "wc_subrun",
+                            "wc_event",
+                            "wc_weight_cv",
+                            "wc_weight_spline",
+                            "wc_file_name" ]
+            if "hA2025_pion_fsi_rw_weight" in lazy_df.columns:
+                select_list.append("hA2025_pion_fsi_rw_weight")
+                select_list.append("additional_hA2025c_weight")
             # Collect only the final filtered result
-            all_df = lazy_df.select([
-                var,
-                "wc_run",
-                "wc_subrun",
-                "wc_event",
-                "wc_weight_cv",
-                "wc_weight_spline",
-                "wc_file_name"
-            ]).collect()
+            all_df = lazy_df.select(select_list).collect()
         else:
             passed_vec = PassSelection(selection, all_df, -1)
 
@@ -8826,6 +8828,8 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
         es = all_df["wc_event"].to_numpy(zero_copy_only=False)
         weight_cvs = all_df["wc_weight_cv"].to_numpy(zero_copy_only=False)
         weight_splines = all_df["wc_weight_spline"].to_numpy(zero_copy_only=False)
+        hA2025_weight = all_df["hA2025_pion_fsi_rw_weight"].to_numpy(zero_copy_only=False) if "hA2025_pion_fsi_rw_weight" in all_df.columns else None
+        additional_hA2025c_weight = all_df["additional_hA2025c_weight"].to_numpy(zero_copy_only=False) if "additional_hA2025c_weight" in all_df.columns else None
         #weightReints = all_df["pelee_weightsReint"].to_numpy(zero_copy_only=False)
         is_file = (all_df["wc_file_name"].to_numpy(zero_copy_only=False) == file_path)
         var_type = str(type(allvars[0]))
@@ -8849,6 +8853,7 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
         e = array('i', [0])
         weight_cv = array('d', [0])
         weight_spline = array('d', [0])
+        add_weights = array('d', [0])
         #weightsReint = array('d', [0])
         file_len = 0
         alldf_len = 0
@@ -8860,6 +8865,7 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
         sel_tree.Branch("passed", passed, "passed/B")
         sel_tree.Branch("weight_cv", weight_cv, "weight_cv/D")
         sel_tree.Branch("weight_spline", weight_spline, "weight_spline/D")
+        sel_tree.Branch("add_weights", add_weights, "add_weights/D")
         #sel_tree.Branch("weightsReint", weightsReint, "weightsReint/D")
         for i in range(len(allvars)):
             alldf_len+=1
@@ -8872,6 +8878,7 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
                 passed[0] = passed_vec[i]
                 weight_cv[0] = weight_cvs[i]
                 weight_spline[0] = weight_splines[i]
+                add_weights[0] = hA2025_weight[i] * additional_hA2025c_weight[i] if hA2025_weight is not None and additional_hA2025c_weight is not None else 1.0
                 #weightsReint[0] = weightReints[i]
                 sel_tree.Fill()
         #print(alldf_len)
@@ -9072,7 +9079,7 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
         
         # Set weight_2 based on subchannel type
         if subchannel_name not in ["ext", "data"]:
-            weight_2 = "(weight_cv * weight_spline * (weight_cv * weight_spline < 30) * (weight_cv * weight_spline > 0) + 1 * !((weight_cv * weight_spline < 30) * (weight_cv * weight_spline > 0)))"
+            weight_2 = "(add_weights * weight_cv * weight_spline * (weight_cv * weight_spline < 30) * (weight_cv * weight_spline > 0) + 1 * !((weight_cv * weight_spline < 30) * (weight_cv * weight_spline > 0)))"
             branch.set("weight_2", weight_2)
         
         # Add variable
