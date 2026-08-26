@@ -5579,30 +5579,60 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
     # Check if lazy
     is_lazy = isinstance(all_df, pl.LazyFrame)
 
+    columns = [var, "weights", "true_event_type"]
+    metadata_columns = [
+        column for column in (
+            "true_event_type_name", "true_event_type_color", "true_event_type_fill"
+        ) if column in all_df.columns
+    ]
+    columns.extend(metadata_columns)
+
+    def split_frame(frame):
+        values = frame[var].to_numpy(zero_copy_only=False)
+        weights = frame["weights"].to_numpy(zero_copy_only=False)
+        types = frame["true_event_type"].to_numpy(zero_copy_only=False)
+        keep = ~np.isin(types, ignore_cat)
+        sig_mask = keep & np.isin(types, array_sig)
+        data_mask = keep & (types == 13)
+        bkg_mask = keep & (types > -1) & ~np.isin(types, array_sig + [13])
+        return (
+            values[sig_mask], values[bkg_mask], values[data_mask],
+            weights[sig_mask], weights[bkg_mask], weights[data_mask],
+            types[sig_mask], types[bkg_mask], types[data_mask],
+            {column: frame[column].to_numpy(zero_copy_only=False)
+             for column in metadata_columns},
+            sig_mask, bkg_mask, data_mask
+        )
+
     if is_lazy:
-        var_sig, var_bkg, var_data = GetVariableArraysLazy(all_df, var, "var", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
-        weights_sig, weights_bkg, weights_data = GetVariableArraysLazy(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
-
-        selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArraysLazy(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-        selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArraysLazy(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-        selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArraysLazy(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-        if "true_event_type_name" in all_df.columns:
-            newcatsadded = True
-            selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArraysLazy(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-            selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArraysLazy(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-            selected_true_event_type_fill_sig, selected_true_event_type_fill_bkg, selected_true_event_type_fill_data = GetVariableArraysLazy(all_df, "true_event_type_fill", "true_event_type_fill", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+        frame = all_df.with_columns(
+            PassSelectionLazyAll(selection, all_df).alias("__make_data_mc_plot_selected")
+        ).select(columns + ["__make_data_mc_plot_selected"]).collect()
     else:
-        var_sig, var_bkg, var_data = GetVariableArrays(all_df, var, "var", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
-        weights_sig, weights_bkg, weights_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+        frame = all_df.select(columns).with_columns(
+            pl.Series("__make_data_mc_plot_selected", PassSelection(selection, all_df, -1))
+        )
 
-        selected_var_sig, selected_var_bkg, selected_var_data = GetVariableArrays(all_df, var, "selected_var", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-        selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-        selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-        if "true_event_type_name" in all_df.columns:
-            newcatsadded = True
-            selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArrays(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-            selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArrays(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-            selected_true_event_type_fill_sig, selected_true_event_type_fill_bkg, selected_true_event_type_fill_data = GetVariableArrays(all_df, "true_event_type_fill", "true_event_type_fill", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    selected_frame = frame.filter(frame["__make_data_mc_plot_selected"])
+    (var_sig, var_bkg, var_data, weights_sig, weights_bkg, weights_data,
+     _, _, _, _, _, _, _) = split_frame(frame)
+    (selected_var_sig, selected_var_bkg, selected_var_data,
+     selected_w_sig, selected_w_bkg, selected_w_data,
+     selected_true_event_type_sig, selected_true_event_type_bkg,
+     selected_true_event_type_data, selected_metadata,
+     selected_sig_mask, selected_bkg_mask, selected_data_mask) = split_frame(selected_frame)
+
+    if metadata_columns:
+        newcatsadded = True
+        selected_true_event_type_name_sig = selected_metadata["true_event_type_name"][selected_sig_mask]
+        selected_true_event_type_name_bkg = selected_metadata["true_event_type_name"][selected_bkg_mask]
+        selected_true_event_type_name_data = selected_metadata["true_event_type_name"][selected_data_mask]
+        selected_true_event_type_color_sig = selected_metadata["true_event_type_color"][selected_sig_mask]
+        selected_true_event_type_color_bkg = selected_metadata["true_event_type_color"][selected_bkg_mask]
+        selected_true_event_type_color_data = selected_metadata["true_event_type_color"][selected_data_mask]
+        selected_true_event_type_fill_sig = selected_metadata["true_event_type_fill"][selected_sig_mask]
+        selected_true_event_type_fill_bkg = selected_metadata["true_event_type_fill"][selected_bkg_mask]
+        selected_true_event_type_fill_data = selected_metadata["true_event_type_fill"][selected_data_mask]
 
     #single_photon_numu_score_sig, single_photon_numu_score_bkg, single_photon_numu_score_data = GetVariableArrays(all_df, "single_photon_numu_score", "single_photon_numu_score", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
     #single_photon_other_score_sig, single_photon_other_score_bkg, single_photon_other_score_data = GetVariableArrays(all_df, "single_photon_other_score", "single_photon_other_score", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
@@ -5749,8 +5779,12 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
     selected_new_var = []
     selected_new_w = []
 
-    for i in range(len(selected_var_data)):
-        h_data.Fill(selected_var_data[i],selected_w_data[i])
+    if len(selected_var_data):
+        h_data.FillN(
+            len(selected_var_data),
+            np.asarray(selected_var_data, dtype=np.float64),
+            np.asarray(selected_w_data, dtype=np.float64),
+        )
 
     for i in range(len(selected_var_bkg)):
         if selected_true_event_type_bkg[i]==12:
@@ -7069,7 +7103,7 @@ def MakeMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label, y_l
     for i in range(len(seen_new_type)):
         pred_var.append(selected_new_var[i])
         mc_weights.append(selected_new_w[i])
-        mc_labels.append("{} ({})".format(seen_new_cat[i], round(sum(selected_new_w[i]),2)))
+        mc_labels.append(seen_new_cat[i] + "("+str(round(sum(selected_new_w[i]),2))+")")
         colors_new.append(ROOT.gROOT.GetColor(seen_new_color[i]).AsHexString())
         #colors.append(ROOT.gROOT.GetColor(880+10).AsHexString())
 
@@ -9075,7 +9109,7 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
                 friend.set("treename", friend_tree)
 
             subchannel = ET.SubElement(detvarsec, "subchannel")
-            subchannel.text = f"nu_uBooNE_{selname}_42_overlay"
+            subchannel.text = f"nu_uBooNE_{selname}_overlay"
         
 
     
