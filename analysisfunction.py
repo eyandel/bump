@@ -4559,9 +4559,12 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs, reweight_
     has_muon = (all_df["wc_is_sigoverlay"].to_numpy(zero_copy_only=False) == 0)# (all_df["reco_muonMomentum"].to_numpy(zero_copy_only=False) > 0)
     run_number = all_df["wc_run_period"].to_numpy(zero_copy_only=False)
     if "hA2025_pion_fsi_rw_weight" in all_df.columns and reweight_pions:
+        print(f"Loading pion weights from dataframe (reweight_pions={reweight_pions})")
         hA2025_w = all_df["hA2025_pion_fsi_rw_weight"].to_numpy(zero_copy_only=False)
         additional_hA2025c_w = all_df["additional_hA2025c_weight"].to_numpy(zero_copy_only=False)
+        print(f"Pion weight stats: min={hA2025_w.min():.4f}, max={hA2025_w.max():.4f}, mean={hA2025_w.mean():.4f}")
     else:
+        print(f"Setting pion weights to ones (reweight_pions={reweight_pions}, column_exists={'hA2025_pion_fsi_rw_weight' in all_df.columns})")
         hA2025_w = np.ones(len(weight_cv))
         additional_hA2025c_w = np.ones(len(weight_cv))
 
@@ -6068,7 +6071,7 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
             np.concatenate((selected_var_sig, selected_var_bkg)),
             bin_edges,
         )
-    selected_w_mc = selected_w_sig+selected_w_bkg
+    selected_w_mc = np.concatenate((selected_w_sig, selected_w_bkg))
     error_mc = []
     # access elements
     for i_bin in range(len(bin_edges)-1):
@@ -8817,9 +8820,10 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
                 select_list.append("hA2025_pion_fsi_rw_weight")
                 select_list.append("additional_hA2025c_weight")
             # Collect only the final filtered result
-            all_df = lazy_df.select(select_list).collect()
+            all_df = lazy_df.select(select_list).filter(pl.col("wc_file_name") == file_path).collect()
         else:
             passed_vec = PassSelection(selection, all_df, -1)
+            all_df = all_df.filter(pl.col("wc_file_name") == file_path)
 
         allvars = all_df[var].to_numpy(zero_copy_only=False)
         print(len(allvars))
