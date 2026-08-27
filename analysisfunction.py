@@ -4781,17 +4781,18 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs, reweight_
         # Cast weights to Float32 to match the schema of other columns
         weights_df = pl.DataFrame({
             "row_nr": pl.Series(range(len(w)), dtype=pl.UInt32),
-            "weights": pl.Series(w, dtype=pl.Float32)
+            "weights": pl.Series(w, dtype=pl.Float32),
+            "weight_pion": pl.Series(hA2025_w * additional_hA2025c_w, dtype=pl.Float32)
         }).lazy()  # Convert to LazyFrame for joining
 
         # Add row number to lazy frame and join with weights
         # Drop any existing weights column first to avoid name collision
-        result_df = lazy_df.drop("weights", strict=False).with_row_index("row_nr").join(
+        result_df = lazy_df.drop("weights", strict=False).drop("weight_pion", strict=False).with_row_index("row_nr").join(
             weights_df, on="row_nr", how="left"
         ).drop("row_nr")
         return result_df, w
     else:
-        return all_df.drop("weights", strict=False).with_columns([pl.Series("weights", w)]), w
+        return all_df.drop("weights", strict=False).drop("weight_pion", strict=False).with_columns([pl.Series("weights", w)]), w
 
     # return all_df, w
 
@@ -8758,185 +8759,149 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
     #    weightsReint_df  = pl.from_pandas(f_in.arrays(["weightsReint"], library="pd"))
     #weightsReint_old = weightsReint_df["weightsReint"].to_numpy(zero_copy_only=False)
     #weightsReint = array('H', [0])
-    
+
+    # STEP 1: Build rse_to_idx from all_df first to know which events to keep
+    is_lazy = isinstance(all_df, pl.LazyFrame)
+    if is_lazy:
+        lazy_df = all_df
+        passed_vec = PassSelectionLazy(selection, lazy_df, -1)
+        select_list =[ var,
+                        "wc_run",
+                        "wc_subrun",
+                        "wc_event",
+                        "wc_weight_cv",
+                        "wc_weight_spline",
+                        "wc_file_name" ]
+        if "hA2025_pion_fsi_rw_weight" in lazy_df.columns:
+            select_list.append("hA2025_pion_fsi_rw_weight")
+            select_list.append("additional_hA2025c_weight")
+            select_list.append("weight_pion")
+        # Collect only the final filtered result
+        all_df = lazy_df.select(select_list).filter(pl.col("wc_file_name") == file_path).collect()
+    else:
+        passed_vec = PassSelection(selection, all_df, -1)
+        all_df = all_df.filter(pl.col("wc_file_name") == file_path)
+
+    allvars = all_df[var].to_numpy(zero_copy_only=False)
+    print(f"Events from all_df for this file: {len(allvars)}")
+    rs = all_df["wc_run"].to_numpy(zero_copy_only=False)
+    ss = all_df["wc_subrun"].to_numpy(zero_copy_only=False)
+    es = all_df["wc_event"].to_numpy(zero_copy_only=False)
+    weight_cvs = all_df["wc_weight_cv"].to_numpy(zero_copy_only=False)
+    weight_splines = all_df["wc_weight_spline"].to_numpy(zero_copy_only=False)
+    hA2025_weight = all_df["hA2025_pion_fsi_rw_weight"].to_numpy(zero_copy_only=False) if "hA2025_pion_fsi_rw_weight" in all_df.columns else None
+    additional_hA2025c_weight = all_df["additional_hA2025c_weight"].to_numpy(zero_copy_only=False) if "additional_hA2025c_weight" in all_df.columns else None
+    weight_pion = all_df["weight_pion"].to_numpy(zero_copy_only=False) if "weight_pion" in all_df.columns else None
+    is_file = (all_df["wc_file_name"].to_numpy(zero_copy_only=False) == file_path)
+
+    # Build rse_to_idx mapping
+    rse_to_idx = {}
+    for i in range(len(allvars)):
+        if is_file[i]:
+            rse_to_idx[(rs[i], ss[i], es[i])] = i
+
+    print(f"Built rse_to_idx with {len(rse_to_idx)} unique events")
+
+    # STEP 2: Now open the file and only fill trees with events in rse_to_idx
     with ROOT.TFile(outFileName, "RECREATE") as outfile:
         outfile.SetCompressionLevel(1)
         if data:
-                print(file_path + " is a data file")
-                #spline_tree = ROOT.TTree()
+            print(file_path + " is a data file")
         else:
-            print(file_path + " is an overlay file")
-            #read in the spline_weights tree and the NeutrinoSelectionFilter tree from the input file
-            with ROOT.TFile(file_path, "read") as infile:   
+            print(file_path + " is an overlay file - filtering trees")
+            # Read input trees and filter in one pass
+            with ROOT.TFile(file_path, "read") as infile:
                 spline_tree_in = infile.Get("spline_weights")
-                #spline_tree_in.SetDirectory(ROOT.nullptr)
-                spline_tree_in.SetBranchStatus("*", 1) # set all branches to active
+                spline_tree_in.SetBranchStatus("*", 1)
 
                 NeutrinoSelectionFilter_in = infile.Get("nuselection/NeutrinoSelectionFilter")
-                NeutrinoSelectionFilter_in.SetBranchStatus("*", 0)  # Disable all branches
+                NeutrinoSelectionFilter_in.SetBranchStatus("*", 0)
                 NeutrinoSelectionFilter_in.SetBranchStatus("weightsReint", 1)
                 NeutrinoSelectionFilter_in.SetBranchStatus("run", 1)
                 NeutrinoSelectionFilter_in.SetBranchStatus("sub", 1)
                 NeutrinoSelectionFilter_in.SetBranchStatus("evt", 1)
 
-                # More efficient for large trees
+                # Set up branch addresses for run/sub/evt
+                run_nsf = array('i', [0])
+                sub_nsf = array('i', [0])
+                evt_nsf = array('i', [0])
+                NeutrinoSelectionFilter_in.SetBranchAddress("run", run_nsf)
+                NeutrinoSelectionFilter_in.SetBranchAddress("sub", sub_nsf)
+                NeutrinoSelectionFilter_in.SetBranchAddress("evt", evt_nsf)
+
+                # Create output trees
                 outfile.cd()
                 spline_tree = spline_tree_in.CloneTree(0)
                 spline_tree.SetDirectory(outfile)
-                spline_tree.CopyAddresses(spline_tree_in)
 
-                NeutrinoSelectionFilter_out = NeutrinoSelectionFilter_in.CloneTree(-1, "fast")
-                #NeutrinoSelectionFilter_out.SetDirectory(outfile)
-                #NeutrinoSelectionFilter_out.CopyAddresses(NeutrinoSelectionFilter_in)
+                NeutrinoSelectionFilter_out = NeutrinoSelectionFilter_in.CloneTree(0)
+                NeutrinoSelectionFilter_out.SetDirectory(outfile)
 
-                # NeutrinoSelectionFilter_in.SetBranchAddress('weightsReint', weightsReint)
-                # NeutrinoSelectionFilter.Branch("weightsReint", weightsReint)
-
-                # Build run/subrun/event set for filtering (will be populated later from all_df)
-                # For now, copy all entries - will filter after building rse_to_idx from all_df
+                # Single pass - only fill entries that match rse_to_idx
                 for i in range(spline_tree_in.GetEntriesFast()):
-                    spline_tree_in.GetEntry(i)
-                    spline_tree.Fill()
+                    NeutrinoSelectionFilter_in.GetEntry(i)
+                    rse_key = (run_nsf[0], sub_nsf[0], evt_nsf[0])
 
-            # Don't write trees yet - need to filter them first based on all_df 
+                    if rse_key in rse_to_idx:
+                        spline_tree_in.GetEntry(i)
+                        spline_tree.Fill()
+                        NeutrinoSelectionFilter_out.Fill()
 
-    #with ROOT.TFile(outFileName, "RECREATE") as outfile:
-    #uncomment here
-            sel_tree = ROOT.TTree("sel_tree", "sel_tree")
-            is_lazy = isinstance(all_df, pl.LazyFrame)
-            if is_lazy:
-                lazy_df = all_df
-                passed_vec = PassSelectionLazy(selection, lazy_df, -1)   
-                select_list =[ var,
-                                "wc_run",
-                                "wc_subrun",
-                                "wc_event",
-                                "wc_weight_cv",
-                                "wc_weight_spline",
-                                "wc_file_name" ]
-                if "hA2025_pion_fsi_rw_weight" in lazy_df.columns:
-                    select_list.append("hA2025_pion_fsi_rw_weight")
-                    select_list.append("additional_hA2025c_weight")
-                # Collect only the final filtered result
-                all_df = lazy_df.select(select_list).filter(pl.col("wc_file_name") == file_path).collect()
-            else:
-                passed_vec = PassSelection(selection, all_df, -1)
-                all_df = all_df.filter(pl.col("wc_file_name") == file_path)
+            print(f"Filtered trees: spline_weights={spline_tree.GetEntries()}, NeutrinoSelectionFilter={NeutrinoSelectionFilter_out.GetEntries()}")
+            outfile.WriteObject(spline_tree, "spline_weights")
+            outfile.WriteObject(NeutrinoSelectionFilter_out, "NeutrinoSelectionFilter")
 
-            allvars = all_df[var].to_numpy(zero_copy_only=False)
-            print(len(allvars))
-            rs = all_df["wc_run"].to_numpy(zero_copy_only=False)
-            ss = all_df["wc_subrun"].to_numpy(zero_copy_only=False)
-            es = all_df["wc_event"].to_numpy(zero_copy_only=False)
-            weight_cvs = all_df["wc_weight_cv"].to_numpy(zero_copy_only=False)
-            weight_splines = all_df["wc_weight_spline"].to_numpy(zero_copy_only=False)
-            hA2025_weight = all_df["hA2025_pion_fsi_rw_weight"].to_numpy(zero_copy_only=False) if "hA2025_pion_fsi_rw_weight" in all_df.columns else None
-            additional_hA2025c_weight = all_df["additional_hA2025c_weight"].to_numpy(zero_copy_only=False) if "additional_hA2025c_weight" in all_df.columns else None
-            #weightReints = all_df["pelee_weightsReint"].to_numpy(zero_copy_only=False)
-            is_file = (all_df["wc_file_name"].to_numpy(zero_copy_only=False) == file_path)
-            var_type = str(type(allvars[0]))
+        # STEP 3: Build sel_tree
+        sel_tree = ROOT.TTree("sel_tree", "sel_tree")
+        var_type = str(type(allvars[0]))
+        var_type_array = 'd'
+        if "int" in var_type:
+            var_type = "/I"
+            var_type_array = 'i'
+        elif "float" in var_type:
+            var_type = "/F"
+            var_type_array = 'f'
+        elif "double" in var_type:
+            var_type = "/D"
             var_type_array = 'd'
-            if "int" in var_type:
-                var_type = "/I"
-                var_type_array = 'i'
-            elif "float" in var_type:
-                var_type = "/F"
-                var_type_array = 'f'
-            elif "double" in var_type:
-                var_type = "/D"
-                var_type_array = 'd'
-            else:
-                var_type = ""
-                var_type_array = 'f'
-            var_val = array(var_type_array, [0])
-            passed = array('b', [0])
-            r = array('i', [0])
-            s = array('i', [0])
-            e = array('i', [0])
-            weight_cv = array('d', [0])
-            weight_spline = array('d', [0])
-            add_weights = array('d', [0])
-            #weightsReint = array('d', [0])
-            file_len = 0
-            alldf_len = 0
-            #print(type(var_val))
-            sel_tree.Branch("run", r, "run/I")
-            sel_tree.Branch("subrun", s, "subrun/I")
-            sel_tree.Branch("event", e, "event/I")
-            sel_tree.Branch(var, var_val, var+var_type)
-            sel_tree.Branch("passed", passed, "passed/B")
-            sel_tree.Branch("weight_cv", weight_cv, "weight_cv/D")
-            sel_tree.Branch("weight_spline", weight_spline, "weight_spline/D")
-            sel_tree.Branch("add_weights", add_weights, "add_weights/D")
-            #sel_tree.Branch("weightsReint", weightsReint, "weightsReint/D")
-            rse_to_idx = {}
-            for i in range(len(allvars)):
-                alldf_len+=1
-                if is_file[i]:
-                    file_len+=1
-                    r[0] = rs[i]
-                    s[0] = ss[i]
-                    e[0] = es[i]
-                    rse_to_idx[(rs[i], ss[i], es[i])] = i
-                    var_val[0] = allvars[i]
-                    passed[0] = passed_vec[i]
-                    weight_cv[0] = weight_cvs[i]
-                    weight_spline[0] = weight_splines[i]
-                    add_weights[0] = hA2025_weight[i] * additional_hA2025c_weight[i] if hA2025_weight is not None and additional_hA2025c_weight is not None else 1.0
-                    #weightsReint[0] = weightReints[i]
-                    sel_tree.Fill()
-            #print(alldf_len)
-            #print(file_len)
+        else:
+            var_type = ""
+            var_type_array = 'f'
 
-            # Now filter spline_tree and NeutrinoSelectionFilter_out to match sel_tree
-            # using the rse_to_idx mapping built from all_df
-            if not data:
-                print(f"Filtering trees to match sel_tree: {len(rse_to_idx)} events")
+        var_val = array(var_type_array, [0])
+        passed = array('b', [0])
+        r = array('i', [0])
+        s = array('i', [0])
+        e = array('i', [0])
+        weight_cv = array('d', [0])
+        weight_spline = array('d', [0])
+        add_weights = array('d', [0])
 
-                # Create filtered versions of the trees
-                with ROOT.TFile(file_path, "read") as infile:
-                    spline_tree_in_filter = infile.Get("spline_weights")
-                    spline_tree_in_filter.SetBranchStatus("*", 1)
+        sel_tree.Branch("run", r, "run/I")
+        sel_tree.Branch("subrun", s, "subrun/I")
+        sel_tree.Branch("event", e, "event/I")
+        sel_tree.Branch(var, var_val, var+var_type)
+        sel_tree.Branch("passed", passed, "passed/B")
+        sel_tree.Branch("weight_cv", weight_cv, "weight_cv/D")
+        sel_tree.Branch("weight_spline", weight_spline, "weight_spline/D")
+        sel_tree.Branch("add_weights", add_weights, "add_weights/D")
 
-                    NeutrinoSelectionFilter_in_filter = infile.Get("nuselection/NeutrinoSelectionFilter")
-                    NeutrinoSelectionFilter_in_filter.SetBranchStatus("*", 0)
-                    NeutrinoSelectionFilter_in_filter.SetBranchStatus("weightsReint", 1)
-                    NeutrinoSelectionFilter_in_filter.SetBranchStatus("run", 1)
-                    NeutrinoSelectionFilter_in_filter.SetBranchStatus("sub", 1)
-                    NeutrinoSelectionFilter_in_filter.SetBranchStatus("evt", 1)
+        file_len = 0
+        for i in range(len(allvars)):
+            if is_file[i]:
+                file_len+=1
+                r[0] = rs[i]
+                s[0] = ss[i]
+                e[0] = es[i]
+                var_val[0] = allvars[i]
+                passed[0] = passed_vec[i]
+                weight_cv[0] = weight_cvs[i]
+                weight_spline[0] = weight_splines[i]
+                add_weights[0] = weight_pion[i] if weight_pion is not None else 1.0
+                sel_tree.Fill()
 
-                    # Get run/sub/evt from NeutrinoSelectionFilter to match against rse_to_idx
-                    run_nsf = array('i', [0])
-                    sub_nsf = array('i', [0])
-                    evt_nsf = array('i', [0])
-                    NeutrinoSelectionFilter_in_filter.SetBranchAddress("run", run_nsf)
-                    NeutrinoSelectionFilter_in_filter.SetBranchAddress("sub", sub_nsf)
-                    NeutrinoSelectionFilter_in_filter.SetBranchAddress("evt", evt_nsf)
-
-                    # Clear the old trees and recreate them
-                    outfile.cd()
-                    spline_tree_filtered = spline_tree_in_filter.CloneTree(0)
-                    spline_tree_filtered.SetDirectory(outfile)
-
-                    NeutrinoSelectionFilter_filtered = NeutrinoSelectionFilter_in_filter.CloneTree(0)
-                    NeutrinoSelectionFilter_filtered.SetDirectory(outfile)
-
-                    # Copy only entries that match rse_to_idx
-                    for i in range(NeutrinoSelectionFilter_in_filter.GetEntriesFast()):
-                        NeutrinoSelectionFilter_in_filter.GetEntry(i)
-                        spline_tree_in_filter.GetEntry(i)
-
-                        rse_key = (run_nsf[0], sub_nsf[0], evt_nsf[0])
-                        if rse_key in rse_to_idx:
-                            spline_tree_filtered.Fill()
-                            NeutrinoSelectionFilter_filtered.Fill()
-
-                print(f"Filtered trees: spline_weights={spline_tree_filtered.GetEntries()}, NeutrinoSelectionFilter={NeutrinoSelectionFilter_filtered.GetEntries()}, sel_tree={sel_tree.GetEntries()}")
-
-                outfile.WriteObject(spline_tree_filtered, "spline_weights")
-                outfile.WriteObject(NeutrinoSelectionFilter_filtered, "NeutrinoSelectionFilter")
-
-            outfile.WriteObject(sel_tree, "sel_tree")
+        print(f"sel_tree: {sel_tree.GetEntries()} events")
+        outfile.WriteObject(sel_tree, "sel_tree")
         
         #outfile.Close()
     #end uncomment here
