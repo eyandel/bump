@@ -8802,32 +8802,40 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
 
     print(f"Built rse_to_idx with {len(rse_to_idx)} unique events")
 
-    # STEP 2: Now open the file and only fill trees with events in rse_to_idx
+    # STEP 2: Use uproot to quickly read run/sub/evt and build matching indices
     with ROOT.TFile(outFileName, "RECREATE") as outfile:
         outfile.SetCompressionLevel(1)
         if data:
             print(file_path + " is a data file")
         else:
             print(file_path + " is an overlay file - filtering trees")
-            # Read input trees and filter in one pass
+
+            # Use uproot to quickly read run/sub/evt columns (much faster than ROOT)
+            print("Reading run/sub/evt with uproot...")
+            with uproot.open(file_path) as f_uproot:
+                nsf_tree = f_uproot["nuselection/NeutrinoSelectionFilter"]
+                run_arr = nsf_tree["run"].array(library="np")
+                sub_arr = nsf_tree["sub"].array(library="np")
+                evt_arr = nsf_tree["evt"].array(library="np")
+
+            # Build list of indices that match rse_to_idx
+            print("Finding matching indices...")
+            matching_indices = []
+            for i in range(len(run_arr)):
+                rse_key = (int(run_arr[i]), int(sub_arr[i]), int(evt_arr[i]))
+                if rse_key in rse_to_idx:
+                    matching_indices.append(i)
+
+            print(f"Found {len(matching_indices)} matching entries out of {len(run_arr)} total")
+
+            # Now use ROOT to copy only the matching entries
             with ROOT.TFile(file_path, "read") as infile:
                 spline_tree_in = infile.Get("spline_weights")
                 spline_tree_in.SetBranchStatus("*", 1)
 
                 NeutrinoSelectionFilter_in = infile.Get("nuselection/NeutrinoSelectionFilter")
                 NeutrinoSelectionFilter_in.SetBranchStatus("*", 0)
-                NeutrinoSelectionFilter_in.SetBranchStatus("weightsReint", 1)
-                NeutrinoSelectionFilter_in.SetBranchStatus("run", 1)
-                NeutrinoSelectionFilter_in.SetBranchStatus("sub", 1)
-                NeutrinoSelectionFilter_in.SetBranchStatus("evt", 1)
-
-                # Set up branch addresses for run/sub/evt
-                run_nsf = array('i', [0])
-                sub_nsf = array('i', [0])
-                evt_nsf = array('i', [0])
-                NeutrinoSelectionFilter_in.SetBranchAddress("run", run_nsf)
-                NeutrinoSelectionFilter_in.SetBranchAddress("sub", sub_nsf)
-                NeutrinoSelectionFilter_in.SetBranchAddress("evt", evt_nsf)
+                NeutrinoSelectionFilter_in.SetBranchStatus("weightReint", 1)
 
                 # Create output trees
                 outfile.cd()
@@ -8837,15 +8845,12 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
                 NeutrinoSelectionFilter_out = NeutrinoSelectionFilter_in.CloneTree(0)
                 NeutrinoSelectionFilter_out.SetDirectory(outfile)
 
-                # Single pass - only fill entries that match rse_to_idx
-                for i in range(spline_tree_in.GetEntriesFast()):
-                    NeutrinoSelectionFilter_in.GetEntry(i)
-                    rse_key = (run_nsf[0], sub_nsf[0], evt_nsf[0])
-
-                    if rse_key in rse_to_idx:
-                        spline_tree_in.GetEntry(i)
-                        spline_tree.Fill()
-                        NeutrinoSelectionFilter_out.Fill()
+                # Only GetEntry and Fill for matching indices
+                for idx in matching_indices:
+                    spline_tree_in.GetEntry(idx)
+                    NeutrinoSelectionFilter_in.GetEntry(idx)
+                    spline_tree.Fill()
+                    NeutrinoSelectionFilter_out.Fill()
 
             print(f"Filtered trees: spline_weights={spline_tree.GetEntries()}, NeutrinoSelectionFilter={NeutrinoSelectionFilter_out.GetEntries()}")
             outfile.WriteObject(spline_tree, "spline_weights")
