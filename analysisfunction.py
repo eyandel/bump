@@ -4785,7 +4785,8 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs, reweight_
         }).lazy()  # Convert to LazyFrame for joining
 
         # Add row number to lazy frame and join with weights
-        result_df = lazy_df.with_row_index("row_nr").join(
+        # Drop any existing weights column first to avoid name collision
+        result_df = lazy_df.drop("weights", strict=False).with_row_index("row_nr").join(
             weights_df, on="row_nr", how="left"
         ).drop("row_nr")
         return result_df, w
@@ -8773,6 +8774,9 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
                 NeutrinoSelectionFilter_in = infile.Get("nuselection/NeutrinoSelectionFilter")
                 NeutrinoSelectionFilter_in.SetBranchStatus("*", 0)  # Disable all branches
                 NeutrinoSelectionFilter_in.SetBranchStatus("weightsReint", 1)
+                NeutrinoSelectionFilter_in.SetBranchStatus("run", 1)
+                NeutrinoSelectionFilter_in.SetBranchStatus("sub", 1)
+                NeutrinoSelectionFilter_in.SetBranchStatus("evt", 1)
 
                 # More efficient for large trees
                 outfile.cd()
@@ -8794,6 +8798,7 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
                 # #     #weightsReint = weightsReint_old
                     spline_tree.Fill()
                     #NeutrinoSelectionFilter_out.Fill()
+                    NeutrinoSelectionFilter_in.GetEntry(i)
 
                 
                 #spline_tree_size = spline_tree.GetEntries()
