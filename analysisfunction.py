@@ -8794,7 +8794,7 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
     weight_pion = all_df["weight_pion"].to_numpy(zero_copy_only=False) if "weight_pion" in all_df.columns else None
     is_file = (all_df["wc_file_name"].to_numpy(zero_copy_only=False) == file_path)
 
-    # Build rse_to_idx mapping
+    # Build rse_to_idx mapping from all_df to tree indices
     rse_to_idx = {}
     for i in range(len(allvars)):
         if is_file[i]:
@@ -8802,61 +8802,50 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
 
     print(f"Built rse_to_idx with {len(rse_to_idx)} unique events")
 
-    # STEP 2: Use uproot to quickly read run/sub/evt and build matching indices
+    # Use uproot to read run/sub/evt from full tree to build index mapping
+    print("Reading run/sub/evt with uproot...")
+    with uproot.open(file_path) as f_uproot:
+        nsf_tree = f_uproot["nuselection/NeutrinoSelectionFilter"]
+        full_run_arr = nsf_tree["run"].array(library="np")
+        full_sub_arr = nsf_tree["sub"].array(library="np")
+        full_evt_arr = nsf_tree["evt"].array(library="np")
+
+    # Build mapping: tree_idx -> all_df_idx (or -1 for dummy)
+    print("Building index mapping...")
+    tree_idx_to_df_idx = []
+    for i in range(len(full_run_arr)):
+        rse_key = (int(full_run_arr[i]), int(full_sub_arr[i]), int(full_evt_arr[i]))
+        df_idx = rse_to_idx.get(rse_key, -1)
+        tree_idx_to_df_idx.append(df_idx)
+
+    num_matched = sum(1 for x in tree_idx_to_df_idx if x >= 0)
+    print(f"Found {num_matched} matching entries out of {len(tree_idx_to_df_idx)} total")
+
+    # STEP 2: Clone full trees with fast option
     with ROOT.TFile(outFileName, "RECREATE") as outfile:
         outfile.SetCompressionLevel(1)
         if data:
             print(file_path + " is a data file")
         else:
-            print(file_path + " is an overlay file - filtering trees")
+            print(file_path + " is an overlay file - using fast clone for full trees")
 
-            # Use uproot to quickly read run/sub/evt columns (much faster than ROOT)
-            print("Reading run/sub/evt with uproot...")
-            with uproot.open(file_path) as f_uproot:
-                nsf_tree = f_uproot["nuselection/NeutrinoSelectionFilter"]
-                run_arr = nsf_tree["run"].array(library="np")
-                sub_arr = nsf_tree["sub"].array(library="np")
-                evt_arr = nsf_tree["evt"].array(library="np")
-
-            # Build list of indices that match rse_to_idx
-            print("Finding matching indices...")
-            matching_indices = []
-            for i in range(len(run_arr)):
-                rse_key = (int(run_arr[i]), int(sub_arr[i]), int(evt_arr[i]))
-                if rse_key in rse_to_idx:
-                    matching_indices.append(i)
-
-            print(f"Found {len(matching_indices)} matching entries out of {len(run_arr)} total")
-
-            # Now use ROOT to copy only the matching entries
+            # Fast clone full trees
             with ROOT.TFile(file_path, "read") as infile:
                 spline_tree_in = infile.Get("spline_weights")
                 spline_tree_in.SetBranchStatus("*", 1)
-
                 NeutrinoSelectionFilter_in = infile.Get("nuselection/NeutrinoSelectionFilter")
-                NeutrinoSelectionFilter_in.SetBranchStatus("*", 0)
-                NeutrinoSelectionFilter_in.SetBranchStatus("weightReint", 1)
 
-                # Create output trees
                 outfile.cd()
-                spline_tree = spline_tree_in.CloneTree(0)
+                spline_tree = spline_tree_in.CloneTree(-1, "fast")
                 spline_tree.SetDirectory(outfile)
-
-                NeutrinoSelectionFilter_out = NeutrinoSelectionFilter_in.CloneTree(0)
+                NeutrinoSelectionFilter_out = NeutrinoSelectionFilter_in.CloneTree(-1, "fast")
                 NeutrinoSelectionFilter_out.SetDirectory(outfile)
 
-                # Only GetEntry and Fill for matching indices
-                for idx in matching_indices:
-                    spline_tree_in.GetEntry(idx)
-                    NeutrinoSelectionFilter_in.GetEntry(idx)
-                    spline_tree.Fill()
-                    NeutrinoSelectionFilter_out.Fill()
-
-            print(f"Filtered trees: spline_weights={spline_tree.GetEntries()}, NeutrinoSelectionFilter={NeutrinoSelectionFilter_out.GetEntries()}")
+            print(f"Cloned trees: spline_weights={spline_tree.GetEntries()}, NeutrinoSelectionFilter={NeutrinoSelectionFilter_out.GetEntries()}")
             outfile.WriteObject(spline_tree, "spline_weights")
             outfile.WriteObject(NeutrinoSelectionFilter_out, "NeutrinoSelectionFilter")
 
-        # STEP 3: Build sel_tree
+        # STEP 3: Build sel_tree with dummy events to match full tree length
         sel_tree = ROOT.TTree("sel_tree", "sel_tree")
         var_type = str(type(allvars[0]))
         var_type_array = 'd'
@@ -8891,21 +8880,35 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
         sel_tree.Branch("weight_spline", weight_spline, "weight_spline/D")
         sel_tree.Branch("add_weights", add_weights, "add_weights/D")
 
-        file_len = 0
-        for i in range(len(allvars)):
-            if is_file[i]:
-                file_len+=1
-                r[0] = rs[i]
-                s[0] = ss[i]
-                e[0] = es[i]
-                var_val[0] = allvars[i]
-                passed[0] = passed_vec[i]
-                weight_cv[0] = weight_cvs[i]
-                weight_spline[0] = weight_splines[i]
-                add_weights[0] = weight_pion[i] if weight_pion is not None else 1.0
-                sel_tree.Fill()
+        # Fill sel_tree: use real data where available, dummy events elsewhere
+        print("Building sel_tree with dummy events...")
+        for tree_idx in range(len(tree_idx_to_df_idx)):
+            df_idx = tree_idx_to_df_idx[tree_idx]
 
-        print(f"sel_tree: {sel_tree.GetEntries()} events")
+            if df_idx >= 0:
+                # Real event from all_df
+                r[0] = rs[df_idx]
+                s[0] = ss[df_idx]
+                e[0] = es[df_idx]
+                var_val[0] = allvars[df_idx]
+                passed[0] = passed_vec[df_idx]
+                weight_cv[0] = weight_cvs[df_idx]
+                weight_spline[0] = weight_splines[df_idx]
+                add_weights[0] = weight_pion[df_idx] if weight_pion is not None else 1.0
+            else:
+                # Dummy event - use values from full tree but zero weights
+                r[0] = int(full_run_arr[tree_idx])
+                s[0] = int(full_sub_arr[tree_idx])
+                e[0] = int(full_evt_arr[tree_idx])
+                var_val[0] = 0
+                passed[0] = 0
+                weight_cv[0] = 0.0
+                weight_spline[0] = 0.0
+                add_weights[0] = 0.0
+
+            sel_tree.Fill()
+
+        print(f"sel_tree: {sel_tree.GetEntries()} events ({num_matched} real, {sel_tree.GetEntries() - num_matched} dummy)")
         outfile.WriteObject(sel_tree, "sel_tree")
         
         #outfile.Close()
