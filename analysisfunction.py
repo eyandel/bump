@@ -6126,7 +6126,7 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
     selected_efficiency = np.sum(counts_sig_sel) / np.sum(counts_sig_true)
     selected_purity = np.sum(counts_sig_sel) / (np.sum(counts_sig_sel) + np.sum(counts_bkg_sel))
 
-    sum_data_mc_ratio = round(np.sum(selected_w_data)/np.sum(selected_w_sig+selected_w_bkg),2)
+    sum_data_mc_ratio = round(np.sum(selected_w_data)/np.sum(np.concatenate((selected_w_sig, selected_w_bkg))),2)
 
 
     ex1.set_title(title)
