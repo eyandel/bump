@@ -4667,9 +4667,10 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs, reweight_
             elif run_number[i] == 5 and 5 in runs:
                 denom = Lrun5modpi0POT
                 num = dataPOT
-        elif is_data[i] or is_lee[i] or is_ncpi0overlay[i]:
-            num = 1.0
-            denom = 1.0
+        elif (is_data[i] or is_lee[i] or is_ncpi0overlay[i]) and run_number[i] in runs:
+            # Data events should have weight=1 if run is included, 0 otherwise
+                num = 1.0
+                denom = 1.0
         else:
             #num = dataPOT
             if run_number[i] == 1 and 1 in runs:
@@ -6048,7 +6049,7 @@ def MakeDataMCPlot(all_df, var, bin_width, start_edge, end_edge, title, x_label,
     for i in range(len(seen_new_type)):
         pred_var.append(selected_new_var[i])
         mc_weights.append(selected_new_w[i])
-        mc_labels.append("{} ({})".format(seen_new_cat[i], round(sum(selected_new_w[i]),2)))
+        mc_labels.append(seen_new_cat[i]+"("+str(round(sum(selected_new_w[i]),2))+")")
         colors_new.append(ROOT.gROOT.GetColor(seen_new_color[i]).AsHexString())
         #colors.append(ROOT.gROOT.GetColor(880+10).AsHexString())
     
