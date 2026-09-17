@@ -9429,9 +9429,11 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
     #collapsed_total_cor.SetName()
     with ROOT.TFile(profit_dir+"/"+root_filename, "READ") as root_file:
         #covariance_dir = root_file.GetDirectory("covariance")
-        cov_in = root_file.Get["TH2D"]("Covariance/collapsed_total_frac_cov")
-        if not cov_in:
-            raise RuntimeError("Covariance/collapsed_total_frac_cov not found or not a TH2D in " + root_filename)
+        cov_in_raw = root_file.Get("Covariance/collapsed_total_frac_cov")
+        if not cov_in_raw:
+            raise RuntimeError("Covariance/collapsed_total_frac_cov not found in " + root_filename)
+        #force the correct type since Get() can return an under-typed TObject
+        cov_in = ROOT.BindObject(ROOT.addressof(cov_in_raw), ROOT.TH2D)
         #collapsed_total_cor = cov_in.Copy()
         x_bins = cov_in.GetNbinsX()
         y_bins = cov_in.GetNbinsY()
