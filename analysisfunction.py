@@ -9417,10 +9417,10 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
         os.chdir(profit_dir)
         if is_gpvm:
             processcmd = f"source ~/profit_setup.sh; PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o {plot_version} -v3 --log process.log process 2>&1"
-            plotcmd = f"source ~/profit_setup.sh; PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o {plot_version} -v3 --seed 404 --log plot.log --plot-bounds ratmin 0 ratmax 2 --use-fake-data plot --with-splines 2>&1;"
+            plotcmd = f"source ~/profit_setup.sh; PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o {plot_version} -v3 --seed 404 --log plot.log --plot-bounds ratmin 0 ratmax 2 --use-fake-data plot --with-splines --with-covar 2>&1;"
         else:
             processcmd = f"PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o {plot_version} -v3 --log process.log process 2>&1"
-            plotcmd = f"PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o {plot_version} -v3 --seed 404 --log plot.log --plot-bounds ratmin 0 ratmax 2 --use-fake-data plot --with-splines 2>&1;"
+            plotcmd = f"PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o {plot_version} -v3 --seed 404 --log plot.log --plot-bounds ratmin 0 ratmax 2 --use-fake-data plot --with-splines --with-covar 2>&1;"
         print(f"Running: {processcmd}")
         os.system(processcmd)
         print(f"Running: {plotcmd}")
