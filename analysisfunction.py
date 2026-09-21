@@ -200,16 +200,16 @@ default_file_dicts = [
 ]
 
 #DetVar Files
-nu_overlay_4_detvar_cv="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_cv_surprise_reco2_hist_4d.root"
-nu_overlay_4_detvar_lyatt="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_lya_surprise_reco2_hist_4d.root"
-nu_overlay_4_detvar_lydown="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_lyd_surprise_reco2_hist_4d.root"
-nu_overlay_4_detvar_lyrayleigh="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_lyr_surprise_reco2_hist_4d.root"
-nu_overlay_4_detvar_recomb2="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_recomb2_surprise_reco2_hist_4d.root"
-nu_overlay_4_detvar_sce="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_sce_surprise_reco2_hist_4d.root "
-nu_overlay_4_detvar_wiremodx="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMX_surprise_reco2_hist_4d.root"
-nu_overlay_4_detvar_wiremodyz="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMYZ_surprise_reco2_hist_4d.root"
-nu_overlay_4_detvar_wiremodthetaxz="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMthetaXZ_surprise_reco2_hist_4d.root"
-nu_overlay_4_detvar_wiremodthetayz="/pnfs/uboone/persistent/users/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMthetaYZ_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_cv="/exp/uboone/data/users/eyandel/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_cv_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_lyatt="/exp/uboone/data/users/eyandel/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_lya_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_lydown="/exp/uboone/data/users/eyandel/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_lyd_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_lyrayleigh="/exp/uboone/data/users/eyandel/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_lyr_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_recomb2="/exp/uboone/data/users/eyandel/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_recomb2_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_sce="/exp/uboone/data/users/eyandel/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_sce_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_wiremodx="/exp/uboone/data/users/eyandel/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMX_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_wiremodyz="/exp/uboone/data/users/eyandel/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMYZ_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_wiremodthetaxz="/exp/uboone/data/users/eyandel/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMthetaXZ_surprise_reco2_hist_4d.root"
+nu_overlay_4_detvar_wiremodthetayz="/exp/uboone/data/users/eyandel/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMthetaYZ_surprise_reco2_hist_4d.root"
 
 detvars = ["LYAtt", "LYDown", "LYRayleigh", "Recomb2", "SCE", "WireModX", "WireModYZ", "WireModThetaXZ", "WireModThetaYZ"]
 detvar_file_dict = []
@@ -8669,12 +8669,12 @@ def CombinePhotonVars(all_df, var):
         num_evts = all_df.height
 
     for i in range(num_evts):
-        if passed_wc[i]:
-            var_list.append(var_wc[i])
-        elif passed_pandora[i]:
+        if passed_pandora[i]:
             var_list.append(var_pandora[i])
         elif passed_lantern[i]:
             var_list.append(var_lantern[i])
+        elif passed_wc[i]:
+            var_list.append(var_wc[i])
         else:
             var_list.append(np.float32(-9999.))
 
@@ -9417,10 +9417,10 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
         os.chdir(profit_dir)
         if is_gpvm:
             processcmd = f"source ~/profit_setup.sh; PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o {plot_version} -v3 --log process.log process 2>&1"
-            plotcmd = f"source ~/profit_setup.sh; PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o {plot_version} -v3 --seed 404 --log plot.log --plot-bounds ratmin 0 ratmax 2 --use-fake-data plot --with-splines 2>&1;"
+            plotcmd = f"source ~/profit_setup.sh; PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o {plot_version} -v3 --seed 404 --log plot.log --plot-bounds ratmin 0 ratmax 2 --use-fake-data plot --with-splines --with-covar 2>&1;"
         else:
             processcmd = f"PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o {plot_version} -v3 --log process.log process 2>&1"
-            plotcmd = f"PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o {plot_version} -v3 --seed 404 --log plot.log --plot-bounds ratmin 0 ratmax 2 --use-fake-data plot --with-splines 2>&1;"
+            plotcmd = f"PROfit -x {shlex.quote(xml_abs)} -t {shlex.quote(f'{selname}_{var}')} -o {plot_version} -v3 --seed 404 --log plot.log --plot-bounds ratmin 0 ratmax 2 --use-fake-data plot --with-splines --with-covar 2>&1;"
         print(f"Running: {processcmd}")
         os.system(processcmd)
         print(f"Running: {plotcmd}")
@@ -9429,7 +9429,11 @@ def MakePROfitCovMatrix(plot_folder, all_df, files, selname, var, var_label, nbi
     #collapsed_total_cor.SetName()
     with ROOT.TFile(profit_dir+"/"+root_filename, "READ") as root_file:
         #covariance_dir = root_file.GetDirectory("covariance")
-        cov_in = root_file.Get("Covariance/collapsed_total_frac_cov")
+        cov_in_raw = root_file.Get("Covariance/collapsed_total_frac_cov")
+        if not cov_in_raw:
+            raise RuntimeError("Covariance/collapsed_total_frac_cov not found in " + root_filename)
+        #force the correct type since Get() can return an under-typed TObject
+        cov_in = ROOT.BindObject(ROOT.addressof(cov_in_raw), ROOT.TH2D)
         #collapsed_total_cor = cov_in.Copy()
         x_bins = cov_in.GetNbinsX()
         y_bins = cov_in.GetNbinsY()
