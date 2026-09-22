@@ -212,10 +212,10 @@ nu_overlay_4_detvar_wiremodthetaxz="/exp/uboone/data/users/eyandel/uboonepro/sur
 nu_overlay_4_detvar_wiremodthetayz="/exp/uboone/data/users/eyandel/uboonepro/surprise/detvar/BNB/run4d/checkout_DetVar_Run45_v10_04_07_19_BNB_nu_overlay_WMthetaYZ_surprise_reco2_hist_4d.root"
 
 detvars = ["LYAtt", "LYDown", "LYRayleigh", "Recomb2", "SCE", "WireModX", "WireModYZ", "WireModThetaXZ", "WireModThetaYZ"]
-detvar_file_dict = []
+detvar_file_dict = {}
 
 for detvar in detvars:
-    detvar_file_dict.append({f"nu_overlay_4_detvar_{detvar}": eval(f"nu_overlay_4_detvar_{detvar.lower()}")})
+    detvar_file_dict[f"nu_overlay_4_detvar_{detvar}"] = eval(f"nu_overlay_4_detvar_{detvar.lower()}")
 
 def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
     is_lazy = isinstance(all_df, pl.LazyFrame)
