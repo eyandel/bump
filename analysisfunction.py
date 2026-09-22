@@ -9122,16 +9122,21 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
         detvarsec.set("cv_variation_matching_vars", "run,subrun,event")
 
         if "overlay42" in [str(e["subchannel"]) for e in file_entries]:
+            # Process CV detvar file with MakePROfitInputFile
+            detvar_cv_profit_file = MakePROfitInputFile(all_df, nu_overlay_4_detvar_cv, selname, var, data=False)
             detvarcvpot = GetPOT(nu_overlay_4_detvar_cv)
             detvarcv = ET.SubElement(detvarsec, "cv")
-            detvarcv.set("filename", str(nu_overlay_4_detvar_cv))
+            detvarcv.set("filename", str(detvar_cv_profit_file))
             detvarcv.set("pot", str(detvarcvpot))
 
+            # Process each detvar variation file with MakePROfitInputFile
             for detvar in detvars:
                 detvarfile = ET.SubElement(detvarsec, "variation")
                 detvarfile.set("name", detvar)
                 detvar_filepath = detvar_file_dict.get(f"nu_overlay_4_detvar_{detvar}")
-                detvarfile.set("filename", str(detvar_filepath))
+                # Convert detvar file to PROfit input format
+                detvar_profit_file = MakePROfitInputFile(all_df, detvar_filepath, selname, var, data=False)
+                detvarfile.set("filename", str(detvar_profit_file))
                 detvarfile.set("pot", "1")
 
             for friend_tree in mc_friends:
