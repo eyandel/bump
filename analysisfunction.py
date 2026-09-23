@@ -9128,20 +9128,30 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
         detvarsec.set("cv_variation_matching_vars", "run,subrun,event")
 
         if "overlay42" in [str(e["subchannel"]) for e in file_entries]:
-            # Process CV detvar file with MakePROfitInputFile (detvar files don't have spline_weights)
-            detvar_cv_profit_file = MakePROfitInputFile(all_df, nu_overlay_4_detvar_cv, selname, var, data=False, is_detvar=True)
+            # Load CV detvar file with lazy loading, process it, then delete for memory
+            print("Loading CV detvar file (lazy)...")
+            detvar_cv_df_lazy = LoadBNBOverlayLazy([nu_overlay_4_detvar_cv])
+            detvar_cv_profit_file = MakePROfitInputFile(detvar_cv_df_lazy, nu_overlay_4_detvar_cv, selname, var, data=False, is_detvar=True)
+            del detvar_cv_df_lazy
+            gc.collect()
+
             detvarcvpot = GetPOT(nu_overlay_4_detvar_cv)
             detvarcv = ET.SubElement(detvarsec, "cv")
             detvarcv.set("filename", str(detvar_cv_profit_file))
             detvarcv.set("pot", str(detvarcvpot))
 
-            # Process each detvar variation file with MakePROfitInputFile (detvar files don't have spline_weights)
+            # Load each detvar variation file with lazy loading, process it, then delete for memory
             for detvar in detvars:
                 detvarfile = ET.SubElement(detvarsec, "variation")
                 detvarfile.set("name", detvar)
                 detvar_filepath = detvar_file_dict.get(f"nu_overlay_4_detvar_{detvar}")
-                # Convert detvar file to PROfit input format
-                detvar_profit_file = MakePROfitInputFile(all_df, detvar_filepath, selname, var, data=False, is_detvar=True)
+
+                print(f"Loading detvar {detvar} file (lazy)...")
+                detvar_df_lazy = LoadBNBOverlayLazy([detvar_filepath])
+                detvar_profit_file = MakePROfitInputFile(detvar_df_lazy, detvar_filepath, selname, var, data=False, is_detvar=True)
+                del detvar_df_lazy
+                gc.collect()
+
                 detvarfile.set("filename", str(detvar_profit_file))
                 detvarfile.set("pot", "1")
 
