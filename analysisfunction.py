@@ -9131,6 +9131,19 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
             # Load CV detvar file with lazy loading, process it, then delete for memory
             print("Loading CV detvar file (lazy)...")
             detvar_cv_df_lazy = LoadBNBOverlayLazy([nu_overlay_4_detvar_cv])
+            detvar_cv_df_lazy = AddRecoVars(detvar_cv_df_lazy)
+            detvar_cv_df_lazy = Get2Photons(detvar_cv_df_lazy, "wc")
+            detvar_cv_df_lazy = Get2Photons(detvar_cv_df_lazy, "lantern")
+            detvar_cv_df_lazy = Get2Photons(detvar_cv_df_lazy, "pandora")
+            detvar_cv_df_lazy = GetMuons(detvar_cv_df_lazy, "wc")
+            detvar_cv_df_lazy = GetMuons(detvar_cv_df_lazy, "lantern")
+            detvar_cv_df_lazy = GetMuons(detvar_cv_df_lazy, "pandora")
+            detvar_cv_df_lazy, photon_inv_mass = CombinePhotonVars(detvar_cv_df_lazy, "photon_inv_mass")
+            detvar_cv_df_lazy = detvar_cv_df_lazy.with_columns([
+                pl.col(pl.Float64).cast(pl.Float32),
+                pl.col(pl.Int64).cast(pl.Int32),
+                pl.col(pl.UInt64).cast(pl.UInt32),
+            ])
             detvar_cv_profit_file = MakePROfitInputFile(detvar_cv_df_lazy, nu_overlay_4_detvar_cv, selname, var, data=False, is_detvar=True)
             del detvar_cv_df_lazy
             gc.collect()
@@ -9148,6 +9161,19 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
 
                 print(f"Loading detvar {detvar} file (lazy)...")
                 detvar_df_lazy = LoadBNBOverlayLazy([detvar_filepath])
+                detvar_df_lazy = AddRecoVars(detvar_df_lazy)
+                detvar_df_lazy = Get2Photons(detvar_df_lazy, "wc")
+                detvar_df_lazy = Get2Photons(detvar_df_lazy, "lantern")
+                detvar_df_lazy = Get2Photons(detvar_df_lazy, "pandora")
+                detvar_df_lazy = GetMuons(detvar_df_lazy, "wc")
+                detvar_df_lazy = GetMuons(detvar_df_lazy, "lantern")
+                detvar_df_lazy = GetMuons(detvar_df_lazy, "pandora")
+                detvar_df_lazy, photon_inv_mass = CombinePhotonVars(detvar_df_lazy, "photon_inv_mass")
+                detvar_df_lazy = detvar_df_lazy.with_columns([
+                    pl.col(pl.Float64).cast(pl.Float32),
+                    pl.col(pl.Int64).cast(pl.Int32),
+                    pl.col(pl.UInt64).cast(pl.UInt32),
+                ])
                 detvar_profit_file = MakePROfitInputFile(detvar_df_lazy, detvar_filepath, selname, var, data=False, is_detvar=True)
                 del detvar_df_lazy
                 gc.collect()
