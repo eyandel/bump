@@ -8716,7 +8716,7 @@ def CombinePhotonVars(all_df, var):
 #    return cov_matrix
 
 
-def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
+def MakePROfitInputFile(all_df, file_path, selection, var, data = False, is_detvar = False):
     import os
     import subprocess
     is_gpvm = False
@@ -8832,18 +8832,24 @@ def MakePROfitInputFile(all_df, file_path, selection, var, data = False):
 
             # Fast clone full trees
             with ROOT.TFile(file_path, "read") as infile:
-                spline_tree_in = infile.Get("spline_weights")
-                spline_tree_in.SetBranchStatus("*", 1)
+                # DetVar files don't have spline_weights, skip if is_detvar
+                if not is_detvar:
+                    spline_tree_in = infile.Get("spline_weights")
+                    spline_tree_in.SetBranchStatus("*", 1)
                 NeutrinoSelectionFilter_in = infile.Get("nuselection/NeutrinoSelectionFilter")
 
                 outfile.cd()
-                spline_tree = spline_tree_in.CloneTree(-1, "fast")
-                spline_tree.SetDirectory(outfile)
+                if not is_detvar:
+                    spline_tree = spline_tree_in.CloneTree(-1, "fast")
+                    spline_tree.SetDirectory(outfile)
                 NeutrinoSelectionFilter_out = NeutrinoSelectionFilter_in.CloneTree(-1, "fast")
                 NeutrinoSelectionFilter_out.SetDirectory(outfile)
 
-            print(f"Cloned trees: spline_weights={spline_tree.GetEntries()}, NeutrinoSelectionFilter={NeutrinoSelectionFilter_out.GetEntries()}")
-            outfile.WriteObject(spline_tree, "spline_weights")
+            if not is_detvar:
+                print(f"Cloned trees: spline_weights={spline_tree.GetEntries()}, NeutrinoSelectionFilter={NeutrinoSelectionFilter_out.GetEntries()}")
+                outfile.WriteObject(spline_tree, "spline_weights")
+            else:
+                print(f"Cloned tree: NeutrinoSelectionFilter={NeutrinoSelectionFilter_out.GetEntries()} (detvar file, no spline_weights)")
             outfile.WriteObject(NeutrinoSelectionFilter_out, "NeutrinoSelectionFilter")
 
         # STEP 3: Build sel_tree with dummy events to match full tree length
@@ -9122,26 +9128,28 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
         detvarsec.set("cv_variation_matching_vars", "run,subrun,event")
 
         if "overlay42" in [str(e["subchannel"]) for e in file_entries]:
-            # Process CV detvar file with MakePROfitInputFile
-            detvar_cv_profit_file = MakePROfitInputFile(all_df, nu_overlay_4_detvar_cv, selname, var, data=False)
+            # Process CV detvar file with MakePROfitInputFile (detvar files don't have spline_weights)
+            detvar_cv_profit_file = MakePROfitInputFile(all_df, nu_overlay_4_detvar_cv, selname, var, data=False, is_detvar=True)
             detvarcvpot = GetPOT(nu_overlay_4_detvar_cv)
             detvarcv = ET.SubElement(detvarsec, "cv")
             detvarcv.set("filename", str(detvar_cv_profit_file))
             detvarcv.set("pot", str(detvarcvpot))
 
-            # Process each detvar variation file with MakePROfitInputFile
+            # Process each detvar variation file with MakePROfitInputFile (detvar files don't have spline_weights)
             for detvar in detvars:
                 detvarfile = ET.SubElement(detvarsec, "variation")
                 detvarfile.set("name", detvar)
                 detvar_filepath = detvar_file_dict.get(f"nu_overlay_4_detvar_{detvar}")
                 # Convert detvar file to PROfit input format
-                detvar_profit_file = MakePROfitInputFile(all_df, detvar_filepath, selname, var, data=False)
+                detvar_profit_file = MakePROfitInputFile(all_df, detvar_filepath, selname, var, data=False, is_detvar=True)
                 detvarfile.set("filename", str(detvar_profit_file))
                 detvarfile.set("pot", "1")
 
+            # Add friend trees, but exclude spline_weights for detvar files (they don't have it)
             for friend_tree in mc_friends:
-                friend = ET.SubElement(detvarsec, "friend")
-                friend.set("treename", friend_tree)
+                if friend_tree != "spline_weights":
+                    friend = ET.SubElement(detvarsec, "friend")
+                    friend.set("treename", friend_tree)
 
             subchannel = ET.SubElement(detvarsec, "subchannel")
             subchannel.text = f"nu_uBooNE_{selname}_overlay"
