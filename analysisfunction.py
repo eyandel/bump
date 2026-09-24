@@ -9154,7 +9154,7 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
                 detvar_cv_df_lazy = GetMuons(detvar_cv_df_lazy, "wc")
                 detvar_cv_df_lazy = GetMuons(detvar_cv_df_lazy, "lantern")
                 detvar_cv_df_lazy = GetMuons(detvar_cv_df_lazy, "pandora")
-            if var == "photon_inv_mass" and "photon_inv_mass" not in all_df.columns:
+            if var == "photon_inv_mass" and "photon_inv_mass" not in detvar_cv_df_lazy.columns:
                 detvar_cv_df_lazy, photon_inv_mass = CombinePhotonVars(detvar_cv_df_lazy, "photon_inv_mass")
             detvar_cv_df_lazy = detvar_cv_df_lazy.with_columns([
                 pl.col(pl.Float64).cast(pl.Float32),
@@ -9191,7 +9191,7 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
                     detvar_df_lazy = GetMuons(detvar_df_lazy, "wc")
                     detvar_df_lazy = GetMuons(detvar_df_lazy, "lantern")
                     detvar_df_lazy = GetMuons(detvar_df_lazy, "pandora")
-                if var == "photon_inv_mass" and "photon_inv_mass" not in all_df.columns:
+                if var == "photon_inv_mass" and "photon_inv_mass" not in detvar_df_lazy.columns:
                     detvar_df_lazy, photon_inv_mass = CombinePhotonVars(detvar_df_lazy, "photon_inv_mass")
                 detvar_df_lazy = detvar_df_lazy.with_columns([
                     pl.col(pl.Float64).cast(pl.Float32),
