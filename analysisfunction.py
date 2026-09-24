@@ -4463,6 +4463,46 @@ def GetPOT(file, inputPOT = -1.0):
     return p
 
 ###
+def GetExtraWeights(all_df, reweight_pions = True):
+    """
+    Calculate extra weights including pion FSI reweighting.
+
+    Parameters:
+    -----------
+    all_df : pl.DataFrame or pl.LazyFrame
+        DataFrame containing event data
+    reweight_pions : bool, optional
+        Whether to apply pion FSI reweighting (default: True)
+
+    Returns:
+    --------
+    weight_pion : np.array
+        Array of pion weights (hA2025_pion_fsi_rw_weight * additional_hA2025c_weight)
+    """
+    is_lazy = isinstance(all_df, pl.LazyFrame)
+    if is_lazy:
+        lazy_df = all_df
+        # Collect only the final filtered result
+        weight_vars = ["wc_weight_cv"]  # Need at least one column to get length
+        if "hA2025_pion_fsi_rw_weight" in lazy_df.columns:
+            weight_vars.append("hA2025_pion_fsi_rw_weight")
+            weight_vars.append("additional_hA2025c_weight")
+        all_df = lazy_df.select(weight_vars).collect()
+
+    weight_cv = all_df["wc_weight_cv"].to_numpy(zero_copy_only=False)
+
+    if "hA2025_pion_fsi_rw_weight" in all_df.columns and reweight_pions:
+        print(f"Loading pion weights from dataframe (reweight_pions={reweight_pions})")
+        hA2025_w = all_df["hA2025_pion_fsi_rw_weight"].to_numpy(zero_copy_only=False)
+        additional_hA2025c_w = all_df["additional_hA2025c_weight"].to_numpy(zero_copy_only=False)
+        print(f"Pion weight stats: min={hA2025_w.min():.4f}, max={hA2025_w.max():.4f}, mean={hA2025_w.mean():.4f}")
+        weight_pion = hA2025_w * additional_hA2025c_w
+    else:
+        print(f"Setting pion weights to ones (reweight_pions={reweight_pions}, column_exists={'hA2025_pion_fsi_rw_weight' in all_df.columns})")
+        weight_pion = np.ones(len(weight_cv))
+
+    return weight_pion
+
 def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs, reweight_pions = True):
     # for calculating the weight
     #returns w: array filled with weights
@@ -4537,7 +4577,7 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs, reweight_
 
     is_lazy = isinstance(all_df, pl.LazyFrame)
     if is_lazy:
-        lazy_df = all_df  
+        lazy_df = all_df
         # Collect only the final filtered result
         weight_vars = ["wc_weight_cv", "wc_weight_spline", "true_event_type", "wc_is_sigoverlay", "filetype", "wc_run_period"]
         if "hA2025_pion_fsi_rw_weight" in lazy_df.columns:
@@ -4545,7 +4585,7 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs, reweight_
             weight_vars.append("hA2025_pion_fsi_rw_weight")
             weight_vars.append("additional_hA2025c_weight")
         all_df = lazy_df.select(weight_vars).collect()
-    
+
     weight_cv = all_df["wc_weight_cv"].to_numpy(zero_copy_only=False)
     weight_spline = all_df["wc_weight_spline"].to_numpy(zero_copy_only=False)
     is_ext = (all_df["true_event_type"].to_numpy(zero_copy_only=False) == 12) #% 10 == 4)
@@ -4558,15 +4598,9 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs, reweight_
     is_modpi0 = (all_df["filetype"].to_numpy(zero_copy_only=False) == "modpi0_overlay")
     has_muon = (all_df["wc_is_sigoverlay"].to_numpy(zero_copy_only=False) == 0)# (all_df["reco_muonMomentum"].to_numpy(zero_copy_only=False) > 0)
     run_number = all_df["wc_run_period"].to_numpy(zero_copy_only=False)
-    if "hA2025_pion_fsi_rw_weight" in all_df.columns and reweight_pions:
-        print(f"Loading pion weights from dataframe (reweight_pions={reweight_pions})")
-        hA2025_w = all_df["hA2025_pion_fsi_rw_weight"].to_numpy(zero_copy_only=False)
-        additional_hA2025c_w = all_df["additional_hA2025c_weight"].to_numpy(zero_copy_only=False)
-        print(f"Pion weight stats: min={hA2025_w.min():.4f}, max={hA2025_w.max():.4f}, mean={hA2025_w.mean():.4f}")
-    else:
-        print(f"Setting pion weights to ones (reweight_pions={reweight_pions}, column_exists={'hA2025_pion_fsi_rw_weight' in all_df.columns})")
-        hA2025_w = np.ones(len(weight_cv))
-        additional_hA2025c_w = np.ones(len(weight_cv))
+
+    # Calculate extra weights including pion FSI reweighting
+    weight_pion = GetExtraWeights(all_df, reweight_pions)
 
     POT_factor = []
     for i in range(len(is_ext)):
@@ -4756,10 +4790,9 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs, reweight_
     
     w = []
     for i in range(len(is_ext)):
-        pion_weight = hA2025_w[i] * additional_hA2025c_w[i]
-        #if pion_weight != 1.0:
-        #    print(f"Event {i} has pion weight: {pion_weight}")
-        POT_factor[i] *= pion_weight
+        #if weight_pion[i] != 1.0:
+        #    print(f"Event {i} has pion weight: {weight_pion[i]}")
+        POT_factor[i] *= weight_pion[i]
         if is_ext[i]:
             w.append(POT_factor[i] * (1.0 - cosrej)) #0.5*
         elif is_mccosmic[i]:
@@ -4783,7 +4816,7 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs, reweight_
         weights_df = pl.DataFrame({
             "row_nr": pl.Series(range(len(w)), dtype=pl.UInt32),
             "weights": pl.Series(w, dtype=pl.Float32),
-            "weight_pion": pl.Series(hA2025_w * additional_hA2025c_w, dtype=pl.Float32)
+            "weight_pion": pl.Series(weight_pion, dtype=pl.Float32)
         }).lazy()  # Convert to LazyFrame for joining
 
         # Add row number to lazy frame and join with weights
@@ -4793,7 +4826,7 @@ def CalculateWeights(all_df, dataPOTvec, ExtBnbPOTvec, pot_vars, runs, reweight_
         ).drop("row_nr")
         return result_df, w
     else:
-        return all_df.drop("weights", strict=False).drop("weight_pion", strict=False).with_columns([pl.Series("weights", w)]), w
+        return all_df.drop("weights", strict=False).drop("weight_pion", strict=False).with_columns([pl.Series("weights", w), pl.Series("weight_pion", weight_pion)]), w
 
     # return all_df, w
 
@@ -9141,6 +9174,18 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
             # Load CV detvar file with lazy loading, process it, then delete for memory
             print("Loading CV detvar file (lazy)...")
             detvar_cv_df_lazy = LoadFilesLazy([nu_overlay_4_detvar_cv], "bnboverlay", su = True)
+            detvar_cv_pion_w = GetExtraWeights(detvar_cv_df_lazy)
+            weights_df = pl.DataFrame({
+                "row_nr": pl.Series(range(len(detvar_cv_pion_w)), dtype=pl.UInt32),
+                "weight_pion": pl.Series(detvar_cv_pion_w, dtype=pl.Float32)
+            }).lazy()  # Convert to LazyFrame for joining
+    
+            # Add row number to lazy frame and join with weights
+            # Drop any existing weights column first to avoid name collision
+            detvar_cv_df_lazy = detvar_cv_df_lazy.drop("weights", strict=False).drop("weight_pion", strict=False).with_row_index("row_nr").join(
+                weights_df, on="row_nr", how="left"
+            ).drop("row_nr")
+            del weights_df
             if "dist" in selname and "wc_pandora_dist" not in detvar_cv_df_lazy.columns:
                 print("Running AddRecoVars() on Detvar CV.")
                 detvar_cv_df_lazy = AddRecoVars(detvar_cv_df_lazy)
@@ -9156,6 +9201,7 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
                 detvar_cv_df_lazy = GetMuons(detvar_cv_df_lazy, "pandora")
             if var == "photon_inv_mass" and "photon_inv_mass" not in detvar_cv_df_lazy.columns:
                 detvar_cv_df_lazy, photon_inv_mass = CombinePhotonVars(detvar_cv_df_lazy, "photon_inv_mass")
+            #detvar_cv_df_lazy, w_det_cv = CalculateWeights(detvar_cv_df_lazy, [pot], [1.0], pot_vars, runs_to_plot)
             detvar_cv_df_lazy = detvar_cv_df_lazy.with_columns([
                 pl.col(pl.Float64).cast(pl.Float32),
                 pl.col(pl.Int64).cast(pl.Int32),
@@ -9178,6 +9224,18 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
 
                 print(f"Loading detvar {detvar} file (lazy)...")
                 detvar_df_lazy = LoadFilesLazy([detvar_filepath], "bnboverlay", su = True)
+                detvar_pion_w = GetExtraWeights(detvar_df_lazy)
+                weights_df = pl.DataFrame({
+                    "row_nr": pl.Series(range(len(detvar_pion_w)), dtype=pl.UInt32),
+                    "weight_pion": pl.Series(detvar_pion_w, dtype=pl.Float32)
+                }).lazy()  # Convert to LazyFrame for joining
+        
+                # Add row number to lazy frame and join with weights
+                # Drop any existing weights column first to avoid name collision
+                detvar_df_lazy = detvar_df_lazy.drop("weights", strict=False).drop("weight_pion", strict=False).with_row_index("row_nr").join(
+                    weights_df, on="row_nr", how="left"
+                ).drop("row_nr")
+                del weights_df
                 if "dist" in selname and "wc_pandora_dist" not in detvar_df_lazy.columns:
                     print("Running AddRecoVars() on Detvar " + detvar)
                     detvar_df_lazy = AddRecoVars(detvar_df_lazy)
