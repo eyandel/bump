@@ -5234,11 +5234,11 @@ def PassSelectionLazyAll(selection, df):
     elif "2photon" in selection:
         # Ensure photon counting columns exist
         if "nphotons_wc" not in df.columns:
-            print("Warning: Photon counting columns don't exist. Running Get2Photons() first.")
-            df = Get2Photons(df, "wc")
-            df = Get2Photons(df, "lantern")
-            df = Get2Photons(df, "pandora")
-            #return pl.lit(False)
+            print("Warning: Photon counting columns don't exist. Run Get2Photons() first.")
+            #df = Get2Photons(df, "wc")
+            #df = Get2Photons(df, "lantern")
+            #df = Get2Photons(df, "pandora")
+            return pl.lit(False)
         
         if selection == "2photon_wc":
             return (
@@ -5320,8 +5320,9 @@ def PassSelectionLazyAll(selection, df):
         if selection == "2photon_any_dist":
             # Check if distance columns exist
             if "wc_pandora_dist" not in df.columns:
-                print("Warning: Distance columns don't exist. Running AddRecoVars() first.")
-                df = AddRecoVars(df)
+                print("Warning: Distance columns don't exist. Run AddRecoVars() first.")
+                #df = AddRecoVars(df)
+                return pl.lit(False)
             
             return (
                 (pl.col("wc_kine_reco_Enu") > 0.0) &
@@ -5334,8 +5335,9 @@ def PassSelectionLazyAll(selection, df):
         if selection == "2photon_any_wpdist":
             # Check if distance columns exist
             if "wc_pandora_dist" not in df.columns:
-                print("Warning: Distance columns don't exist. Running AddRecoVars() first.")
-                df = AddRecoVars(df)
+                print("Warning: Distance columns don't exist. Run AddRecoVars() first.")
+                #df = AddRecoVars(df)
+                return pl.lit(False)
             
             return (
                 (pl.col("wc_kine_reco_Enu") > 0.0) &
@@ -5346,8 +5348,9 @@ def PassSelectionLazyAll(selection, df):
         if selection == "2photon_any_wldist":
             # Check if distance columns exist
             if "wc_pandora_dist" not in df.columns:
-                print("Warning: Distance columns don't exist. Running AddRecoVars() first.")
-                df = AddRecoVars(df)
+                print("Warning: Distance columns don't exist. Run AddRecoVars() first.")
+                #df = AddRecoVars(df)
+                return pl.lit(False)
             
             return (
                 (pl.col("wc_lantern_dist") < 5.0) &
@@ -5357,8 +5360,9 @@ def PassSelectionLazyAll(selection, df):
         if selection == "2photon_any_lpdist":
             # Check if distance columns exist
             if "wc_pandora_dist" not in df.columns:
-                print("Warning: Distance columns don't exist. Running AddRecoVars() first.")
-                df = AddRecoVars(df)
+                print("Warning: Distance columns don't exist. Run AddRecoVars() first.")
+                #df = AddRecoVars(df)
+                return pl.lit(False)
             
             return (
                 (pl.col("wc_kine_reco_Enu") > 0.0) &
@@ -5377,10 +5381,11 @@ def PassSelectionLazyAll(selection, df):
     # CC/NC selections - check if muon columns exist
     if "_CC" in selection or "_NC" in selection:
         if "nmuons_wc" not in df.columns:
-            print("Warning: Muon counting columns don't exist. Running GetMuons() first.")
-            df = GetMuons(df, "wc")
-            df = GetMuons(df, "lantern")
-            df = GetMuons(df, "pandora")
+            print("Warning: Muon counting columns don't exist. Run GetMuons() first.")
+            #df = GetMuons(df, "wc")
+            #df = GetMuons(df, "lantern")
+            #df = GetMuons(df, "pandora")
+            return pl.lit(False)
         
         base_sel = selection.replace("_CC", "").replace("_NC", "")
         base_condition = PassSelectionLazyAll(base_sel, df)
@@ -9136,13 +9141,19 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
             # Load CV detvar file with lazy loading, process it, then delete for memory
             print("Loading CV detvar file (lazy)...")
             detvar_cv_df_lazy = LoadFilesLazy([nu_overlay_4_detvar_cv], "bnboverlay", su = True)
-            #detvar_cv_df_lazy = AddRecoVars(detvar_cv_df_lazy)
-            #detvar_cv_df_lazy = Get2Photons(detvar_cv_df_lazy, "wc")
-            #detvar_cv_df_lazy = Get2Photons(detvar_cv_df_lazy, "lantern")
-            #detvar_cv_df_lazy = Get2Photons(detvar_cv_df_lazy, "pandora")
-            #detvar_cv_df_lazy = GetMuons(detvar_cv_df_lazy, "wc")
-            #detvar_cv_df_lazy = GetMuons(detvar_cv_df_lazy, "lantern")
-            #detvar_cv_df_lazy = GetMuons(detvar_cv_df_lazy, "pandora")
+            if "dist" in selname and "wc_pandora_dist" not in detvar_cv_df_lazy.columns:
+                print("Running AddRecoVars() on Detvar CV.")
+                detvar_cv_df_lazy = AddRecoVars(detvar_cv_df_lazy)
+            if "2photon" in selname and "nphotons_wc" not in detvar_cv_df_lazy.columns:
+                print("Running Get2Photons() on Detvar CV.")
+                detvar_cv_df_lazy = Get2Photons(detvar_cv_df_lazy, "wc")
+                detvar_cv_df_lazy = Get2Photons(detvar_cv_df_lazy, "lantern")
+                detvar_cv_df_lazy = Get2Photons(detvar_cv_df_lazy, "pandora")
+            if ("_CC" in selname or "_NC" in selname) and ("nmuons_wc" not in detvar_cv_df_lazy.columns):
+                print("Running GetMuons() on Detvar CV.")
+                detvar_cv_df_lazy = GetMuons(detvar_cv_df_lazy, "wc")
+                detvar_cv_df_lazy = GetMuons(detvar_cv_df_lazy, "lantern")
+                detvar_cv_df_lazy = GetMuons(detvar_cv_df_lazy, "pandora")
             if var == "photon_inv_mass" and "photon_inv_mass" not in all_df.columns:
                 detvar_cv_df_lazy, photon_inv_mass = CombinePhotonVars(detvar_cv_df_lazy, "photon_inv_mass")
             detvar_cv_df_lazy = detvar_cv_df_lazy.with_columns([
@@ -9167,13 +9178,19 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
 
                 print(f"Loading detvar {detvar} file (lazy)...")
                 detvar_df_lazy = LoadFilesLazy([detvar_filepath], "bnboverlay", su = True)
-                #detvar_df_lazy = AddRecoVars(detvar_df_lazy)
-                #detvar_df_lazy = Get2Photons(detvar_df_lazy, "wc")
-                #detvar_df_lazy = Get2Photons(detvar_df_lazy, "lantern")
-                #detvar_df_lazy = Get2Photons(detvar_df_lazy, "pandora")
-                #detvar_df_lazy = GetMuons(detvar_df_lazy, "wc")
-                #detvar_df_lazy = GetMuons(detvar_df_lazy, "lantern")
-                #detvar_df_lazy = GetMuons(detvar_df_lazy, "pandora")
+                if "dist" in selname and "wc_pandora_dist" not in detvar_df_lazy.columns:
+                    print("Running AddRecoVars() on Detvar " + detvar)
+                    detvar_df_lazy = AddRecoVars(detvar_df_lazy)
+                if "2photon" in selname and "nphotons_wc" not in detvar_df_lazy.columns:
+                    print("Running Get2Photons() on Detvar " + detvar)
+                    detvar_df_lazy = Get2Photons(detvar_df_lazy, "wc")
+                    detvar_df_lazy = Get2Photons(detvar_df_lazy, "lantern")
+                    detvar_df_lazy = Get2Photons(detvar_df_lazy, "pandora")
+                if ("_CC" in selname or "_NC" in selname) and ("nmuons_wc" not in detvar_df_lazy.columns):
+                    print("Running GetMuons() on Detvar " + detvar)
+                    detvar_df_lazy = GetMuons(detvar_df_lazy, "wc")
+                    detvar_df_lazy = GetMuons(detvar_df_lazy, "lantern")
+                    detvar_df_lazy = GetMuons(detvar_df_lazy, "pandora")
                 if var == "photon_inv_mass" and "photon_inv_mass" not in all_df.columns:
                     detvar_df_lazy, photon_inv_mass = CombinePhotonVars(detvar_df_lazy, "photon_inv_mass")
                 detvar_df_lazy = detvar_df_lazy.with_columns([
