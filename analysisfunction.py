@@ -11224,3 +11224,30 @@ lantern_reco_variables = [
     "trackPiScore",
     "trackPrScore"
 ]
+
+
+# Instructions from Lee
+#
+#1. create_rw_systs_weight_dict from pyroot_loading.py; input is filename, outputs a dict with syst name to weight
+#    look at create_rw_syst_df.py to see how it is added to a df, make work for my structure
+#    output: df with filename (do I need this?), r, s, e, column for each syst name with a row containing weights for each universe
+#
+#
+#All now in systematics.py
+#
+#2. create_rw_frac_cov_matrices -> outputs a dict of syst name and cov matrix (numpy 2D array) for XS, geant, flux for the input histogram prediction
+#
+#3. get_pred_stat_cov -> make the pred stat cov
+#
+#
+#detvar
+#4. get detvar dataframes using same way as cv files
+#
+#5. add "vartype" variable with detvar type (names in create_detvar_df.py)
+#
+#6. create_detvar_frac_cov_matrices -> outputs dict of detvar name and cov matrix
+#
+#
+#a bunch of cov matrices now
+#
+#7. add them all together (or whatever you want) and plot (copy plot code from reading in the cov matrix from WC)
