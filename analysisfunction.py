@@ -8433,7 +8433,7 @@ def Get2Photons(all_df, reco):
                     momentum_arr *= np.float32(1.0)
 
                 if (
-                    row["wc_reco_pdg"][index] == 22
+                    (row["wc_reco_pdg"][index] == 22 or row["wc_reco_pdg"][index] == 11)
                     and mother not in (11, 22)
                     and momentum_arr[3] > np.float32(20.0)
                     and np.float32(3.0) < position[0] < np.float32(253.0)
