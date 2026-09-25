@@ -217,6 +217,29 @@ detvar_file_dict = {}
 for detvar in detvars:
     detvar_file_dict[f"nu_overlay_4_detvar_{detvar}"] = eval(f"nu_overlay_4_detvar_{detvar.lower()}")
 
+def _safe_load_arrays(tree, variable_list, library="pd"):
+    """
+    Safely load arrays from a tree, only including variables that exist.
+
+    Parameters:
+    -----------
+    tree : uproot tree object
+        The tree to load from
+    variable_list : list
+        List of variable names to attempt to load
+    library : str
+        Library to use for loading (default: "pd")
+
+    Returns:
+    --------
+    DataFrame with available columns
+    """
+    available_vars = [var for var in variable_list if var in tree.keys()]
+    if len(available_vars) < len(variable_list):
+        missing = set(variable_list) - set(available_vars)
+        print(f"Note: Skipping missing columns: {missing}")
+    return tree.arrays(available_vars, library=library)
+
 def AddTruthCat(all_df, catname, catnum, catcolor, Fill = 1001):
     is_lazy = isinstance(all_df, pl.LazyFrame)
     if is_lazy:
@@ -1278,9 +1301,9 @@ def LoadTreesTruth1(file1, su = False):
 
     if su:
         with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data = pl.from_pandas(f_in_time_data.arrays(time_variables + time_truth_variables  + larpid_reco_variables + larpid_truth_variables, library="pd"))
+            all_df_in_time_data = pl.from_pandas(_safe_load_arrays(f_in_time_data, time_variables + time_truth_variables  + larpid_reco_variables + larpid_truth_variables, library="pd"))
         with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
-            all_df_in_pelee_data = pl.from_pandas(f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd"))
+            all_df_in_pelee_data = pl.from_pandas(_safe_load_arrays(f_in_pelee_data, pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd"))
             all_df_in_pelee_data = all_df_in_pelee_data.rename(lambda col: f'pelee_{col}')
         with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
             all_df_in_glee_data = pl.from_pandas(f_in_glee_data.arrays(glee_reco_variables, library="pd"))
@@ -1364,14 +1387,16 @@ def LoadTreesTruth1Lazy(file1, su = False):
 
     if su:
         with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
-            all_df_in_time_data = _collect_and_shrink(pl.from_pandas(f_in_time_data.arrays(
-                time_variables + time_truth_variables + larpid_reco_variables + larpid_truth_variables, 
+            all_df_in_time_data = _collect_and_shrink(pl.from_pandas(_safe_load_arrays(
+                f_in_time_data,
+                time_variables + time_truth_variables + larpid_reco_variables + larpid_truth_variables,
                 library="pd"
             )))
-        
+
         with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
-            all_df_in_pelee_data = _collect_and_shrink(pl.from_pandas(f_in_pelee_data.arrays(
-                pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables + pelee_time_variables, 
+            all_df_in_pelee_data = _collect_and_shrink(pl.from_pandas(_safe_load_arrays(
+                f_in_pelee_data,
+                pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables + pelee_time_variables,
                 library="pd"
             ))).select(pl.col("*").name.prefix("pelee_"))
             pirw_df = ReweightPions(f_in_pelee_data)
@@ -1586,7 +1611,7 @@ def LoadTreesData1(file1, su = False):
         with uproot.open(file1)["wcpselection/T_PFeval"] as f_in_time_data:
             all_df_in_time_data = pl.from_pandas(f_in_time_data.arrays(time_variables  + larpid_reco_variables, library="pd"))
         with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
-            all_df_in_pelee_data = pl.from_pandas(f_in_pelee_data.arrays(pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd"))
+            all_df_in_pelee_data = pl.from_pandas(_safe_load_arrays(f_in_pelee_data, pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables +pelee_time_variables, library="pd"))
             all_df_in_pelee_data = all_df_in_pelee_data.rename(lambda col: f'pelee_{col}')
         with uproot.open(file1)["singlephotonana/vertex_tree"] as f_in_glee_data:
             all_df_in_glee_data = pl.from_pandas(f_in_glee_data.arrays(glee_reco_variables, library="pd"))
@@ -1754,7 +1779,8 @@ def LoadTreesData1Lazy(file1, su = False):
             )))
 
         with uproot.open(file1)["nuselection/NeutrinoSelectionFilter"] as f_in_pelee_data:
-            all_df_in_pelee_data = _collect_and_shrink(pl.from_pandas(f_in_pelee_data.arrays(
+            all_df_in_pelee_data = _collect_and_shrink(pl.from_pandas(_safe_load_arrays(
+                f_in_pelee_data,
                 pelee_variables + pelee_mcf_variables + pelee_pi0_variables + nugraph_reco_variables + pelee_time_variables,
                 library="pd"
             ))).select(pl.col("*").name.prefix("pelee_"))
@@ -9174,6 +9200,14 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
             # Load CV detvar file with lazy loading, process it, then delete for memory
             print("Loading CV detvar file (lazy)...")
             detvar_cv_df_lazy = LoadFilesLazy([nu_overlay_4_detvar_cv], "bnboverlay", su = True)
+
+            # Extract time correction columns from CV for use in variation files
+            # These columns exist in CV but not in the variations
+            time_cor_columns = ["evtTimeNS_cor", "cor_nu_time", "cor_nu_time_nospill", "cor_nu_time_spill", "cor_nu_deltatime"]
+            available_time_cor_cols = [col for col in time_cor_columns if col in detvar_cv_df_lazy.columns]
+            if available_time_cor_cols:
+                print(f"Extracting time correction columns from CV: {available_time_cor_cols}")
+                detvar_cv_time_corrections = detvar_cv_df_lazy.select(["run", "sub", "evt"] + available_time_cor_cols)
             detvar_cv_pion_w = GetExtraWeights(detvar_cv_df_lazy)
             weights_df = pl.DataFrame({
                 "row_nr": pl.Series(range(len(detvar_cv_pion_w)), dtype=pl.UInt32),
@@ -9224,6 +9258,16 @@ def MakePROfitXML(plot_folder, all_df, files, selname, var, var_label, nbins, bi
 
                 print(f"Loading detvar {detvar} file (lazy)...")
                 detvar_df_lazy = LoadFilesLazy([detvar_filepath], "bnboverlay", su = True)
+
+                # Add time corrections from CV file (these columns don't exist in variation files)
+                if available_time_cor_cols:
+                    print(f"Adding time corrections from CV to {detvar}")
+                    detvar_df_lazy = detvar_df_lazy.join(
+                        detvar_cv_time_corrections,
+                        on=["run", "sub", "evt"],
+                        how="left"
+                    )
+
                 detvar_pion_w = GetExtraWeights(detvar_df_lazy)
                 weights_df = pl.DataFrame({
                     "row_nr": pl.Series(range(len(detvar_pion_w)), dtype=pl.UInt32),
