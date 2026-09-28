@@ -8738,12 +8738,12 @@ def CombinePhotonVars(all_df, var):
         num_evts = all_df.height
 
     for i in range(num_evts):
-        if passed_pandora[i]:
+        if passed_wc[i]:
+            var_list.append(var_wc[i]) 
+        elif passed_pandora[i]:
             var_list.append(var_pandora[i])
         elif passed_lantern[i]:
             var_list.append(var_lantern[i])
-        elif passed_wc[i]:
-            var_list.append(var_wc[i])
         else:
             var_list.append(np.float32(-9999.))
 
