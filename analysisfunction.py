@@ -7843,7 +7843,7 @@ def MakeEffPurPlots(all_df, var, bin_width, start_edge, end_edge, title, x_label
 
 ###
 def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_widthy, start_edgey, end_edgey,
-               title, x_label, y_label, event_types, selection, POT, plot_folder, array_sig = [0,1,2,3,111], ignore_cat = []):
+               title, x_label, y_label, event_types, selection, POT, plot_folder, array_sig = [0,1,2,3,111], ignore_cat = [], cat5 = False):
     
     #function to make a 2D histogram plot for two variables, will use whatever cut value and part of chain 
     #comes before the call to the function
@@ -7887,6 +7887,7 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     h_NCother = ROOT.gROOT.FindObject("h_NCother")
     h_numuCC1g = ROOT.gROOT.FindObject("h_numuCC1g")
     h_out1g = ROOT.gROOT.FindObject("h_out1g")
+    h_1g = ROOT.gROOT.FindObject("h_1g")
     if h_ext:
         h_ext.Delete()
     if h_dirt:
@@ -7915,7 +7916,9 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
         h_numuCC1g.Delete()
     if h_out1g:
         h_out1g.Delete()
-    
+    if h_1g:
+        h_1g.Delete()
+
     h_data = ROOT.TH2F('h_data', title, bin_numx, start_edgex, end_edgex, bin_numy, start_edgey, end_edgey)
     h_ext = ROOT.TH2F('h_ext', title, bin_numx, start_edgex, end_edgex, bin_numy, start_edgey, end_edgey)
     h_dirt = ROOT.TH2F('h_dirt', title, bin_numx, start_edgex, end_edgex, bin_numy, start_edgey, end_edgey)
@@ -7931,8 +7934,9 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     h_NCother = ROOT.TH2F('h_NCother', title, bin_numx, start_edgex, end_edgex, bin_numy, start_edgey, end_edgey)
     h_numuCC1g = ROOT.TH2F('h_numuCC1g', title, bin_numx, start_edgex, end_edgex, bin_numy, start_edgey, end_edgey)
     h_out1g = ROOT.TH2F('h_out1g', title, bin_numx, start_edgex, end_edgex, bin_numy, start_edgey, end_edgey)
+    h_1g = ROOT.TH2F('h_1g', title, bin_numx, start_edgex, end_edgex, bin_numy, start_edgey, end_edgey)
 
-    
+
     selected_varx_sig = []
     selected_varx_bkg = []
     selected_varx_data = []
@@ -8021,7 +8025,8 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     selected_NCother_varx = []
     selected_numuCC1g_varx = []
     selected_out1g_varx = []
-    
+    selected_1g_varx = []
+
     selected_ext_vary = []
     selected_dirt_vary = []
     selected_cos_vary = []
@@ -8036,7 +8041,8 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     selected_NCother_vary = []
     selected_numuCC1g_vary = []
     selected_out1g_vary = []
-    
+    selected_1g_vary = []
+
     selected_ext_w = []
     selected_dirt_w = []
     selected_cos_w = []
@@ -8051,7 +8057,44 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     selected_NCother_w = []
     selected_numuCC1g_w = []
     selected_out1g_w = []
+    selected_1g_w = []
 
+    newcatsadded = False
+    seen_new_type = []
+    seen_new_cat = []
+    seen_new_color = []
+    seen_new_fill = []
+    h_new = []
+    selected_new_varx = []
+    selected_new_vary = []
+    selected_new_w = []
+
+    # Check for metadata columns
+    if all_df is not None:
+        is_lazy = isinstance(all_df, pl.LazyFrame)
+        if is_lazy:
+            metadata_columns = [
+                column for column in (
+                    "true_event_type_name", "true_event_type_color", "true_event_type_fill"
+                ) if column in all_df.collect_schema().names()
+            ]
+        else:
+            metadata_columns = [
+                column for column in (
+                    "true_event_type_name", "true_event_type_color", "true_event_type_fill"
+                ) if column in all_df.columns
+            ]
+
+        if metadata_columns:
+            newcatsadded = True
+            if is_lazy:
+                selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArraysLazy(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+                selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArraysLazy(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+                selected_true_event_type_fill_sig, selected_true_event_type_fill_bkg, selected_true_event_type_fill_data = GetVariableArraysLazy(all_df, "true_event_type_fill", "true_event_type_fill", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+            else:
+                selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArrays(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+                selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArrays(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+                selected_true_event_type_fill_sig, selected_true_event_type_fill_bkg, selected_true_event_type_fill_data = GetVariableArrays(all_df, "true_event_type_fill", "true_event_type_fill", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
 
     for i in range(len(selected_varx_bkg)):
         if selected_true_event_type_bkg[i]==12 and 12 in event_types:
@@ -8084,7 +8127,7 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
             selected_numuCC_vary.append(selected_vary_bkg[i])
             selected_numuCC_w.append(selected_w_bkg[i])
             h_numuCC.Fill(selected_varx_bkg[i],selected_vary_bkg[i],selected_w_bkg[i])
-        elif selected_true_event_type_bkg[i]==6 and 6 in event_types:
+        elif (selected_true_event_type_bkg[i]==6 or selected_true_event_type_bkg[i]==-3) and (6 in event_types or -3 in event_types):
             selected_NCpi0_varx.append(selected_varx_bkg[i])
             selected_NCpi0_vary.append(selected_vary_bkg[i])
             selected_NCpi0_w.append(selected_w_bkg[i])
@@ -8099,39 +8142,97 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
             selected_nueCC_vary.append(selected_vary_bkg[i])
             selected_nueCC_w.append(selected_w_bkg[i])
             h_nueCC.Fill(selected_varx_bkg[i],selected_vary_bkg[i],selected_w_bkg[i])
-
-        #else:
-            #print("There is an unknown additional background type")
-            #print(selected_is_CC_bkg[i])
-            #print(selected_true_event_type_bkg[i])
-            #print(selected_nu_Pdg_bkg[i])
+        elif not cat5 and (selected_true_event_type_bkg[i] in [3, 2, 1, 0, 111]) and any(t in event_types for t in [3, 2, 1, 0, 111]):
+            selected_1g_varx.append(selected_varx_bkg[i])
+            selected_1g_vary.append(selected_vary_bkg[i])
+            selected_1g_w.append(selected_w_bkg[i])
+            h_1g.Fill(selected_varx_bkg[i],selected_vary_bkg[i],selected_w_bkg[i])
+        else:
+            if (selected_true_event_type_bkg[i] not in seen_new_type):
+                print("There is a new background type")
+                print(selected_true_event_type_bkg[i])
+                if newcatsadded:
+                    seen_new_type.append(selected_true_event_type_bkg[i])
+                    seen_new_cat.append(selected_true_event_type_name_bkg[i])
+                    seen_new_color.append(int(selected_true_event_type_color_bkg[i]))
+                    seen_new_fill.append(int(selected_true_event_type_fill_bkg[i]))
+                    h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}")
+                    if h_tmp:
+                        h_tmp.Delete()
+                    h_new.append(ROOT.TH2F(f"h_{str(selected_true_event_type_bkg[i]).replace(' ', '')}", title, bin_numx, start_edgex, end_edgex, bin_numy, start_edgey, end_edgey))
+                    new_varx = []
+                    new_vary = []
+                    new_w = []
+                    selected_new_varx.append(new_varx)
+                    selected_new_vary.append(new_vary)
+                    selected_new_w.append(new_w)
+                else:
+                    print("No additional background categories defined, so not adding this category to the plot")
+            if newcatsadded:
+                index = seen_new_type.index(selected_true_event_type_bkg[i])
+                selected_new_varx[index].append(selected_varx_bkg[i])
+                selected_new_vary[index].append(selected_vary_bkg[i])
+                selected_new_w[index].append(selected_w_bkg[i])
+                h_new[index].Fill(selected_varx_bkg[i],selected_vary_bkg[i],selected_w_bkg[i])
 
     for i in range(len(selected_varx_sig)):
-        if selected_true_event_type_sig[i]==3 and 3 in event_types: 
+        if not cat5 and (selected_true_event_type_sig[i] in [3, 2, 1, 0, 111]) and any(t in event_types for t in [3, 2, 1, 0, 111]):
+            selected_1g_varx.append(selected_varx_sig[i])
+            selected_1g_vary.append(selected_vary_sig[i])
+            selected_1g_w.append(selected_w_sig[i])
+            h_1g.Fill(selected_varx_sig[i],selected_vary_sig[i],selected_w_sig[i])
+        elif cat5 and selected_true_event_type_sig[i]==3 and 3 in event_types:
             selected_NCpi1g_varx.append(selected_varx_sig[i])
             selected_NCpi1g_vary.append(selected_vary_sig[i])
             selected_NCpi1g_w.append(selected_w_sig[i])
             h_NCpi1g.Fill(selected_varx_sig[i],selected_vary_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==2 and 2 in event_types: 
+        elif cat5 and selected_true_event_type_sig[i]==2 and 2 in event_types:
             selected_NCdel_varx.append(selected_varx_sig[i])
             selected_NCdel_vary.append(selected_vary_sig[i])
             selected_NCdel_w.append(selected_w_sig[i])
             h_NCdel.Fill(selected_varx_sig[i],selected_vary_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==1 and 1 in event_types: 
+        elif cat5 and selected_true_event_type_sig[i]==1 and 1 in event_types:
             selected_NCother_varx.append(selected_varx_sig[i])
             selected_NCother_vary.append(selected_vary_sig[i])
             selected_NCother_w.append(selected_w_sig[i])
             h_NCother.Fill(selected_varx_sig[i],selected_vary_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==0 and 0 in event_types: 
+        elif cat5 and selected_true_event_type_sig[i]==0 and 0 in event_types:
             selected_numuCC1g_varx.append(selected_varx_sig[i])
             selected_numuCC1g_vary.append(selected_vary_sig[i])
             selected_numuCC1g_w.append(selected_w_sig[i])
             h_numuCC1g.Fill(selected_varx_sig[i],selected_vary_sig[i],selected_w_sig[i])
-        elif selected_true_event_type_sig[i]==111 and 111 in event_types: 
+        elif cat5 and selected_true_event_type_sig[i]==111 and 111 in event_types:
             selected_out1g_varx.append(selected_varx_sig[i])
             selected_out1g_vary.append(selected_vary_sig[i])
             selected_out1g_w.append(selected_w_sig[i])
             h_out1g.Fill(selected_varx_sig[i],selected_vary_sig[i],selected_w_sig[i])
+        else:
+            if (selected_true_event_type_sig[i] not in seen_new_type):
+                print("There is a new signal type")
+                print(selected_true_event_type_sig[i])
+                if newcatsadded:
+                    seen_new_type.append(selected_true_event_type_sig[i])
+                    seen_new_cat.append(selected_true_event_type_name_sig[i])
+                    seen_new_color.append(int(selected_true_event_type_color_sig[i]))
+                    seen_new_fill.append(int(selected_true_event_type_fill_sig[i]))
+                    h_tmp = ROOT.gROOT.FindObject(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}")
+                    if h_tmp:
+                        h_tmp.Delete()
+                    h_new.append(ROOT.TH2F(f"h_{str(selected_true_event_type_sig[i]).replace(' ', '')}", title, bin_numx, start_edgex, end_edgex, bin_numy, start_edgey, end_edgey))
+                    new_varx = []
+                    new_vary = []
+                    new_w = []
+                    selected_new_varx.append(new_varx)
+                    selected_new_vary.append(new_vary)
+                    selected_new_w.append(new_w)
+                else:
+                    print("No additional signal categories defined, so not adding this category to the plot")
+            if newcatsadded:
+                index = seen_new_type.index(selected_true_event_type_sig[i])
+                selected_new_varx[index].append(selected_varx_sig[i])
+                selected_new_vary[index].append(selected_vary_sig[i])
+                selected_new_w[index].append(selected_w_sig[i])
+                h_new[index].Fill(selected_varx_sig[i],selected_vary_sig[i],selected_w_sig[i])
             
             
     
@@ -8154,21 +8255,37 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     #plt.clf()
     #plt.figure(dpi=100)
 
-    pred_varx = [selected_numuCC1g_varx, selected_NCother_varx, selected_NCdel_varx, selected_NCpi1g_varx, 
-                 selected_nueCC_varx,
-            selected_NC_varx, selected_NCpi0_varx, selected_numuCC_varx, selected_numuCCpi0_varx, 
-                 selected_outFV_varx,
-            selected_cos_varx, selected_dirt_varx, selected_ext_varx, selected_data_varx]
+    if cat5:
+        pred_varx = [selected_numuCC1g_varx, selected_NCother_varx, selected_NCdel_varx, selected_NCpi1g_varx,
+                     selected_nueCC_varx,
+                selected_NC_varx, selected_NCpi0_varx, selected_numuCC_varx, selected_numuCCpi0_varx,
+                     selected_outFV_varx,
+                selected_cos_varx, selected_dirt_varx, selected_ext_varx, selected_data_varx]
+
+        pred_vary = [selected_numuCC1g_vary, selected_NCother_vary, selected_NCdel_vary, selected_NCpi1g_vary,
+                     selected_nueCC_vary,
+                selected_NC_vary, selected_NCpi0_vary, selected_numuCC_vary, selected_numuCCpi0_vary,
+                     selected_outFV_vary,
+                selected_cos_vary, selected_dirt_vary, selected_ext_vary, selected_data_vary]
+    else:
+        pred_varx = [selected_1g_varx, selected_nueCC_varx,
+                selected_NC_varx, selected_NCpi0_varx, selected_numuCC_varx, selected_numuCCpi0_varx,
+                     selected_outFV_varx,
+                selected_cos_varx, selected_dirt_varx, selected_ext_varx, selected_data_varx]
+
+        pred_vary = [selected_1g_vary, selected_nueCC_vary,
+                selected_NC_vary, selected_NCpi0_vary, selected_numuCC_vary, selected_numuCCpi0_vary,
+                     selected_outFV_vary,
+                selected_cos_vary, selected_dirt_vary, selected_ext_vary, selected_data_vary]
     
-    pred_vary = [selected_numuCC1g_vary, selected_NCother_vary, selected_NCdel_vary, selected_NCpi1g_vary, 
-                 selected_nueCC_vary,
-            selected_NC_vary, selected_NCpi0_vary, selected_numuCC_vary, selected_numuCCpi0_vary, 
-                 selected_outFV_vary,
-            selected_cos_vary, selected_dirt_vary, selected_ext_vary, selected_data_vary]
-    
-    selected_varx_all = selected_numuCC1g_varx+selected_NCother_varx+selected_NCdel_varx+selected_NCpi1g_varx+selected_nueCC_varx+selected_NC_varx+selected_NCpi0_varx+selected_numuCC_varx+selected_numuCCpi0_varx+selected_outFV_varx+selected_cos_varx+selected_dirt_varx+selected_ext_varx+selected_data_varx
-        
-    selected_vary_all = selected_numuCC1g_vary+selected_NCother_vary+selected_NCdel_vary+selected_NCpi1g_vary+selected_nueCC_vary+selected_NC_vary+selected_NCpi0_vary+selected_numuCC_vary+selected_numuCCpi0_vary+selected_outFV_vary+selected_cos_vary+selected_dirt_vary+selected_ext_vary+selected_data_vary
+    if cat5:
+        selected_varx_all = selected_numuCC1g_varx+selected_NCother_varx+selected_NCdel_varx+selected_NCpi1g_varx+selected_nueCC_varx+selected_NC_varx+selected_NCpi0_varx+selected_numuCC_varx+selected_numuCCpi0_varx+selected_outFV_varx+selected_cos_varx+selected_dirt_varx+selected_ext_varx+selected_data_varx
+
+        selected_vary_all = selected_numuCC1g_vary+selected_NCother_vary+selected_NCdel_vary+selected_NCpi1g_vary+selected_nueCC_vary+selected_NC_vary+selected_NCpi0_vary+selected_numuCC_vary+selected_numuCCpi0_vary+selected_outFV_vary+selected_cos_vary+selected_dirt_vary+selected_ext_vary+selected_data_vary
+    else:
+        selected_varx_all = selected_1g_varx+selected_nueCC_varx+selected_NC_varx+selected_NCpi0_varx+selected_numuCC_varx+selected_numuCCpi0_varx+selected_outFV_varx+selected_cos_varx+selected_dirt_varx+selected_ext_varx+selected_data_varx
+
+        selected_vary_all = selected_1g_vary+selected_nueCC_vary+selected_NC_vary+selected_NCpi0_vary+selected_numuCC_vary+selected_numuCCpi0_vary+selected_outFV_vary+selected_cos_vary+selected_dirt_vary+selected_ext_vary+selected_data_vary
         
     
 
