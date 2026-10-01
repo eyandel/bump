@@ -8450,7 +8450,12 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     h_data.SetMarkerColor(kBlack)
     h_data.SetMarkerStyle(34)
     h_stack.Add(h_data)
-    
+
+    # Add new categories to the stack
+    for i in range(len(h_new)):
+        h_new[i].SetMarkerColor(seen_new_color[i])
+        h_stack.Add(h_new[i])
+
     h_stack.Draw("colz")
     c.Update()
     #c.Draw()
