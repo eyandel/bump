@@ -7956,24 +7956,64 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     # Check if lazy
     is_lazy = isinstance(all_df, pl.LazyFrame)
 
-    if is_lazy:
-        varx_sig, varx_bkg, varx_data = GetVariableArraysLazy(all_df, varx, "varx", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
-        vary_sig, vary_bkg, vary_data = GetVariableArraysLazy(all_df, vary, "vary", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
-        weights_sig, weights_bkg, weights_data = GetVariableArraysLazy(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
-    
-        selected_varx_sig, selected_varx_bkg, selected_varx_data = GetVariableArraysLazy(all_df, varx, "selected_varx", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-        selected_vary_sig, selected_vary_bkg, selected_vary_data = GetVariableArraysLazy(all_df, vary, "selected_vary", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-        selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArraysLazy(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-        selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArraysLazy(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-    else:
-        varx_sig, varx_bkg, varx_data = GetVariableArrays(all_df, varx, "varx", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
-        vary_sig, vary_bkg, vary_data = GetVariableArrays(all_df, vary, "vary", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
-        weights_sig, weights_bkg, weights_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection="all", ignore_cat=ignore_cat)
+    # More efficient approach: do one pass through the data like MakeDataMCPlot
+    columns = [varx, vary, "weights", "true_event_type"]
+    metadata_columns = [
+        column for column in (
+            "true_event_type_name", "true_event_type_color", "true_event_type_fill"
+        ) if column in (all_df.collect_schema().names() if is_lazy else all_df.columns)
+    ]
+    columns.extend(metadata_columns)
 
-        selected_varx_sig, selected_varx_bkg, selected_varx_data = GetVariableArrays(all_df, varx, "selected_varx", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-        selected_vary_sig, selected_vary_bkg, selected_vary_data = GetVariableArrays(all_df, vary, "selected_vary", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-        selected_w_sig, selected_w_bkg, selected_w_data = GetVariableArrays(all_df, "weights", "weights", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-        selected_true_event_type_sig, selected_true_event_type_bkg, selected_true_event_type_data = GetVariableArrays(all_df, "true_event_type", "true_event_type", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    def split_frame(frame):
+        varx_vals = frame[varx].to_numpy(zero_copy_only=False)
+        vary_vals = frame[vary].to_numpy(zero_copy_only=False)
+        weights = frame["weights"].to_numpy(zero_copy_only=False)
+        types = frame["true_event_type"].to_numpy(zero_copy_only=False)
+        keep = ~np.isin(types, ignore_cat)
+        sig_mask = keep & np.isin(types, array_sig)
+        data_mask = keep & (types == 13)
+        bkg_mask = keep & (types > -1) & ~np.isin(types, array_sig + [13])
+        return (
+            varx_vals[sig_mask], varx_vals[bkg_mask], varx_vals[data_mask],
+            vary_vals[sig_mask], vary_vals[bkg_mask], vary_vals[data_mask],
+            weights[sig_mask], weights[bkg_mask], weights[data_mask],
+            types[sig_mask], types[bkg_mask], types[data_mask],
+            {column: frame[column].to_numpy(zero_copy_only=False)
+             for column in metadata_columns},
+            sig_mask, bkg_mask, data_mask
+        )
+
+    if is_lazy:
+        frame = all_df.with_columns(
+            PassSelectionLazyAll(selection, all_df).alias("__make_2d_plot_selected")
+        ).select(columns + ["__make_2d_plot_selected"]).collect()
+    else:
+        frame = all_df.select(columns).with_columns(
+            pl.Series("__make_2d_plot_selected", PassSelection(selection, all_df, -1))
+        )
+
+    selected_frame = frame.filter(frame["__make_2d_plot_selected"])
+    (selected_varx_sig, selected_varx_bkg, selected_varx_data,
+     selected_vary_sig, selected_vary_bkg, selected_vary_data,
+     selected_w_sig, selected_w_bkg, selected_w_data,
+     selected_true_event_type_sig, selected_true_event_type_bkg,
+     selected_true_event_type_data, selected_metadata,
+     selected_sig_mask, selected_bkg_mask, selected_data_mask) = split_frame(selected_frame)
+
+    # Convert to lists for compatibility with existing code
+    selected_varx_sig = selected_varx_sig.tolist()
+    selected_varx_bkg = selected_varx_bkg.tolist()
+    selected_varx_data = selected_varx_data.tolist()
+    selected_vary_sig = selected_vary_sig.tolist()
+    selected_vary_bkg = selected_vary_bkg.tolist()
+    selected_vary_data = selected_vary_data.tolist()
+    selected_w_sig = selected_w_sig.tolist()
+    selected_w_bkg = selected_w_bkg.tolist()
+    selected_w_data = selected_w_data.tolist()
+    selected_true_event_type_sig = selected_true_event_type_sig.tolist()
+    selected_true_event_type_bkg = selected_true_event_type_bkg.tolist()
+    selected_true_event_type_data = selected_true_event_type_data.tolist()
 
 
     #for i in range(0, len(e_sig)):
@@ -8069,32 +8109,18 @@ def Make2DPlot(all_df, varx, vary, bin_widthx, start_edgex, end_edgex, bin_width
     selected_new_vary = []
     selected_new_w = []
 
-    # Check for metadata columns
-    if all_df is not None:
-        is_lazy = isinstance(all_df, pl.LazyFrame)
-        if is_lazy:
-            metadata_columns = [
-                column for column in (
-                    "true_event_type_name", "true_event_type_color", "true_event_type_fill"
-                ) if column in all_df.collect_schema().names()
-            ]
-        else:
-            metadata_columns = [
-                column for column in (
-                    "true_event_type_name", "true_event_type_color", "true_event_type_fill"
-                ) if column in all_df.columns
-            ]
-
-        if metadata_columns:
-            newcatsadded = True
-            if is_lazy:
-                selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArraysLazy(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-                selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArraysLazy(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-                selected_true_event_type_fill_sig, selected_true_event_type_fill_bkg, selected_true_event_type_fill_data = GetVariableArraysLazy(all_df, "true_event_type_fill", "true_event_type_fill", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-            else:
-                selected_true_event_type_name_sig, selected_true_event_type_name_bkg, selected_true_event_type_name_data = GetVariableArrays(all_df, "true_event_type_name", "true_event_type_name", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-                selected_true_event_type_color_sig, selected_true_event_type_color_bkg, selected_true_event_type_color_data = GetVariableArrays(all_df, "true_event_type_color", "true_event_type_color", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
-                selected_true_event_type_fill_sig, selected_true_event_type_fill_bkg, selected_true_event_type_fill_data = GetVariableArrays(all_df, "true_event_type_fill", "true_event_type_fill", array_sig=array_sig, selection=selection, ignore_cat=ignore_cat)
+    # Check for metadata columns (already extracted above in selected_metadata)
+    if metadata_columns:
+        newcatsadded = True
+        selected_true_event_type_name_sig = selected_metadata["true_event_type_name"][selected_sig_mask]
+        selected_true_event_type_name_bkg = selected_metadata["true_event_type_name"][selected_bkg_mask]
+        selected_true_event_type_name_data = selected_metadata["true_event_type_name"][selected_data_mask]
+        selected_true_event_type_color_sig = selected_metadata["true_event_type_color"][selected_sig_mask]
+        selected_true_event_type_color_bkg = selected_metadata["true_event_type_color"][selected_bkg_mask]
+        selected_true_event_type_color_data = selected_metadata["true_event_type_color"][selected_data_mask]
+        selected_true_event_type_fill_sig = selected_metadata["true_event_type_fill"][selected_sig_mask]
+        selected_true_event_type_fill_bkg = selected_metadata["true_event_type_fill"][selected_bkg_mask]
+        selected_true_event_type_fill_data = selected_metadata["true_event_type_fill"][selected_data_mask]
 
     for i in range(len(selected_varx_bkg)):
         if selected_true_event_type_bkg[i]==12 and 12 in event_types:
